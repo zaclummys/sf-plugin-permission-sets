@@ -1,22 +1,35 @@
 name: ci
 
+# Runs on PRs and manual dispatch, and is callable by the publish workflow as
+# its release gate (workflow_call), so build + test are defined once here.
+# Split into parallel jobs: build typechecks and lints, test runs vitest (which
+# transpiles TS itself, so it needs no prior build).
 on:
-  push:
-    branches: [main]
-  pull_request:
-  workflow_dispatch:
+    pull_request:
+    workflow_dispatch:
+    workflow_call:
 
 jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          # Pinned to 24: Node 26 removed Buffer.SlowBuffer, which the current
-          # lint toolchain still depends on transitively.
-          node-version: '24'
-          cache: yarn
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
-      - run: yarn test
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  # Pinned to 24: Node 26 removed Buffer.SlowBuffer, which the current
+                  # lint toolchain still depends on transitively.
+                  node-version: '24'
+                  cache: yarn
+            - run: yarn install --frozen-lockfile
+            - run: yarn build
+
+    test:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: '24'
+                  cache: yarn
+            - run: yarn install --frozen-lockfile
+            - run: yarn test:only
