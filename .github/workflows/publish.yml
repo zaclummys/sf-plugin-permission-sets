@@ -44,7 +44,7 @@ jobs:
             VERSION="0.0.0-dev.${{ github.run_number }}"
             TAG=dev
           fi
-          
+
           echo "Resolved version $VERSION for dist-tag $TAG"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -76,7 +76,7 @@ jobs:
       - name: Install Salesforce CLI
         run: npm install -g @salesforce/cli
 
-      - name: Install the published plugin and dry-run it
+      - name: Install Plugin
         env:
           VERSION: ${{ needs.publish.outputs.version }}
         run: |
@@ -90,7 +90,8 @@ jobs:
             echo "waiting for npm propagation ($i)"; sleep 10
           done
 
-          yes | sf plugins install "$PKG"
+          # Auto-answer the unsigned-plugin prompt with a single y (no broken-pipe noise from yes).
+          echo y | sf plugins install "$PKG"
 
-      - name: Dry-run the plugin
+      - name: Dry-run Plugin
         run: sf help ps
