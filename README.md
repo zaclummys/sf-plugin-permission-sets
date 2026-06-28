@@ -343,11 +343,12 @@ The `next` tag is selected whenever the version contains a hyphen, not by GitHub
 
 ## Architecture
 
-The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, and core holds the reusable primitives.
+The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
-- **Commands** (`src/commands/ps/`): oclif only. Parse flags, call a service, render output, set the exit code.
-- **Services** (`src/services/`): one per command (`check` today, then `validate`, `plan`, `apply`, `export`). Each turns the core into a command's behavior.
-- **Core** (`src/core/`): the reusable building blocks.
+- **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
+- **Services** (`src/services/`): one per command (`check` and `validate` today, then `plan`, `apply`, `export`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior.
+- **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
+- **Adapters** (`src/adapters/`): the boundary to the outside world. A port, the `OrgClient` interface, declares the org operations the app needs, and `ConnectionOrgClient` is the adapter that backs it with a Salesforce `Connection`. Services depend on the port rather than the SDK, so they test against a fake and stay free of connection detail.
 
 | Core module | Responsibility |
 | --- | --- |
@@ -356,9 +357,10 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
 | `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
+| `resolve` | Plan the org queries that resolve declared references, each paired with a pure evaluator that turns the returned rows into findings. |
 | `report` | Format and count findings. |
 
-Commands are slices of one pipeline. `check` runs the offline **load** stage only. The online commands add **resolve** (names to ids), **fetch** (current org state), **diff** (desired vs actual), and **apply** (DML) on top, reusing load, report, model, and schema unchanged.
+Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it plans the SOQL from the loaded model, runs each query through the `OrgClient` port, and feeds the rows back to resolve's pure evaluators. The remaining online commands layer **fetch** (current org state), **diff** (desired vs actual), and **apply** (DML) on top, reusing load, resolve, report, model, and schema unchanged.
 
 ## License
 
