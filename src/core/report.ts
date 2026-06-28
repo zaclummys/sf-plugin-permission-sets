@@ -10,8 +10,8 @@ export function formatFindings(findings: Finding[]): string[] {
 
 /** Count findings by level. */
 export function countFindings(findings: Finding[]): { errors: number; warnings: number } {
-    return {
-        errors: findings.filter((f) => f.level === 'error').length,
-        warnings: findings.filter((f) => f.level === 'warning').length,
-    };
+    const errors = findings.filter((finding) => finding.level === 'error');
+    const warnings = findings.filter((finding) => finding.level === 'warning');
+
+    return { errors: errors.length, warnings: warnings.length };
 }

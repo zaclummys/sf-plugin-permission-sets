@@ -5,7 +5,7 @@ import { OrgClient } from '../services/org-client.js';
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
 
 /** SObject + naming field per kind. The Salesforce schema knowledge lives here, not in core. */
-const TARGET_OBJECTS: Record<Kind, TargetObject> = {
+const targetObjects: Record<Kind, TargetObject> = {
     permissionSet: { sobject: 'PermissionSet', field: 'Name' },
     permissionSetGroup: { sobject: 'PermissionSetGroup', field: 'DeveloperName' },
     permissionSetLicense: { sobject: 'PermissionSetLicense', field: 'DeveloperName' },
@@ -34,7 +34,7 @@ export class ConnectionOrgClient implements OrgClient {
     }
 
     public async findTargets(kind: Kind, names: string[]): Promise<string[]> {
-        const { sobject, field } = TARGET_OBJECTS[kind];
+        const { sobject, field } = targetObjects[kind];
         const records = await this.query<Record<string, string>>(
             `SELECT ${field} FROM ${sobject} WHERE ${field} IN (${inList(names)})`
         );

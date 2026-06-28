@@ -1,13 +1,13 @@
 import { DesiredAssignment, Finding, Kind, OrgUser } from './model.js';
 
 /** Human label per kind, used in findings. Domain wording, not SObject names. */
-const KIND_LABELS: Record<Kind, string> = {
+const kindLabels: Record<Kind, string> = {
     permissionSet: 'permission set',
     permissionSetGroup: 'permission set group',
     permissionSetLicense: 'permission set license',
 };
 
-export const KINDS = Object.keys(KIND_LABELS) as Kind[];
+export const kinds = Object.keys(kindLabels) as Kind[];
 
 function distinct(values: string[]): string[] {
     return [...new Set(values)];
@@ -50,7 +50,7 @@ export function evaluateUsers(declared: string[], found: OrgUser[]): Finding[] {
  * case-insensitive, mirroring how the org compares them.
  */
 export function evaluateTargets(kind: Kind, declared: string[], found: string[]): Finding[] {
-    const label = KIND_LABELS[kind];
+    const label = kindLabels[kind];
 
     const counts = new Map<string, number>();
     for (const name of found) {

@@ -3,7 +3,7 @@ import { DesiredAssignment, Finding, Kind } from './model.js';
 
 type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
 
-const KIND_KEYS: Array<[Kind, ScopeKey]> = [
+const kindKeys: Array<[Kind, ScopeKey]> = [
     ['permissionSet', 'permissionSets'],
     ['permissionSetGroup', 'permissionSetGroups'],
     ['permissionSetLicense', 'permissionSetLicenses'],
@@ -20,7 +20,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
     for (const [username, entry] of Object.entries(data.users)) {
         let scopeCount = 0;
 
-        for (const [kind, key] of KIND_KEYS) {
+        for (const [kind, key] of kindKeys) {
             const list = entry[key];
             if (list === undefined) continue;
             if (list.length === 0) {
