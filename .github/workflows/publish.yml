@@ -1,0 +1,39 @@
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to publish, e.g. 0.1.0 (defaults to the release tag)"
+        required: false
+
+permissions:
+  contents: read
+  id-token: write # required for OIDC trusted publishing and provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          # Pinned to 24: Node 26 removed Buffer.SlowBuffer, which the current
+          # lint toolchain depends on transitively.
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Update npm (OIDC trusted publishing needs npm >= 11.5)
+        run: npm install -g npm@latest
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+      - name: Publish to npm
+        run: |
+          RAW="${{ github.event.release.tag_name || inputs.version }}"
+          VERSION="${RAW#v}"
+          if [ -z "$VERSION" ]; then echo "No version available to publish"; exit 1; fi
+          npm pkg set version="$VERSION"
+          if printf '%s' "$VERSION" | grep -q '-'; then TAG=next; else TAG=latest; fi
+          echo "Publishing $VERSION to dist-tag $TAG"
+          npm publish --provenance --access public --tag "$TAG"
