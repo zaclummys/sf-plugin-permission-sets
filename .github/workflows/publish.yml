@@ -8,11 +8,15 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for OIDC trusted publishing and provenance
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for OIDC trusted publishing and provenance
+    outputs:
+      version: ${{ steps.pub.outputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -26,6 +30,7 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn build
       - name: Publish to npm
+        id: pub
         run: |
           if [ "${{ github.event_name }}" = "release" ]; then
             # Real release: version comes from the git tag (the single source of truth).
@@ -43,3 +48,30 @@ jobs:
           echo "Publishing $VERSION to dist-tag $TAG"
           npm pkg set version="$VERSION"
           npm publish --provenance --access public --tag "$TAG"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+  smoke-test:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Salesforce CLI
+        run: npm install -g @salesforce/cli
+      - name: Install the published plugin and dry-run it
+        env:
+          VERSION: ${{ needs.publish.outputs.version }}
+        run: |
+          PKG="sf-plugin-permission-sets@$VERSION"
+          echo "Smoke-testing $PKG"
+          # Wait for the just-published version to be installable (registry propagation).
+          for i in 1 2 3 4 5 6; do
+            if npm view "$PKG" version >/dev/null 2>&1; then echo "available on registry"; break; fi
+            echo "waiting for npm propagation ($i)"; sleep 10
+          done
+          # yes | ... auto-answers the "unsigned plugin" prompt in case it appears.
+          yes | sf plugins install "$PKG"
+          sf plugins
+          sf ps info
