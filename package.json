@@ -48,8 +48,8 @@
       "@oclif/plugin-help"
     ],
     "topics": {
-      "hello": {
-        "description": "Commands to say hello."
+      "ps": {
+        "description": "Manage permission set assignments declaratively."
       }
     },
     "flexibleTaxonomy": true
