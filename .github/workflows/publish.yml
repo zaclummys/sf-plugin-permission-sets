@@ -1,13 +1,10 @@
 name: publish
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version to publish, e.g. 0.1.0 (defaults to the release tag)"
-        required: false
 
 permissions:
   contents: read
@@ -30,10 +27,19 @@ jobs:
       - run: yarn build
       - name: Publish to npm
         run: |
-          RAW="${{ github.event.release.tag_name || inputs.version }}"
-          VERSION="${RAW#v}"
-          if [ -z "$VERSION" ]; then echo "No version available to publish"; exit 1; fi
-          npm pkg set version="$VERSION"
-          if printf '%s' "$VERSION" | grep -q '-'; then TAG=next; else TAG=latest; fi
+          if [ "${{ github.event_name }}" = "release" ]; then
+            # Real release: version comes from the git tag (the single source of truth).
+            VERSION="${{ github.event.release.tag_name }}"
+            VERSION="${VERSION#v}"
+            case "$VERSION" in
+              *-*) TAG=next ;;
+              *)   TAG=latest ;;
+            esac
+          else
+            # Snapshot on every push to main, for client testing. Unique and increasing.
+            VERSION="0.0.0-dev.${{ github.run_number }}"
+            TAG=dev
+          fi
           echo "Publishing $VERSION to dist-tag $TAG"
+          npm pkg set version="$VERSION"
           npm publish --provenance --access public --tag "$TAG"
