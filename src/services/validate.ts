@@ -1,8 +1,8 @@
-import { OrgClient } from '../adapters/org-client.js';
 import { loadFiles } from '../core/load.js';
 import { countFindings } from '../core/report.js';
 import { KINDS, distinctAssignees, distinctTargets, evaluateUsers, evaluateTargets } from '../core/resolve.js';
 import { DesiredAssignment, Finding } from '../core/model.js';
+import { OrgClient } from './org-client.js';
 
 export type ValidateResult = {
     files: string[];

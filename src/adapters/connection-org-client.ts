@@ -1,16 +1,6 @@
 import { Connection } from '@salesforce/core';
 import { Kind, OrgUser } from '../core/model.js';
-
-/**
- * Port: the org lookups the app needs, in domain terms. Services depend on this,
- * not on @salesforce/core or SOQL, so they stay easy to test and persistence-ignorant.
- */
-export interface OrgClient {
-    /** The users that exist in the org, among the given usernames. */
-    findUsers(usernames: string[]): Promise<OrgUser[]>;
-    /** The identifiers that exist in the org, among the given targets of one kind. */
-    findTargets(kind: Kind, names: string[]): Promise<string[]>;
-}
+import { OrgClient } from '../services/org-client.js';
 
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
 
