@@ -21,6 +21,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Commands](#commands)
 - [Inspiration & equivalents](#inspiration--equivalents)
 - [Versioning](#versioning)
+- [Architecture](#architecture)
 
 ---
 
@@ -339,6 +340,25 @@ gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 | `dev` | automatic on every push to `main` | `sf plugins install sf-plugin-permission-sets@dev` |
 
 The `next` tag is selected whenever the version contains a hyphen, not by GitHub's prerelease checkbox.
+
+## Architecture
+
+The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, and core holds the reusable primitives.
+
+- **Commands** (`src/commands/ps/`): oclif only. Parse flags, call a service, render output, set the exit code.
+- **Services** (`src/services/`): one per command (`check` today, then `validate`, `plan`, `apply`, `export`). Each turns the core into a command's behavior.
+- **Core** (`src/core/`): the reusable building blocks.
+
+| Core module | Responsibility |
+| --- | --- |
+| `model` | Shared domain types (assignment, finding, result). |
+| `schema` | The zod contract for a file, plus validation. |
+| `parse` | File text to an object, with YAML and duplicate-key errors. |
+| `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
+| `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
+| `report` | Format and count findings. |
+
+Commands are slices of one pipeline. `check` runs the offline **load** stage only. The online commands add **resolve** (names to ids), **fetch** (current org state), **diff** (desired vs actual), and **apply** (DML) on top, reusing load, report, model, and schema unchanged.
 
 ## License
 
