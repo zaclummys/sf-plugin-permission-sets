@@ -164,7 +164,7 @@ Every run checks the files first. `check` runs the offline checks with no org, a
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
 | Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
-| Same target listed twice for a user, like `[Sales_Manager, Sales_Manager]` | `check` (offline) | ⚠️ warning | Deduped |
+| Same target listed twice for a user | `check` (offline) | ⚠️ warning | Deduped |
 | A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
 | Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
 | Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
