@@ -9,7 +9,10 @@
     "dependencies": {
         "@oclif/core": "^4",
         "@salesforce/core": "^8",
-        "@salesforce/sf-plugins-core": "^12"
+        "@salesforce/sf-plugins-core": "^12",
+        "globby": "^16.2.0",
+        "yaml": "^2.9.0",
+        "zod": "^4.4.3"
     },
     "devDependencies": {
         "@salesforce/dev-scripts": "^10",
@@ -17,7 +20,8 @@
         "husky": "^7.0.4",
         "oclif": "^4.14.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.4.5"
+        "typescript": "^5.4.5",
+        "vitest": "^4.1.9"
     },
     "engines": {
         "node": ">=18.0.0"
@@ -91,54 +95,38 @@
             "clean": "if-file-deleted"
         },
         "format": {
-            "command": "prettier --write \"+(src|test|schemas)/**/*.+(ts|js|json)|command-snapshot.json\"",
+            "command": "prettier --write \"src/**/*.+(ts|js|json)\"",
             "files": [
                 "src/**/*.ts",
-                "test/**/*.ts",
-                "schemas/**/*.json",
-                "command-snapshot.json",
                 ".prettier*"
             ],
             "output": []
         },
         "lint": {
-            "command": "eslint src test --color --cache --cache-location .eslintcache",
+            "command": "eslint src --color --cache --cache-location .eslintcache",
             "files": [
                 "src/**/*.ts",
-                "test/**/*.ts",
                 "messages/**",
                 "**/.eslint*",
                 "**/tsconfig.json"
             ],
             "output": []
         },
-        "test:compile": {
-            "command": "tsc -p \"./test\" --pretty",
-            "files": [
-                "test/**/*.ts",
-                "**/tsconfig.json"
-            ],
-            "output": []
-        },
         "test": {
             "dependencies": [
-                "test:compile",
                 "test:only",
                 "lint"
             ]
         },
         "test:only": {
-            "command": "nyc mocha \"test/**/*.test.ts\"",
+            "command": "vitest run",
             "env": {
                 "FORCE_COLOR": "2"
             },
             "files": [
-                "test/**/*.ts",
                 "src/**/*.ts",
-                "**/tsconfig.json",
-                ".mocha*",
-                "!*.nut.ts",
-                ".nycrc"
+                "vitest.config.ts",
+                "**/tsconfig.json"
             ],
             "output": []
         }

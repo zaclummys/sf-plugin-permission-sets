@@ -196,11 +196,12 @@ Fully offline: runs in any CI job or pre-commit hook without org credentials.
 
 ```
 USAGE
-  $ sf ps check -f <glob>... [--strict] [--json]
+  $ sf ps check -f <glob>... [--strict] [--watch] [--json]
 
 FLAGS
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs are expanded by the plugin.
   --strict                 Treat warnings as errors.
+  -w, --watch              Re-run on every change to a matched file. Stays in the foreground until you stop it (Ctrl-C).
 
 CHECKS
   - valid YAML & schema (unknown keys rejected)
@@ -210,15 +211,18 @@ CHECKS
   - internal referential integrity
 ```
 
+`--watch` is for the local edit loop: leave it running while you tweak the YAML and the findings refresh on every save. It re-expands the globs each run, so files you add or delete are picked up too. It's a foreground, interactive mode, so it can't be combined with `--json` and isn't meant for CI, where a single gated `check` run is what you want.
+
 ### `sf ps validate`
 
 ```
 USAGE
-  $ sf ps validate -o <org> -f <glob>... [--json]
+  $ sf ps validate -o <org> -f <glob>... [--watch] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required) Org to resolve against.
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
+  -w, --watch              Re-run on every change to a matched file. Read-only, but each run queries the org, so point it at a scratch or dev org.
 
 Runs all offline checks, then verifies that every user (active), permission set,
 group, and license referenced actually exists and resolves uniquely.
@@ -228,13 +232,14 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--fail-on-drift] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--fail-on-drift] [--watch] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --fail-on-drift          Exit non-zero if any change is pending (for CI gates).
+  -w, --watch              Re-diff against the org on every change to a matched file. Read-only (never applies), but each run queries the org.
 ```
 
 Example output:

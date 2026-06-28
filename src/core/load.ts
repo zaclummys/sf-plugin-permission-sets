@@ -1,0 +1,58 @@
+import { readFile } from 'node:fs/promises';
+import { globby } from 'globby';
+import { parseFile } from './parse.js';
+import { validateFile } from './schema.js';
+import { normalize } from './normalize.js';
+import { DesiredAssignment, Finding, LoadResult } from './model.js';
+
+/** Process one file's text through parse, validate, and normalize. Pure, no disk. */
+export function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
+  const parsed = parseFile(text, file);
+  if (!parsed.data) {
+    return { assignments: [], findings: parsed.findings };
+  }
+
+  const validated = validateFile(parsed.data, file);
+  if (!validated.data) {
+    return { assignments: [], findings: [...parsed.findings, ...validated.findings] };
+  }
+
+  const normalized = normalize(validated.data, file);
+  return {
+    assignments: normalized.assignments,
+    findings: [...parsed.findings, ...validated.findings, ...normalized.findings],
+  };
+}
+
+/** Expand the globs, read every matched file, and merge into one model by union. */
+export async function loadFiles(patterns: string[]): Promise<LoadResult> {
+  const files = await globby(patterns);
+  if (files.length === 0) {
+    return {
+      files,
+      assignments: [],
+      findings: [{ level: 'error', code: 'NO_FILES', message: `no files matched: ${patterns.join(', ')}` }],
+    };
+  }
+
+  const findings: Finding[] = [];
+  const collected: DesiredAssignment[] = [];
+  for (const file of files) {
+    // eslint-disable-next-line no-await-in-loop
+    const text = await readFile(file, 'utf8');
+    const res = checkContent(text, file);
+    findings.push(...res.findings);
+    collected.push(...res.assignments);
+  }
+
+  const seen = new Set<string>();
+  const assignments: DesiredAssignment[] = [];
+  for (const a of collected) {
+    const dedupeKey = `${a.assignee} ${a.kind} ${a.target}`;
+    if (seen.has(dedupeKey)) continue;
+    seen.add(dedupeKey);
+    assignments.push(a);
+  }
+
+  return { files, assignments, findings };
+}
