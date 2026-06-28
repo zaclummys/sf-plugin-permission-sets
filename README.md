@@ -1,6 +1,6 @@
-# permission-sets
+# sf-plugin-permission-sets
 
-[![NPM](https://img.shields.io/npm/v/permission-sets.svg?label=permission-sets)](https://www.npmjs.com/package/permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/permission-sets.svg)](https://npmjs.org/package/permission-sets) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/salesforcecli/permission-sets/main/LICENSE.txt)
+[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.txt)
 
 > Declarative, GitOps-style management of **permission set assignments** for Salesforce orgs.
 > Define who gets what in version-controlled YAML. The plugin reconciles your org to match it: `plan` then `apply`, just like Terraform.
@@ -38,13 +38,13 @@ This plugin makes the desired state **declarative and reviewable**:
 ## Install
 
 ```bash
-sf plugins install permission-sets
+sf plugins install sf-plugin-permission-sets
 ```
 
 Or pin a version:
 
 ```bash
-sf plugins install permission-sets@x.y.z
+sf plugins install sf-plugin-permission-sets@x.y.z
 ```
 
 Requires Salesforce CLI (`sf`) and Node.js 18+.
@@ -295,7 +295,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g @salesforce/cli
-      - run: sf plugins install permission-sets
+      - run: sf plugins install sf-plugin-permission-sets
       - run: sf ps check --file "permissions/*.yml" --strict
 
   plan:
@@ -305,7 +305,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g @salesforce/cli
-      - run: sf plugins install permission-sets
+      - run: sf plugins install sf-plugin-permission-sets
       # Auth via Sfdx auth URL stored in a secrets manager, never hardcode credentials
       - run: echo "$SF_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin --alias target
         env:
@@ -319,7 +319,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install -g @salesforce/cli
-      - run: sf plugins install permission-sets
+      - run: sf plugins install sf-plugin-permission-sets
       - run: echo "$SF_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin --alias target
         env:
           SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}

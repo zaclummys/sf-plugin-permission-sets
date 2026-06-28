@@ -2,7 +2,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
-const messages = Messages.loadMessages('permission-sets', 'hello.world');
+const messages = Messages.loadMessages('sf-plugin-permission-sets', 'hello.world');
 
 export type HelloWorldResult = {
   name: string;
