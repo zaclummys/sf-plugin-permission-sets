@@ -1,7 +1,6 @@
 {
     "name": "sf-plugin-permission-sets",
     "description": "",
-    "version": "0.0.0-dev",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/zaclummys/sf-plugin-permission-sets.git"
