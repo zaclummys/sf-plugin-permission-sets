@@ -19,7 +19,6 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Validations](#validations)
 - [Modes](#modes)
 - [Commands](#commands)
-- [CI/CD](#cicd)
 - [Inspiration & equivalents](#inspiration--equivalents)
 - [Versioning](#versioning)
 
@@ -27,7 +26,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 
 ## Why
 
-Permission set assignments drift. People get access for a project and keep it forever. Offboarding misses a set. Nobody can answer "who can see X and why?" without a SOQL spelunking session.
+Permission set assignments drift. People get access for a project and keep it forever. Offboarding misses a set. Nobody can answer "who can see X and why?" without a SOQL spelunking session. And in higher environments those grants happen by hand in Setup, with no review and no trail.
 
 This plugin makes the desired state **declarative and reviewable**:
 
@@ -36,6 +35,8 @@ This plugin makes the desired state **declarative and reviewable**:
 - ✅ **Safe by default:** deletions are opt-in and guarded by a delete threshold.
 - ✅ **CI-native:** fully offline `check`, exit codes for gating, and `--json` on every command.
 - ✅ **Flexible at the edges:** pick your file layout (by permission set or by user) and your sync mode.
+- ✅ **GitOps for access, the SFDX way:** assignments live in source and ship through the same git and CI pipeline as your metadata, instead of being clicked into Setup by hand.
+- ✅ **Fewer hands in Setup for higher environments:** because access is applied from git through CI, fewer people need direct Setup access in UAT and production, and every change is a reviewed pull request with a git audit trail.
 
 ## Install
 
@@ -202,11 +203,11 @@ FLAGS
   --strict                 Treat warnings as errors.
 
 CHECKS
-  • valid YAML & schema (unknown keys rejected)
-  • duplicate assignees / duplicate (user, target) pairs
-  • conflicting intent across files
-  • empty or malformed assignee usernames
-  • internal referential integrity
+  - valid YAML & schema (unknown keys rejected)
+  - duplicate assignees / duplicate (user, target) pairs
+  - conflicting intent across files
+  - empty or malformed assignee usernames
+  - internal referential integrity
 ```
 
 ### `sf ps validate`
@@ -291,73 +292,28 @@ FLAGS
   --permission-sets=<names>  Comma-separated list to export (default: all assignable).
 ```
 
-## CI/CD
-
-A typical ladder: lint on every PR, plan against a sandbox, apply on merge:
-
-```yaml
-# .github/workflows/ps-gitops.yml
-name: ps-gitops
-on:
-  pull_request:
-  push:
-    branches: [main]
-
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm install -g @salesforce/cli
-      - run: sf plugins install sf-plugin-permission-sets
-      - run: sf ps check --file "permissions/*.yml" --strict
-
-  plan:
-    if: github.event_name == 'pull_request'
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm install -g @salesforce/cli
-      - run: sf plugins install sf-plugin-permission-sets
-      # Auth via Sfdx auth URL stored in a secrets manager, never hardcode credentials
-      - run: echo "$SF_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin --alias target
-        env:
-          SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}
-      - run: sf ps plan -o target --file "permissions/*.yml" --mode sync --fail-on-drift
-
-  apply:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: npm install -g @salesforce/cli
-      - run: sf plugins install sf-plugin-permission-sets
-      - run: echo "$SF_AUTH_URL" | sf org login sfdx-url --sfdx-url-stdin --alias target
-        env:
-          SF_AUTH_URL: ${{ secrets.SF_AUTH_URL }}
-      - run: sf ps apply -o target --file "permissions/*.yml" --mode sync --no-prompt --max-deletes 25
-```
-
-> **Credentials:** the plugin never reads or stores secrets itself. It uses orgs you've already authenticated with `sf`. In CI, inject auth from your platform's secrets store (as above), not from committed files.
-
 ## Inspiration & equivalents
 
-The command surface borrows deliberately from tools you already know:
+This plugin's command surface borrows ideas from tools you already know:
 
-| This plugin          | Terraform              | CloudFormation / SAM            | sf core                    |
-| -------------------- | ---------------------- | ------------------------------- | -------------------------- |
-| `ps check`      | `terraform validate`   | `sam validate --lint`           | n/a                          |
-| `ps validate`   | `terraform plan` (refresh) | `cfn validate-template`     | `project deploy validate`  |
-| `ps plan`       | `terraform plan`       | `cfn create-change-set`         | `project deploy preview`   |
-| `ps apply`      | `terraform apply`      | `cfn execute-change-set` / `sam deploy` | `project deploy start` |
-| `ps export`     | `terraform import`     | n/a                               | n/a                          |
-| `--fail-on-drift`    | drift in plan exit code | `cfn detect-stack-drift`       | n/a                          |
+- [Terraform](https://developer.hashicorp.com/terraform/docs)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/)
+- [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/)
+- [Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
 
 ## Versioning
 
-Releases follow [semantic versioning](https://semver.org). You choose the bump by the git tag you create, and CI stamps and routes it to the right npm dist-tag.
+Releases follow [semantic versioning](https://semver.org). Snapshots are automatic, real releases are a manual decision.
+
+**Automatic, no action needed:**
+
+- Every push to `main` publishes a snapshot `0.0.0-dev.<run>` to the `dev` dist-tag.
+- Creating a release triggers CI to build, stamp the version from the tag, publish it with provenance, and smoke-test the result.
+
+**Manual, you decide and trigger:**
+
+- Choosing the version bump (patch, minor, or major).
+- Creating the GitHub Release, which is what triggers the publish above.
 
 | Bump | When | Example tag |
 | --- | --- | --- |
@@ -365,19 +321,19 @@ Releases follow [semantic versioning](https://semver.org). You choose the bump b
 | minor | new backward-compatible feature | `v0.2.0` |
 | major | breaking change to a command, flag, or the YAML schema | `v1.0.0` |
 
-| dist-tag | Source | Install |
-| --- | --- | --- |
-| `latest` | a GitHub Release with a normal tag like `v1.2.0` | `sf plugins install sf-plugin-permission-sets` |
-| `next` | a Release whose tag has a hyphen, like `v1.3.0-beta.1` | `sf plugins install sf-plugin-permission-sets@next` |
-| `dev` | every push to `main`, published as `0.0.0-dev.<run>` | `sf plugins install sf-plugin-permission-sets@dev` |
-
 Cut a release with a tag off `main`:
 
 ```bash
 gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 ```
 
-The `next` tag is selected whenever the version contains a hyphen, not by GitHub's prerelease checkbox. The `dev` snapshots publish automatically on every push to `main`, so they need no command.
+| dist-tag | Published by | Install |
+| --- | --- | --- |
+| `latest` | manual release with a normal tag like `v1.2.0` | `sf plugins install sf-plugin-permission-sets` |
+| `next` | manual release with a hyphenated tag like `v1.3.0-beta.1` | `sf plugins install sf-plugin-permission-sets@next` |
+| `dev` | automatic on every push to `main` | `sf plugins install sf-plugin-permission-sets@dev` |
+
+The `next` tag is selected whenever the version contains a hyphen, not by GitHub's prerelease checkbox.
 
 ## License
 
