@@ -1,7 +1,7 @@
 {
   "name": "sf-plugin-permission-sets",
   "description": "",
-  "version": "1.0.0",
+  "version": "0.0.0-dev",
   "dependencies": {
     "@oclif/core": "^4",
     "@salesforce/core": "^8",
