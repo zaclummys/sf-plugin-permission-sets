@@ -1,6 +1,6 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import { check } from '../../services/check.js';
+import { CheckService } from '../../services/check.js';
 import { formatFindings } from '../../core/report.js';
 import { Finding } from '../../core/model.js';
 
@@ -33,13 +33,16 @@ export default class Check extends SfCommand<PsCheckResult> {
 
     public async run(): Promise<PsCheckResult> {
         const { flags } = await this.parse(Check);
-        const result = await check({ files: flags.file, strict: flags.strict });
+
+        const service = new CheckService(flags.file, flags.strict);
+        const result = await service.run();
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);
         }
 
-        const assignees = new Set(result.assignments.map((a) => a.assignee));
+        const assignees = new Set(result.assignments.map((assignment) => assignment.assignee));
+
         this.log('');
         this.log(messages.getMessage('summary.counts', [String(result.errors), String(result.warnings)]));
 

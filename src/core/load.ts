@@ -6,7 +6,7 @@ import { normalize } from './normalize.js';
 import { DesiredAssignment, Finding, LoadResult } from './model.js';
 
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
-export function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
+function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
     const parsed = parseFile(text, file);
     if (!parsed.data) {
         return { assignments: [], findings: parsed.findings };
@@ -47,11 +47,12 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
 
     const seen = new Set<string>();
     const assignments: DesiredAssignment[] = [];
-    for (const a of collected) {
-        const dedupeKey = `${a.assignee} ${a.kind} ${a.target}`;
+
+    for (const assignment of collected) {
+        const dedupeKey = `${assignment.assignee} ${assignment.kind} ${assignment.target}`;
         if (seen.has(dedupeKey)) continue;
         seen.add(dedupeKey);
-        assignments.push(a);
+        assignments.push(assignment);
     }
 
     return { files, assignments, findings };
