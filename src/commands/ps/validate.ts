@@ -1,5 +1,6 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
+import { ConnectionOrgClient } from '../../adapters/org-client.js';
 import { ValidateService } from '../../services/validate.js';
 import { formatFindings } from '../../core/report.js';
 import { Finding } from '../../core/model.js';
@@ -34,7 +35,8 @@ export default class Validate extends SfCommand<PsValidateResult> {
         const { flags } = await this.parse(Validate);
 
         const connection = flags['target-org'].getConnection(flags['api-version']);
-        const service = new ValidateService(connection, flags.file);
+        const orgClient = new ConnectionOrgClient(connection);
+        const service = new ValidateService(orgClient, flags.file);
         const result = await service.run();
 
         for (const line of formatFindings(result.findings)) {

@@ -6,6 +6,12 @@ export type DesiredAssignment = {
     target: string;
 };
 
+/** A user as it exists in the org, in domain terms (no SObject field names). */
+export type OrgUser = {
+    username: string;
+    isActive: boolean;
+};
+
 export type FindingLevel = 'error' | 'warning';
 
 export type Finding = {
