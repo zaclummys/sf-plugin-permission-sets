@@ -16,10 +16,12 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Quick start](#quick-start)
 - [Permission files](#permission-files)
 - [Organizing files](#organizing-files)
+- [Validations](#validations)
 - [Modes](#modes)
 - [Commands](#commands)
 - [CI/CD](#cicd)
 - [Inspiration & equivalents](#inspiration--equivalents)
+- [Versioning](#versioning)
 
 ---
 
@@ -152,6 +154,18 @@ sf ps apply -o qa   --file "permissions/qa/*.yml"
 ```
 
 The two compose: a directory per environment, each split into functional files.
+
+## Validations
+
+Every run checks the files first. `check` runs the offline checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
+
+| Situation | Checked by | Severity | Result |
+| --- | --- | :---: | --- |
+| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
+| Same target listed twice for a user, like `[Sales_Manager, Sales_Manager]` | `check` (offline) | ⚠️ warning | Deduped |
+| A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
+| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
+| Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
 
 ## Modes
 
@@ -340,6 +354,30 @@ The command surface borrows deliberately from tools you already know:
 | `ps apply`      | `terraform apply`      | `cfn execute-change-set` / `sam deploy` | `project deploy start` |
 | `ps export`     | `terraform import`     | n/a                               | n/a                          |
 | `--fail-on-drift`    | drift in plan exit code | `cfn detect-stack-drift`       | n/a                          |
+
+## Versioning
+
+Releases follow [semantic versioning](https://semver.org). You choose the bump by the git tag you create, and CI stamps and routes it to the right npm dist-tag.
+
+| Bump | When | Example tag |
+| --- | --- | --- |
+| patch | bug fix, no behavior change | `v0.1.1` |
+| minor | new backward-compatible feature | `v0.2.0` |
+| major | breaking change to a command, flag, or the YAML schema | `v1.0.0` |
+
+| dist-tag | Source | Install |
+| --- | --- | --- |
+| `latest` | a GitHub Release with a normal tag like `v1.2.0` | `sf plugins install sf-plugin-permission-sets` |
+| `next` | a Release whose tag has a hyphen, like `v1.3.0-beta.1` | `sf plugins install sf-plugin-permission-sets@next` |
+| `dev` | every push to `main`, published as `0.0.0-dev.<run>` | `sf plugins install sf-plugin-permission-sets@dev` |
+
+Cut a release with a tag off `main`:
+
+```bash
+gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
+```
+
+The `next` tag is selected whenever the version contains a hyphen, not by GitHub's prerelease checkbox. The `dev` snapshots publish automatically on every push to `main`, so they need no command.
 
 ## License
 
