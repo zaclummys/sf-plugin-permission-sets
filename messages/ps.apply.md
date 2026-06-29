@@ -4,7 +4,7 @@ Reconcile a target org to match the permission set assignment files.
 
 # description
 
-Load the files, resolve every user and target against the org, diff the desired state against what the org currently has, then add and/or remove assignments per the mode. Additions and removals run through the sObject Collections API with partial success, so one bad record does not roll back the rest. Deletions are capped by --max-deletes and confirmed before they run. Run validate and a --dry-run first.
+Load the files, resolve every user and target against the org, diff the desired state against what the org currently has, then add, update expirations, and/or remove assignments per the mode. Additions, expiration updates, and removals run through the sObject Collections API with partial success, so one bad record does not roll back the rest. Deletions are capped by --max-deletes and confirmed before they run. Run validate and a --dry-run first.
 
 # flags.file.summary
 
@@ -12,7 +12,7 @@ YAML file or glob to apply. Repeatable.
 
 # flags.mode.summary
 
-Which half of the reconcile to run: additive adds only, destructive removes only, sync does both.
+Which half of the reconcile to run: additive adds missing assignments and updates expirations, destructive removes only, sync does both.
 
 # flags.max-deletes.summary
 
@@ -32,11 +32,11 @@ This will remove %s assignment(s) from the org. Continue?
 
 # summary.dryRun
 
-Dry run: %s to add, %s to remove. Nothing was changed.
+Dry run: %s to add, %s to update, %s to remove. Nothing was changed.
 
 # summary.applied
 
-Applied: %s added, %s removed.
+Applied: %s added, %s updated, %s removed.
 
 # summary.declined
 

@@ -6,6 +6,8 @@ export type DesiredAssignment = {
     assignee: string;
     kind: Kind;
     target: string;
+    /** ISO 8601 datetime the grant should expire, if any. Only permission sets and groups support it. */
+    expiration?: string;
 };
 
 /** A user as it exists in the org, in domain terms (no SObject field names). */
@@ -27,6 +29,17 @@ export type ActualAssignment = {
     assignee: string;
     kind: Kind;
     target: string;
+    /** The expiration the org has on record, if any. */
+    expiration?: string;
+};
+
+/** An existing assignment whose expiration should change. `expiration` undefined clears it. */
+export type AssignmentUpdate = {
+    recordId: string;
+    assignee: string;
+    kind: Kind;
+    target: string;
+    expiration?: string;
 };
 
 /** A resolved managed target: its kind and the org id it resolved to. */
@@ -44,6 +57,7 @@ export type ResolvedAddition = DesiredAssignment & {
 /** The change set between the desired model and the org's current state. */
 export type Diff = {
     toAdd: DesiredAssignment[];
+    toUpdate: AssignmentUpdate[];
     toRemove: ActualAssignment[];
     unchanged: ActualAssignment[];
 };
@@ -53,7 +67,7 @@ export type AssignmentOutcome = {
     assignee: string;
     kind: Kind;
     target: string;
-    operation: 'add' | 'remove';
+    operation: 'add' | 'update' | 'remove';
     success: boolean;
     message?: string;
 };

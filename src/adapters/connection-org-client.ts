@@ -2,6 +2,7 @@ import { Connection } from '@salesforce/core';
 import {
     ActualAssignment,
     AssignmentOutcome,
+    AssignmentUpdate,
     DesiredAssignment,
     Kind,
     OrgTarget,
@@ -23,6 +24,7 @@ type MembershipRecord = {
     PermissionSet: { Name: string };
     PermissionSetGroup: { DeveloperName: string } | null;
     PermissionSetGroupId: string | null;
+    ExpirationDate: string | null;
 };
 
 type LicenseRecord = {
@@ -73,7 +75,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 /** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
 function outcomeOf(
     assignment: { assignee: string; kind: Kind; target: string },
-    operation: 'add' | 'remove',
+    operation: 'add' | 'update' | 'remove',
     result: DmlResult | undefined
 ): AssignmentOutcome {
     const success = result?.success ?? false;
@@ -89,10 +91,16 @@ function outcomeOf(
     };
 }
 
+/** A DML create record field map. ExpirationDate may be null to clear it. */
+type DmlRecord = Record<string, string | null>;
+
+/** A DML update record: the id to update, plus the expiration to set (null clears it). */
+type UpdateRecord = { Id: string; ExpirationDate: string | null };
+
 /** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */
 function additionBatches(
     additions: ResolvedAddition[]
-): Array<{ sobject: string; additions: ResolvedAddition[]; records: Array<Record<string, string>> }> {
+): Array<{ sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }> {
     const bySobject = new Map<string, ResolvedAddition[]>();
     for (const addition of additions) {
         const { sobject } = assignmentObjects[addition.kind];
@@ -101,15 +109,40 @@ function additionBatches(
         bySobject.set(sobject, grouped);
     }
 
-    const batches: Array<{ sobject: string; additions: ResolvedAddition[]; records: Array<Record<string, string>> }> =
-        [];
+    const batches: Array<{ sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }> = [];
     for (const [sobject, grouped] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records = batch.map((addition) => ({
                 AssigneeId: addition.assigneeId,
                 [assignmentObjects[addition.kind].idField]: addition.targetId,
+                ...(addition.expiration ? { ExpirationDate: addition.expiration } : {}),
             }));
             batches.push({ sobject, additions: batch, records });
+        }
+    }
+    return batches;
+}
+
+/** Group expiration updates by sObject and chunk them, building the Id + ExpirationDate records. */
+function updateBatches(
+    updates: AssignmentUpdate[]
+): Array<{ sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }> {
+    const bySobject = new Map<string, AssignmentUpdate[]>();
+    for (const update of updates) {
+        const { sobject } = assignmentObjects[update.kind];
+        const grouped = bySobject.get(sobject) ?? [];
+        grouped.push(update);
+        bySobject.set(sobject, grouped);
+    }
+
+    const batches: Array<{ sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }> = [];
+    for (const [sobject, grouped] of bySobject) {
+        for (const batch of chunk(grouped, collectionBatchSize)) {
+            const records: UpdateRecord[] = batch.map((update) => ({
+                Id: update.recordId,
+                ExpirationDate: update.expiration ?? null,
+            }));
+            batches.push({ sobject, updates: batch, records });
         }
     }
     return batches;
@@ -158,7 +191,7 @@ export class ConnectionOrgClient implements OrgClient {
     public async listAssignments(): Promise<DesiredAssignment[]> {
         const [memberships, licenses] = await Promise.all([
             this.query<MembershipRecord>(
-                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
+                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
                     'FROM PermissionSetAssignment ' +
                     'WHERE Assignee.IsActive = true AND PermissionSet.IsOwnedByProfile = false'
             ),
@@ -172,17 +205,20 @@ export class ConnectionOrgClient implements OrgClient {
         const assignments: DesiredAssignment[] = [];
 
         for (const record of memberships) {
+            const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
             if (record.PermissionSetGroupId && record.PermissionSetGroup) {
                 assignments.push({
                     assignee: record.Assignee.Username,
                     kind: 'permissionSetGroup',
                     target: record.PermissionSetGroup.DeveloperName,
+                    ...expiration,
                 });
             } else {
                 assignments.push({
                     assignee: record.Assignee.Username,
                     kind: 'permissionSet',
                     target: record.PermissionSet.Name,
+                    ...expiration,
                 });
             }
         }
@@ -210,25 +246,28 @@ export class ConnectionOrgClient implements OrgClient {
         if (groupIds.length > 0) memberClauses.push(`PermissionSetGroupId IN (${inList(groupIds)})`);
         if (memberClauses.length > 0) {
             const soql =
-                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
+                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
                 `FROM PermissionSetAssignment WHERE ${memberClauses.join(' OR ')}`;
             tasks.push(
                 this.query<MembershipRecord>(soql).then((records) =>
-                    records.map((record) =>
-                        record.PermissionSetGroupId && record.PermissionSetGroup
+                    records.map((record) => {
+                        const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
+                        return record.PermissionSetGroupId && record.PermissionSetGroup
                             ? {
                                   recordId: record.Id,
                                   assignee: record.Assignee.Username,
                                   kind: 'permissionSetGroup' as const,
                                   target: record.PermissionSetGroup.DeveloperName,
+                                  ...expiration,
                               }
                             : {
                                   recordId: record.Id,
                                   assignee: record.Assignee.Username,
                                   kind: 'permissionSet' as const,
                                   target: record.PermissionSet.Name,
-                              }
-                    )
+                                  ...expiration,
+                              };
+                    })
                 )
             );
         }
@@ -268,6 +307,26 @@ export class ConnectionOrgClient implements OrgClient {
         for (const { batch, results } of settled) {
             batch.additions.forEach((addition, index) => {
                 outcomes.push(outcomeOf(addition, 'add', results[index]));
+            });
+        }
+        return outcomes;
+    }
+
+    public async updateAssignments(updates: AssignmentUpdate[]): Promise<AssignmentOutcome[]> {
+        const batches = updateBatches(updates);
+        const settled = await Promise.all(
+            batches.map((batch) =>
+                this.connection.update(batch.sobject, batch.records, { allOrNone: false }).then((results) => ({
+                    batch,
+                    results: results as DmlResult[],
+                }))
+            )
+        );
+
+        const outcomes: AssignmentOutcome[] = [];
+        for (const { batch, results } of settled) {
+            batch.updates.forEach((update, index) => {
+                outcomes.push(outcomeOf(update, 'update', results[index]));
             });
         }
         return outcomes;

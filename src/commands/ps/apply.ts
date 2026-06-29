@@ -11,8 +11,10 @@ const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
 export type PsApplyResult = {
     status: string;
     toAdd: number;
+    toUpdate: number;
     toRemove: number;
     added: number;
+    updated: number;
     removed: number;
     failures: number;
 };
@@ -74,14 +76,17 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
 
         const added = result.outcomes.filter((outcome) => outcome.operation === 'add' && outcome.success).length;
+        const updated = result.outcomes.filter((outcome) => outcome.operation === 'update' && outcome.success).length;
         const removed = result.outcomes.filter((outcome) => outcome.operation === 'remove' && outcome.success).length;
         const failures = result.outcomes.filter((outcome) => !outcome.success);
 
         const summary: PsApplyResult = {
             status: result.status,
             toAdd: result.diff.toAdd.length,
+            toUpdate: result.diff.toUpdate.length,
             toRemove: result.diff.toRemove.length,
             added,
+            updated,
             removed,
             failures: failures.length,
         };
@@ -108,7 +113,13 @@ export default class Apply extends SfCommand<PsApplyResult> {
         this.reportDrift(result.drift, flags.mode);
 
         if (result.status === 'dry-run') {
-            this.log(messages.getMessage('summary.dryRun', [String(summary.toAdd), String(summary.toRemove)]));
+            this.log(
+                messages.getMessage('summary.dryRun', [
+                    String(summary.toAdd),
+                    String(summary.toUpdate),
+                    String(summary.toRemove),
+                ])
+            );
             return summary;
         }
 
@@ -117,7 +128,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
             return summary;
         }
 
-        this.log(messages.getMessage('summary.applied', [String(added), String(removed)]));
+        this.log(messages.getMessage('summary.applied', [String(added), String(updated), String(removed)]));
         for (const failure of failures) {
             this.log(
                 messages.getMessage('failure.line', [
@@ -137,8 +148,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
         return summary;
     }
 
-    private reportDrift(drift: { adds: number; removes: number }, mode: string): void {
+    private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
         if (drift.adds > 0) this.log(messages.getMessage('drift.note', [String(drift.adds), mode]));
+        if (drift.updates > 0) this.log(messages.getMessage('drift.note', [String(drift.updates), mode]));
         if (drift.removes > 0) this.log(messages.getMessage('drift.note', [String(drift.removes), mode]));
     }
 }

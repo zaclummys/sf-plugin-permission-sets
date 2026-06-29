@@ -12,11 +12,11 @@ YAML file or glob to plan. Repeatable.
 
 # flags.mode.summary
 
-Which half of the reconcile to preview: additive adds only, destructive removes only, sync does both. Adds and removes are always shown either way.
+Which half of the reconcile to preview: additive adds and updates expirations, destructive removes only, sync does both. Adds, expiration updates, and removes are always shown either way.
 
 # summary.counts
 
-Plan: %s to add, %s to remove, %s unchanged.
+Plan: %s to add, %s to update, %s to remove, %s unchanged.
 
 # summary.next
 

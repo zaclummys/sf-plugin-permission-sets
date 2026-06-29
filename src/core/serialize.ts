@@ -1,31 +1,42 @@
 import { stringify } from 'yaml';
 import { DesiredAssignment } from './model.js';
-import { FileShape } from './schema.js';
-import { kindKeys } from './normalize.js';
+import { kindKeys, ScopeKey } from './normalize.js';
+
+/** A single serialized entry: a bare name, or a name with an expiration. */
+type SerializedEntry = string | { name: string; expiration: string };
+
+/** The YAML shape we emit. A superset of FileShape: every scope accepts the object form. */
+type OutputFile = { users: Record<string, Partial<Record<ScopeKey, SerializedEntry[]>>> };
 
 /**
- * Emit canonical (assignee, kind, target) tuples back to a user-keyed YAML
- * document: the inverse of normalize. Usernames and targets are sorted and
- * de-duplicated so the output is deterministic, and empty scopes are omitted.
+ * Emit canonical assignments back to a user-keyed YAML document: the inverse of
+ * normalize. Usernames and targets are sorted and de-duplicated so the output is
+ * deterministic, empty scopes are omitted, and an assignment with an expiration
+ * is written as the object form so it round-trips through the schema.
  */
 export function serializeAssignments(assignments: DesiredAssignment[]): string {
     const usernames = [...new Set(assignments.map((assignment) => assignment.assignee))].sort();
-    const users: FileShape['users'] = {};
+    const users: OutputFile['users'] = {};
 
     for (const username of usernames) {
-        const entry: FileShape['users'][string] = {};
+        const entry: OutputFile['users'][string] = {};
 
         for (const [kind, key] of kindKeys) {
-            const targets = [
-                ...new Set(
-                    assignments
-                        .filter((assignment) => assignment.assignee === username && assignment.kind === kind)
-                        .map((assignment) => assignment.target)
-                ),
-            ].sort();
+            const expirationByTarget = new Map<string, string | undefined>();
+            for (const assignment of assignments) {
+                const mine = assignment.assignee === username && assignment.kind === kind;
+                if (mine && !expirationByTarget.has(assignment.target)) {
+                    expirationByTarget.set(assignment.target, assignment.expiration);
+                }
+            }
 
-            if (targets.length > 0) {
-                entry[key] = targets;
+            const entries: SerializedEntry[] = [...expirationByTarget.keys()].sort().map((target) => {
+                const expiration = expirationByTarget.get(target);
+                return expiration ? { name: target, expiration } : target;
+            });
+
+            if (entries.length > 0) {
+                entry[key] = entries;
             }
         }
 

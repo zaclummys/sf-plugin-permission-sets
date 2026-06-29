@@ -11,6 +11,7 @@ const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.plan');
 export type PsPlanResult = {
     status: string;
     toAdd: number;
+    toUpdate: number;
     toRemove: number;
     unchanged: number;
     drift: number;
@@ -52,9 +53,10 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const summary: PsPlanResult = {
             status: result.status,
             toAdd: result.diff.toAdd.length,
+            toUpdate: result.diff.toUpdate.length,
             toRemove: result.diff.toRemove.length,
             unchanged: result.diff.unchanged.length,
-            drift: result.drift.adds + result.drift.removes,
+            drift: result.drift.adds + result.drift.updates + result.drift.removes,
         };
 
         if (result.status === 'invalid') {
@@ -73,12 +75,13 @@ export default class Plan extends SfCommand<PsPlanResult> {
         this.log(
             messages.getMessage('summary.counts', [
                 String(summary.toAdd),
+                String(summary.toUpdate),
                 String(summary.toRemove),
                 String(summary.unchanged),
             ])
         );
 
-        const pending = summary.toAdd + summary.toRemove;
+        const pending = summary.toAdd + summary.toUpdate + summary.toRemove;
         if (pending > 0) {
             this.log(messages.getMessage('summary.next', [flags.mode]));
         }
@@ -86,8 +89,9 @@ export default class Plan extends SfCommand<PsPlanResult> {
         return summary;
     }
 
-    private reportDrift(drift: { adds: number; removes: number }, mode: string): void {
+    private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
         if (drift.adds > 0) this.log(messages.getMessage('drift.note', [String(drift.adds), mode]));
+        if (drift.updates > 0) this.log(messages.getMessage('drift.note', [String(drift.updates), mode]));
         if (drift.removes > 0) this.log(messages.getMessage('drift.note', [String(drift.removes), mode]));
     }
 }

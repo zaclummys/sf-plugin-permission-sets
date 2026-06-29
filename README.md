@@ -114,6 +114,24 @@ users:
       - Sales_Manager
 ```
 
+### Timed access (expiration)
+
+A permission set or permission set group entry can be a plain name or an object with an `expiration`. The expiration is an ISO 8601 datetime, and Salesforce removes access automatically when it passes. Plain names never expire.
+
+```yaml
+users:
+  contractor@acme.com:
+    permissionSets:
+      - Read_Only                              # permanent
+      - name: Sales_Manager                    # expires automatically
+        expiration: 2026-12-31T23:59:59Z
+    permissionSetGroups:
+      - name: Project_Phoenix_Bundle
+        expiration: 2026-09-30T00:00:00Z
+```
+
+Expiration is a property of the grant, so `plan` and `apply` treat a changed `expiration` on an already-assigned target as an **update** (the `~` line), not an add or a remove. Updates ride with the additive half: they run in `additive` and `sync` modes and never count against `--max-deletes`. Permission set **licenses** cannot expire (Salesforce has no expiration on `PermissionSetLicenseAssign`), so the object form is rejected there. `export` writes the object form for any assignment that currently has an expiration in the org.
+
 The `--file` flag is repeatable and the plugin expands globs itself, so all of these work:
 
 ```bash
@@ -255,6 +273,7 @@ Org: prod (00D5g0000000abcEAA)   Mode: sync
 permissionSets:
   Sales_Manager
     + asmith@acme.com
+    ~ csmith@acme.com (expires 2026-12-31T23:59:59Z)
     - bwayne@acme.com        (undeclared, will be removed)
     = jdoe@acme.com          (no change)
   Report_Builder
@@ -263,7 +282,7 @@ permissionSets:
 permissionSetGroups:
   Sales_Team_Bundle          (no changes)
 
-Plan: 2 to add, 1 to remove, 1 unchanged.
+Plan: 2 to add, 1 to update, 1 to remove, 1 unchanged.
 ► Review, then run:  sf ps apply -o prod --mode sync
 ```
 

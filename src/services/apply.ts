@@ -12,6 +12,7 @@ import {
 import {
     ActualAssignment,
     AssignmentOutcome,
+    AssignmentUpdate,
     DesiredAssignment,
     Diff,
     Kind,
@@ -39,7 +40,7 @@ export type ApplyResult = {
     findings: Finding[];
     diff: Diff;
     /** What the chosen mode did not act on (surfaced as drift). */
-    drift: { adds: number; removes: number };
+    drift: { adds: number; updates: number; removes: number };
     outcomes: AssignmentOutcome[];
     status: ApplyStatus;
     failed: boolean;
@@ -51,7 +52,7 @@ type Resolution = {
     targetIds: Record<Kind, Map<string, string>>;
 };
 
-const emptyDiff: Diff = { toAdd: [], toRemove: [], unchanged: [] };
+const emptyDiff: Diff = { toAdd: [], toUpdate: [], toRemove: [], unchanged: [] };
 
 /** An aborted-before-any-change result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Finding[]): ApplyResult {
@@ -59,7 +60,7 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
         files,
         findings,
         diff: emptyDiff,
-        drift: { adds: 0, removes: 0 },
+        drift: { adds: 0, updates: 0, removes: 0 },
         outcomes: [],
         status: 'invalid',
         failed: true,
@@ -107,9 +108,11 @@ export class ApplyService {
 
         const { mode, maxDeletes, dryRun } = this.input;
         const additions = mode === 'destructive' ? [] : diff.toAdd;
+        const updates = mode === 'destructive' ? [] : diff.toUpdate;
         const removals = mode === 'additive' ? [] : diff.toRemove;
         const drift = {
             adds: mode === 'destructive' ? diff.toAdd.length : 0,
+            updates: mode === 'destructive' ? diff.toUpdate.length : 0,
             removes: mode === 'additive' ? diff.toRemove.length : 0,
         };
 
@@ -136,7 +139,7 @@ export class ApplyService {
             }
         }
 
-        const outcomes = await this.execute(additions, removals, resolution);
+        const outcomes = await this.execute(additions, updates, removals, resolution);
         const failed = outcomes.some((outcome) => !outcome.success);
 
         return { files: loaded.files, findings, diff, drift, outcomes, status: 'applied', failed };
@@ -177,6 +180,7 @@ export class ApplyService {
 
     private async execute(
         additions: DesiredAssignment[],
+        updates: AssignmentUpdate[],
         removals: ActualAssignment[],
         resolution: Resolution
     ): Promise<AssignmentOutcome[]> {
@@ -186,11 +190,12 @@ export class ApplyService {
             targetId: resolution.targetIds[addition.kind].get(addition.target.toLowerCase()) ?? '',
         }));
 
-        const [added, removed] = await Promise.all([
+        const [added, updated, removed] = await Promise.all([
             resolved.length > 0 ? this.org.addAssignments(resolved) : Promise.resolve<AssignmentOutcome[]>([]),
+            updates.length > 0 ? this.org.updateAssignments(updates) : Promise.resolve<AssignmentOutcome[]>([]),
             removals.length > 0 ? this.org.removeAssignments(removals) : Promise.resolve<AssignmentOutcome[]>([]),
         ]);
 
-        return [...added, ...removed];
+        return [...added, ...updated, ...removed];
     }
 }

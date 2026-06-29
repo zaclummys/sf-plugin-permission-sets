@@ -26,7 +26,7 @@ export type PlanResult = {
     findings: Finding[];
     diff: Diff;
     /** What the chosen mode would not act on (surfaced as drift). */
-    drift: { adds: number; removes: number };
+    drift: { adds: number; updates: number; removes: number };
     status: PlanStatus;
 };
 
@@ -36,11 +36,11 @@ type Resolution = {
     targetIds: Record<Kind, Map<string, string>>;
 };
 
-const emptyDiff: Diff = { toAdd: [], toRemove: [], unchanged: [] };
+const emptyDiff: Diff = { toAdd: [], toUpdate: [], toRemove: [], unchanged: [] };
 
 /** An aborted-before-the-diff result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Finding[]): PlanResult {
-    return { files, findings, diff: emptyDiff, drift: { adds: 0, removes: 0 }, status: 'invalid' };
+    return { files, findings, diff: emptyDiff, drift: { adds: 0, updates: 0, removes: 0 }, status: 'invalid' };
 }
 
 /**
@@ -73,6 +73,7 @@ export class PlanService {
         const { mode } = this.input;
         const drift = {
             adds: mode === 'destructive' ? diff.toAdd.length : 0,
+            updates: mode === 'destructive' ? diff.toUpdate.length : 0,
             removes: mode === 'additive' ? diff.toRemove.length : 0,
         };
 

@@ -32,7 +32,9 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
 
             scopeCount += 1;
             const seen = new Set<string>();
-            for (const target of list) {
+            for (const item of list) {
+                const target = typeof item === 'string' ? item : item.name;
+                const expiration = typeof item === 'string' ? undefined : item.expiration;
                 if (seen.has(target)) {
                     findings.push(
                         warning('DUP_TARGET', `${username}: ${target} is listed twice under ${key}`, { file })
@@ -40,7 +42,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
                     continue;
                 }
                 seen.add(target);
-                assignments.push({ assignee: username, kind, target });
+                assignments.push({ assignee: username, kind, target, ...(expiration ? { expiration } : {}) });
             }
         }
 
