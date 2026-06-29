@@ -1,8 +1,7 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { CheckService } from '../../services/check.js';
-import { formatFindings } from '../../core/report.js';
-import { Finding } from '../../core/model.js';
+import { formatFindings, Finding } from '../../core/finding.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.check');

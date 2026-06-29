@@ -3,7 +3,8 @@ import { globby } from 'globby';
 import { parseFile } from './parse.js';
 import { validateFile } from './schema.js';
 import { normalize } from './normalize.js';
-import { DesiredAssignment, Finding, LoadResult } from './model.js';
+import { DesiredAssignment, LoadResult } from './model.js';
+import { Finding, error } from './finding.js';
 
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
 function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
@@ -31,7 +32,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         return {
             files,
             assignments: [],
-            findings: [{ level: 'error', code: 'NO_FILES', message: `no files matched: ${patterns.join(', ')}` }],
+            findings: [error('NO_FILES', `no files matched: ${patterns.join(', ')}`)],
         };
     }
 

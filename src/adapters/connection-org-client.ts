@@ -1,11 +1,24 @@
 import { Connection } from '@salesforce/core';
-import { DesiredAssignment, Kind, OrgUser } from '../core/model.js';
+import {
+    ActualAssignment,
+    AssignmentOutcome,
+    DesiredAssignment,
+    Kind,
+    OrgTarget,
+    OrgUser,
+    ResolvedAddition,
+    TargetRef,
+} from '../core/model.js';
 import { OrgClient } from '../services/org-client.js';
 
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
 
+/** SObject + id field per kind, for inserting and deleting assignments. */
+type AssignmentObject = { sobject: string; idField: string };
+
 /** Shapes of the assignment rows we read back, with relationship fields nested. */
 type MembershipRecord = {
+    Id: string;
     Assignee: { Username: string };
     PermissionSet: { Name: string };
     PermissionSetGroup: { DeveloperName: string } | null;
@@ -13,9 +26,13 @@ type MembershipRecord = {
 };
 
 type LicenseRecord = {
+    Id: string;
     Assignee: { Username: string };
     PermissionSetLicense: { DeveloperName: string };
 };
+
+/** The slice of a DML save/delete result we report on. Structurally a jsforce SaveResult. */
+type DmlResult = { success: boolean; errors: Array<{ message: string }> };
 
 /** SObject + naming field per kind. The Salesforce schema knowledge lives here, not in core. */
 const targetObjects: Record<Kind, TargetObject> = {
@@ -23,6 +40,16 @@ const targetObjects: Record<Kind, TargetObject> = {
     permissionSetGroup: { sobject: 'PermissionSetGroup', field: 'DeveloperName' },
     permissionSetLicense: { sobject: 'PermissionSetLicense', field: 'DeveloperName' },
 };
+
+/** SObject + foreign-key field to set per kind when assigning. */
+const assignmentObjects: Record<Kind, AssignmentObject> = {
+    permissionSet: { sobject: 'PermissionSetAssignment', idField: 'PermissionSetId' },
+    permissionSetGroup: { sobject: 'PermissionSetAssignment', idField: 'PermissionSetGroupId' },
+    permissionSetLicense: { sobject: 'PermissionSetLicenseAssign', idField: 'PermissionSetLicenseId' },
+};
+
+/** The sObject Collections API caps each create/delete call at 200 records. */
+const collectionBatchSize = 200;
 
 /** Escape a value for safe inclusion in a SOQL string literal. */
 function soqlLiteral(value: string): string {
@@ -34,36 +61,109 @@ function inList(values: string[]): string {
     return values.map((value) => `'${soqlLiteral(value)}'`).join(', ');
 }
 
+/** Split items into chunks of at most `size`. */
+function chunk<T>(items: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let index = 0; index < items.length; index += size) {
+        chunks.push(items.slice(index, index + size));
+    }
+    return chunks;
+}
+
+/** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
+function outcomeOf(
+    assignment: { assignee: string; kind: Kind; target: string },
+    operation: 'add' | 'remove',
+    result: DmlResult | undefined
+): AssignmentOutcome {
+    const success = result?.success ?? false;
+    const message = result && !result.success ? result.errors.map((error) => error.message).join('; ') : undefined;
+
+    return {
+        assignee: assignment.assignee,
+        kind: assignment.kind,
+        target: assignment.target,
+        operation,
+        success,
+        message,
+    };
+}
+
+/** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */
+function additionBatches(
+    additions: ResolvedAddition[]
+): Array<{ sobject: string; additions: ResolvedAddition[]; records: Array<Record<string, string>> }> {
+    const bySobject = new Map<string, ResolvedAddition[]>();
+    for (const addition of additions) {
+        const { sobject } = assignmentObjects[addition.kind];
+        const grouped = bySobject.get(sobject) ?? [];
+        grouped.push(addition);
+        bySobject.set(sobject, grouped);
+    }
+
+    const batches: Array<{ sobject: string; additions: ResolvedAddition[]; records: Array<Record<string, string>> }> =
+        [];
+    for (const [sobject, grouped] of bySobject) {
+        for (const batch of chunk(grouped, collectionBatchSize)) {
+            const records = batch.map((addition) => ({
+                AssigneeId: addition.assigneeId,
+                [assignmentObjects[addition.kind].idField]: addition.targetId,
+            }));
+            batches.push({ sobject, additions: batch, records });
+        }
+    }
+    return batches;
+}
+
+/** Group removals by sObject and chunk them for the Collections API. */
+function removalBatches(removals: ActualAssignment[]): Array<{ sobject: string; removals: ActualAssignment[] }> {
+    const bySobject = new Map<string, ActualAssignment[]>();
+    for (const removal of removals) {
+        const { sobject } = assignmentObjects[removal.kind];
+        const grouped = bySobject.get(sobject) ?? [];
+        grouped.push(removal);
+        bySobject.set(sobject, grouped);
+    }
+
+    const batches: Array<{ sobject: string; removals: ActualAssignment[] }> = [];
+    for (const [sobject, grouped] of bySobject) {
+        for (const batch of chunk(grouped, collectionBatchSize)) {
+            batches.push({ sobject, removals: batch });
+        }
+    }
+    return batches;
+}
+
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
 export class ConnectionOrgClient implements OrgClient {
     public constructor(private readonly connection: Connection) {}
 
     public async findUsers(usernames: string[]): Promise<OrgUser[]> {
-        const records = await this.query<{ Username: string; IsActive: boolean }>(
-            `SELECT Username, IsActive FROM User WHERE Username IN (${inList(usernames)})`
+        const records = await this.query<{ Id: string; Username: string; IsActive: boolean }>(
+            `SELECT Id, Username, IsActive FROM User WHERE Username IN (${inList(usernames)})`
         );
 
-        return records.map((record) => ({ username: record.Username, isActive: record.IsActive }));
+        return records.map((record) => ({ id: record.Id, username: record.Username, isActive: record.IsActive }));
     }
 
-    public async findTargets(kind: Kind, names: string[]): Promise<string[]> {
+    public async findTargets(kind: Kind, names: string[]): Promise<OrgTarget[]> {
         const { sobject, field } = targetObjects[kind];
         const records = await this.query<Record<string, string>>(
-            `SELECT ${field} FROM ${sobject} WHERE ${field} IN (${inList(names)})`
+            `SELECT Id, ${field} FROM ${sobject} WHERE ${field} IN (${inList(names)})`
         );
 
-        return records.map((record) => record[field]);
+        return records.map((record) => ({ id: record.Id, name: record[field] }));
     }
 
     public async listAssignments(): Promise<DesiredAssignment[]> {
         const [memberships, licenses] = await Promise.all([
             this.query<MembershipRecord>(
-                'SELECT Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
+                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
                     'FROM PermissionSetAssignment ' +
                     'WHERE Assignee.IsActive = true AND PermissionSet.IsOwnedByProfile = false'
             ),
             this.query<LicenseRecord>(
-                'SELECT Assignee.Username, PermissionSetLicense.DeveloperName ' +
+                'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
                     'FROM PermissionSetLicenseAssign ' +
                     'WHERE Assignee.IsActive = true'
             ),
@@ -96,6 +196,104 @@ export class ConnectionOrgClient implements OrgClient {
         }
 
         return assignments;
+    }
+
+    public async currentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]> {
+        const permissionSetIds = targets.filter((ref) => ref.kind === 'permissionSet').map((ref) => ref.id);
+        const groupIds = targets.filter((ref) => ref.kind === 'permissionSetGroup').map((ref) => ref.id);
+        const licenseIds = targets.filter((ref) => ref.kind === 'permissionSetLicense').map((ref) => ref.id);
+
+        const tasks: Array<Promise<ActualAssignment[]>> = [];
+
+        const memberClauses: string[] = [];
+        if (permissionSetIds.length > 0) memberClauses.push(`PermissionSetId IN (${inList(permissionSetIds)})`);
+        if (groupIds.length > 0) memberClauses.push(`PermissionSetGroupId IN (${inList(groupIds)})`);
+        if (memberClauses.length > 0) {
+            const soql =
+                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
+                `FROM PermissionSetAssignment WHERE ${memberClauses.join(' OR ')}`;
+            tasks.push(
+                this.query<MembershipRecord>(soql).then((records) =>
+                    records.map((record) =>
+                        record.PermissionSetGroupId && record.PermissionSetGroup
+                            ? {
+                                  recordId: record.Id,
+                                  assignee: record.Assignee.Username,
+                                  kind: 'permissionSetGroup' as const,
+                                  target: record.PermissionSetGroup.DeveloperName,
+                              }
+                            : {
+                                  recordId: record.Id,
+                                  assignee: record.Assignee.Username,
+                                  kind: 'permissionSet' as const,
+                                  target: record.PermissionSet.Name,
+                              }
+                    )
+                )
+            );
+        }
+
+        if (licenseIds.length > 0) {
+            const soql =
+                'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
+                `FROM PermissionSetLicenseAssign WHERE PermissionSetLicenseId IN (${inList(licenseIds)})`;
+            tasks.push(
+                this.query<LicenseRecord>(soql).then((records) =>
+                    records.map((record) => ({
+                        recordId: record.Id,
+                        assignee: record.Assignee.Username,
+                        kind: 'permissionSetLicense' as const,
+                        target: record.PermissionSetLicense.DeveloperName,
+                    }))
+                )
+            );
+        }
+
+        const results = await Promise.all(tasks);
+        return results.flat();
+    }
+
+    public async addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]> {
+        const batches = additionBatches(additions);
+        const settled = await Promise.all(
+            batches.map((batch) =>
+                this.connection.create(batch.sobject, batch.records, { allOrNone: false }).then((results) => ({
+                    batch,
+                    results: results as DmlResult[],
+                }))
+            )
+        );
+
+        const outcomes: AssignmentOutcome[] = [];
+        for (const { batch, results } of settled) {
+            batch.additions.forEach((addition, index) => {
+                outcomes.push(outcomeOf(addition, 'add', results[index]));
+            });
+        }
+        return outcomes;
+    }
+
+    public async removeAssignments(removals: ActualAssignment[]): Promise<AssignmentOutcome[]> {
+        const batches = removalBatches(removals);
+        const settled = await Promise.all(
+            batches.map((batch) =>
+                this.connection
+                    .destroy(
+                        batch.sobject,
+                        batch.removals.map((removal) => removal.recordId),
+                        { allOrNone: false }
+                    )
+                    .then((results) => ({ batch, results: results as DmlResult[] }))
+            )
+        );
+
+        const outcomes: AssignmentOutcome[] = [];
+        for (const { batch, results } of settled) {
+            batch.removals.forEach((removal, index) => {
+                outcomes.push(outcomeOf(removal, 'remove', results[index]));
+            });
+        }
+        return outcomes;
     }
 
     private async query<T>(soql: string): Promise<T[]> {

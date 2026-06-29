@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Finding } from './model.js';
+import { Finding, error } from './finding.js';
 
 const scopeList = z.array(z.string().min(1)).optional();
 
@@ -22,11 +22,8 @@ export function validateFile(data: unknown, file: string): { data?: FileShape; f
         return { data: parsed.data, findings: [] };
     }
     return {
-        findings: parsed.error.issues.map((issue) => ({
-            level: 'error',
-            code: 'SCHEMA',
-            message: `${issue.path.join('.') || '(root)'}: ${issue.message}`,
-            file,
-        })),
+        findings: parsed.error.issues.map((issue) =>
+            error('SCHEMA', `${issue.path.join('.') || '(root)'}: ${issue.message}`, { file })
+        ),
     };
 }

@@ -1,7 +1,7 @@
 import { loadFiles } from '../core/load.js';
-import { countFindings } from '../core/report.js';
 import { kinds, distinctAssignees, distinctTargets, evaluateUsers, evaluateTargets } from '../core/resolve.js';
-import { DesiredAssignment, Finding } from '../core/model.js';
+import { DesiredAssignment } from '../core/model.js';
+import { Finding, countFindings } from '../core/finding.js';
 import { OrgClient } from './org-client.js';
 
 export type ValidateResult = {
@@ -46,7 +46,15 @@ export class ValidateService {
         for (const kind of kinds) {
             const targets = distinctTargets(assignments, kind);
             if (targets.length > 0) {
-                tasks.push(this.org.findTargets(kind, targets).then((found) => evaluateTargets(kind, targets, found)));
+                tasks.push(
+                    this.org.findTargets(kind, targets).then((found) =>
+                        evaluateTargets(
+                            kind,
+                            targets,
+                            found.map((target) => target.name)
+                        )
+                    )
+                );
             }
         }
 

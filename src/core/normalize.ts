@@ -1,5 +1,6 @@
 import { FileShape } from './schema.js';
-import { DesiredAssignment, Finding, Kind } from './model.js';
+import { DesiredAssignment, Kind } from './model.js';
+import { Finding, warning } from './finding.js';
 
 export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
 
@@ -25,7 +26,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
             const list = entry[key];
             if (list === undefined) continue;
             if (list.length === 0) {
-                findings.push({ level: 'warning', code: 'EMPTY_LIST', message: `${username}: ${key} is empty`, file });
+                findings.push(warning('EMPTY_LIST', `${username}: ${key} is empty`, { file }));
                 continue;
             }
 
@@ -33,12 +34,9 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
             const seen = new Set<string>();
             for (const target of list) {
                 if (seen.has(target)) {
-                    findings.push({
-                        level: 'warning',
-                        code: 'DUP_TARGET',
-                        message: `${username}: ${target} is listed twice under ${key}`,
-                        file,
-                    });
+                    findings.push(
+                        warning('DUP_TARGET', `${username}: ${target} is listed twice under ${key}`, { file })
+                    );
                     continue;
                 }
                 seen.add(target);
@@ -47,7 +45,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
         }
 
         if (scopeCount === 0) {
-            findings.push({ level: 'warning', code: 'EMPTY_USER', message: `${username}: no scopes declared`, file });
+            findings.push(warning('EMPTY_USER', `${username}: no scopes declared`, { file }));
         }
     }
 

@@ -1,6 +1,6 @@
 import { loadFiles } from '../core/load.js';
-import { countFindings } from '../core/report.js';
-import { DesiredAssignment, Finding } from '../core/model.js';
+import { DesiredAssignment } from '../core/model.js';
+import { Finding, countFindings } from '../core/finding.js';
 
 export type CheckResult = {
     files: string[];

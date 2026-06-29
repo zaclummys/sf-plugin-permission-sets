@@ -1,4 +1,5 @@
-import { DesiredAssignment, Finding, Kind, OrgUser } from './model.js';
+import { DesiredAssignment, Kind, OrgTarget, OrgUser } from './model.js';
+import { Finding, error } from './finding.js';
 
 /** Human label per kind, used in findings. Domain wording, not SObject names. */
 const kindLabels: Record<Kind, string> = {
@@ -36,9 +37,9 @@ export function evaluateUsers(declared: string[], found: OrgUser[]): Finding[] {
     for (const username of declared) {
         const user = byName.get(username.toLowerCase());
         if (!user) {
-            findings.push({ level: 'error', code: 'USER_NOT_FOUND', message: `${username}: user not found in org` });
+            findings.push(error('USER_NOT_FOUND', `${username}: user not found in org`));
         } else if (!user.isActive) {
-            findings.push({ level: 'error', code: 'USER_INACTIVE', message: `${username}: user is inactive` });
+            findings.push(error('USER_INACTIVE', `${username}: user is inactive`));
         }
     }
     return findings;
@@ -62,18 +63,39 @@ export function evaluateTargets(kind: Kind, declared: string[], found: string[])
     for (const target of declared) {
         const count = counts.get(target.toLowerCase()) ?? 0;
         if (count === 0) {
-            findings.push({
-                level: 'error',
-                code: 'TARGET_NOT_FOUND',
-                message: `${target}: ${label} not found in org`,
-            });
+            findings.push(error('TARGET_NOT_FOUND', `${target}: ${label} not found in org`));
         } else if (count > 1) {
-            findings.push({
-                level: 'error',
-                code: 'TARGET_AMBIGUOUS',
-                message: `${target}: ${label} is not unique in org`,
-            });
+            findings.push(error('TARGET_AMBIGUOUS', `${target}: ${label} is not unique in org`));
         }
     }
     return findings;
+}
+
+/** Index active users by lowercased username to their org id, for building assignments. */
+export function indexUsersById(found: OrgUser[]): Map<string, string> {
+    const byName = new Map<string, string>();
+    for (const user of found) {
+        if (user.isActive) {
+            byName.set(user.username.toLowerCase(), user.id);
+        }
+    }
+    return byName;
+}
+
+/** Index targets by lowercased name to their org id, skipping names that resolve ambiguously. */
+export function indexTargetsById(found: OrgTarget[]): Map<string, string> {
+    const counts = new Map<string, number>();
+    for (const target of found) {
+        const key = target.name.toLowerCase();
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+
+    const byName = new Map<string, string>();
+    for (const target of found) {
+        const key = target.name.toLowerCase();
+        if (counts.get(key) === 1) {
+            byName.set(key, target.id);
+        }
+    }
+    return byName;
 }

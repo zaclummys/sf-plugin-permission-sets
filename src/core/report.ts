@@ -1,17 +1,51 @@
-import { Finding } from './model.js';
+import { Diff, Kind } from './model.js';
+import { kindKeys } from './normalize.js';
 
-/** Render findings as human-readable lines. Shared by check, validate, and plan. */
-export function formatFindings(findings: Finding[]): string[] {
-    return findings.map((finding) => {
-        const where = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ''} ` : '';
-        return `${finding.level}: ${where}${finding.message}`;
-    });
+type DiffBucket = { adds: Set<string>; removes: Set<string>; unchanged: Set<string> };
+
+function bucketFor(byKind: Map<Kind, Map<string, DiffBucket>>, kind: Kind, target: string): DiffBucket {
+    let byTarget = byKind.get(kind);
+    if (!byTarget) {
+        byTarget = new Map();
+        byKind.set(kind, byTarget);
+    }
+
+    let bucket = byTarget.get(target);
+    if (!bucket) {
+        bucket = { adds: new Set(), removes: new Set(), unchanged: new Set() };
+        byTarget.set(target, bucket);
+    }
+    return bucket;
 }
 
-/** Count findings by level. */
-export function countFindings(findings: Finding[]): { errors: number; warnings: number } {
-    const errors = findings.filter((finding) => finding.level === 'error');
-    const warnings = findings.filter((finding) => finding.level === 'warning');
+/**
+ * Render a diff as a plan, grouped by kind then target, with `+` adds, `-` removes,
+ * and `=` unchanged. Shared by plan and apply.
+ */
+export function formatDiff(diff: Diff): string[] {
+    const byKind = new Map<Kind, Map<string, DiffBucket>>();
+    for (const assignment of diff.toAdd) {
+        bucketFor(byKind, assignment.kind, assignment.target).adds.add(assignment.assignee);
+    }
+    for (const assignment of diff.toRemove) {
+        bucketFor(byKind, assignment.kind, assignment.target).removes.add(assignment.assignee);
+    }
+    for (const assignment of diff.unchanged) {
+        bucketFor(byKind, assignment.kind, assignment.target).unchanged.add(assignment.assignee);
+    }
 
-    return { errors: errors.length, warnings: warnings.length };
+    const lines: string[] = [];
+    for (const [kind, scopeKey] of kindKeys) {
+        const byTarget = byKind.get(kind);
+        if (!byTarget) continue;
+
+        lines.push(`${scopeKey}:`);
+        for (const [target, bucket] of [...byTarget].sort((left, right) => left[0].localeCompare(right[0]))) {
+            lines.push(`  ${target}`);
+            for (const assignee of [...bucket.adds].sort()) lines.push(`    + ${assignee}`);
+            for (const assignee of [...bucket.removes].sort()) lines.push(`    - ${assignee}`);
+            for (const assignee of [...bucket.unchanged].sort()) lines.push(`    = ${assignee}`);
+        }
+    }
+    return lines;
 }

@@ -351,22 +351,24 @@ The `next` tag is selected whenever the version contains a hyphen, not by GitHub
 The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
-- **Services** (`src/services/`): one per command (`check`, `validate`, and `export` today, then `plan` and `apply`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
+- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, and `apply` today, then `plan`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
 | Core module | Responsibility |
 | --- | --- |
-| `model` | Shared domain types (assignment, finding, result). |
+| `model` | Shared domain types (assignment, org, diff). |
+| `finding` | The finding type and code vocabulary, plus constructors, formatting, and counting. |
 | `schema` | The zod contract for a file, plus validation. |
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
 | `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
 | `serialize` | Canonical tuples back to a user-keyed YAML document (the inverse of `normalize`). |
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
-| `resolve` | Pure rules that turn declared references and the org's answers into findings. No SOQL: the adapter owns that. |
-| `report` | Format and count findings. |
+| `resolve` | Pure rules that turn declared references and the org's answers into findings, plus id lookups for assigning. No SOQL: the adapter owns that. |
+| `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
+| `report` | Format a diff as a plan. |
 
-Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. The remaining online commands layer **diff** (desired vs actual) and **apply** (DML) on top, reusing load, resolve, report, model, and schema unchanged.
+Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` will be that same pipeline stopping before the DML, which is exactly what `apply --dry-run` already does.
 
 ## License
 
