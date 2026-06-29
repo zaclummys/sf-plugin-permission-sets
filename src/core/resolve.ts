@@ -1,5 +1,5 @@
 import { DesiredAssignment, Kind, OrgTarget, OrgUser } from './model.js';
-import { Finding, error } from './finding.js';
+import { Finding, userNotFoundError, userInactiveError, targetNotFoundError, targetAmbiguousError } from './finding.js';
 
 /** Human label per kind, used in findings. Domain wording, not SObject names. */
 const kindLabels: Record<Kind, string> = {
@@ -37,9 +37,9 @@ export function evaluateUsers(declared: string[], found: OrgUser[]): Finding[] {
     for (const username of declared) {
         const user = byName.get(username.toLowerCase());
         if (!user) {
-            findings.push(error('USER_NOT_FOUND', `${username}: user not found in org`));
+            findings.push(userNotFoundError(username));
         } else if (!user.isActive) {
-            findings.push(error('USER_INACTIVE', `${username}: user is inactive`));
+            findings.push(userInactiveError(username));
         }
     }
     return findings;
@@ -63,9 +63,9 @@ export function evaluateTargets(kind: Kind, declared: string[], found: string[])
     for (const target of declared) {
         const count = counts.get(target.toLowerCase()) ?? 0;
         if (count === 0) {
-            findings.push(error('TARGET_NOT_FOUND', `${target}: ${label} not found in org`));
+            findings.push(targetNotFoundError(target, label));
         } else if (count > 1) {
-            findings.push(error('TARGET_AMBIGUOUS', `${target}: ${label} is not unique in org`));
+            findings.push(targetAmbiguousError(target, label));
         }
     }
     return findings;

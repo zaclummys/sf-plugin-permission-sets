@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Finding, error } from './finding.js';
+import { Finding, schemaError } from './finding.js';
 
 /** A target with an expiration: the object form of an entry. */
 const expiringTarget = z.strictObject({
@@ -33,7 +33,7 @@ export function validateFile(data: unknown, file: string): { data?: FileShape; f
     }
     return {
         findings: parsed.error.issues.map((issue) =>
-            error('SCHEMA', `${issue.path.join('.') || '(root)'}: ${issue.message}`, { file })
+            schemaError(issue.path.join('.') || '(root)', issue.message, file)
         ),
     };
 }

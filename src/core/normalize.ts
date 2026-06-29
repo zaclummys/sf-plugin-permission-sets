@@ -1,6 +1,6 @@
 import { FileShape } from './schema.js';
 import { DesiredAssignment, Kind } from './model.js';
-import { Finding, warning } from './finding.js';
+import { Finding, emptyListWarning, dupTargetWarning, emptyUserWarning } from './finding.js';
 
 export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
 
@@ -26,7 +26,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
             const list = entry[key];
             if (list === undefined) continue;
             if (list.length === 0) {
-                findings.push(warning('EMPTY_LIST', `${username}: ${key} is empty`, { file }));
+                findings.push(emptyListWarning(username, key, file));
                 continue;
             }
 
@@ -36,9 +36,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
                 const target = typeof item === 'string' ? item : item.name;
                 const expiration = typeof item === 'string' ? undefined : item.expiration;
                 if (seen.has(target)) {
-                    findings.push(
-                        warning('DUP_TARGET', `${username}: ${target} is listed twice under ${key}`, { file })
-                    );
+                    findings.push(dupTargetWarning(username, target, key, file));
                     continue;
                 }
                 seen.add(target);
@@ -47,7 +45,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
         }
 
         if (scopeCount === 0) {
-            findings.push(warning('EMPTY_USER', `${username}: no scopes declared`, { file }));
+            findings.push(emptyUserWarning(username, file));
         }
     }
 

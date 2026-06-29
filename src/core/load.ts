@@ -4,12 +4,7 @@ import { parseFile } from './parse.js';
 import { validateFile } from './schema.js';
 import { normalize } from './normalize.js';
 import { DesiredAssignment, LoadResult } from './model.js';
-import { Finding, error } from './finding.js';
-
-/** The error raised when a glob set matches no files. */
-function noFilesError(patterns: string[]): Finding {
-    return error('NO_FILES', `no files matched: ${patterns.join(', ')}`);
-}
+import { Finding, noFilesError } from './finding.js';
 
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
 function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
