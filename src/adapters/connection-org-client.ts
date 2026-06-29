@@ -1,8 +1,21 @@
 import { Connection } from '@salesforce/core';
-import { Kind, OrgUser } from '../core/model.js';
+import { DesiredAssignment, Kind, OrgUser } from '../core/model.js';
 import { OrgClient } from '../services/org-client.js';
 
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
+
+/** Shapes of the assignment rows we read back, with relationship fields nested. */
+type MembershipRecord = {
+    Assignee: { Username: string };
+    PermissionSet: { Name: string };
+    PermissionSetGroup: { DeveloperName: string } | null;
+    PermissionSetGroupId: string | null;
+};
+
+type LicenseRecord = {
+    Assignee: { Username: string };
+    PermissionSetLicense: { DeveloperName: string };
+};
 
 /** SObject + naming field per kind. The Salesforce schema knowledge lives here, not in core. */
 const targetObjects: Record<Kind, TargetObject> = {
@@ -40,6 +53,49 @@ export class ConnectionOrgClient implements OrgClient {
         );
 
         return records.map((record) => record[field]);
+    }
+
+    public async listAssignments(): Promise<DesiredAssignment[]> {
+        const [memberships, licenses] = await Promise.all([
+            this.query<MembershipRecord>(
+                'SELECT Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId ' +
+                    'FROM PermissionSetAssignment ' +
+                    'WHERE Assignee.IsActive = true AND PermissionSet.IsOwnedByProfile = false'
+            ),
+            this.query<LicenseRecord>(
+                'SELECT Assignee.Username, PermissionSetLicense.DeveloperName ' +
+                    'FROM PermissionSetLicenseAssign ' +
+                    'WHERE Assignee.IsActive = true'
+            ),
+        ]);
+
+        const assignments: DesiredAssignment[] = [];
+
+        for (const record of memberships) {
+            if (record.PermissionSetGroupId && record.PermissionSetGroup) {
+                assignments.push({
+                    assignee: record.Assignee.Username,
+                    kind: 'permissionSetGroup',
+                    target: record.PermissionSetGroup.DeveloperName,
+                });
+            } else {
+                assignments.push({
+                    assignee: record.Assignee.Username,
+                    kind: 'permissionSet',
+                    target: record.PermissionSet.Name,
+                });
+            }
+        }
+
+        for (const record of licenses) {
+            assignments.push({
+                assignee: record.Assignee.Username,
+                kind: 'permissionSetLicense',
+                target: record.PermissionSetLicense.DeveloperName,
+            });
+        }
+
+        return assignments;
     }
 
     private async query<T>(soql: string): Promise<T[]> {

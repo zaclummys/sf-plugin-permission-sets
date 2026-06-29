@@ -59,7 +59,7 @@ Requires Salesforce CLI (`sf`) and Node.js 18+.
 
 ```bash
 # 1. Bootstrap YAML from an existing org (so you don't start from scratch)
-sf ps export --target-org dev --output-dir permissions
+sf ps export --target-org dev --output-file permissions.yml
 
 # 2. Edit the files, commit, open a PR. Validate offline, no org needed:
 sf ps check --file "./permissions/*.yml"
@@ -288,17 +288,18 @@ Deletions always prompt for confirmation unless `--no-prompt` is set, and are ha
 
 ### `sf ps export`
 
+Read-only. Snapshots the org's current assignments into a single YAML file you can commit and then feed back into the other commands.
+
 ```
 USAGE
-  $ sf ps export -o <org> [--output-dir <dir>] [--layout <value>]
-                      [--permission-sets <names>] [--json]
+  $ sf ps export -o <org> --output-file <file> [--json]
 
 FLAGS
-  -o, --target-org=<org>     (required)
-  --output-dir=<dir>         [default: permissions] Where to write the generated YAML.
-  --layout=<value>           by-permission-set | by-user   [default: by-permission-set]
-  --permission-sets=<names>  Comma-separated list to export (default: all assignable).
+  -o, --target-org=<org>   (required) Org to read assignments from.
+  --output-file=<file>     (required) Path of the YAML file to write. Parent directories are created; an existing file is overwritten.
 ```
+
+It exports every assignable permission set, group, and license assignment held by active users, keyed by username, so the result is immediately valid input for `check`, `validate`, `plan`, and `apply`. Profile-owned permission sets and inactive users are skipped.
 
 ## Inspiration & equivalents
 
@@ -350,7 +351,7 @@ The `next` tag is selected whenever the version contains a hyphen, not by GitHub
 The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
-- **Services** (`src/services/`): one per command (`check` and `validate` today, then `plan`, `apply`, `export`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
+- **Services** (`src/services/`): one per command (`check`, `validate`, and `export` today, then `plan` and `apply`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
@@ -360,11 +361,12 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `schema` | The zod contract for a file, plus validation. |
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
 | `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
+| `serialize` | Canonical tuples back to a user-keyed YAML document (the inverse of `normalize`). |
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
 | `resolve` | Pure rules that turn declared references and the org's answers into findings. No SOQL: the adapter owns that. |
 | `report` | Format and count findings. |
 
-Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. The remaining online commands layer **fetch** (current org state), **diff** (desired vs actual), and **apply** (DML) on top, reusing load, resolve, report, model, and schema unchanged.
+Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. The remaining online commands layer **diff** (desired vs actual) and **apply** (DML) on top, reusing load, resolve, report, model, and schema unchanged.
 
 ## License
 

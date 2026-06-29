@@ -1,9 +1,10 @@
 import { FileShape } from './schema.js';
 import { DesiredAssignment, Finding, Kind } from './model.js';
 
-type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
+export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
 
-const kindKeys: Array<[Kind, ScopeKey]> = [
+/** The (kind, file scope key) pairing, in canonical order. Shared with serialize. */
+export const kindKeys: Array<[Kind, ScopeKey]> = [
     ['permissionSet', 'permissionSets'],
     ['permissionSetGroup', 'permissionSetGroups'],
     ['permissionSetLicense', 'permissionSetLicenses'],
