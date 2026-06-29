@@ -15,7 +15,7 @@ export function parseFile(text: string, file: string): { data?: unknown; finding
     }
 
     const data = doc.toJS() as unknown;
-    if (data === null || data === undefined) {
+    if (data == null) {
         return { findings: [emptyFileWarning(file)] };
     }
 

@@ -24,7 +24,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
 
         for (const [kind, key] of kindKeys) {
             const list = entry[key];
-            if (list === undefined) continue;
+            if (!list) continue;
             if (list.length === 0) {
                 findings.push(emptyListWarning(username, key, file));
                 continue;

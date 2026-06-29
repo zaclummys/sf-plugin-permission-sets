@@ -7,7 +7,7 @@ function assignmentKey(assignee: string, kind: Kind, target: string): string {
 
 /** Whether two expirations name the same instant. Both absent counts as equal. */
 function sameExpiration(left: string | undefined, right: string | undefined): boolean {
-    if (left === undefined || right === undefined) {
+    if (!left || !right) {
         return left === right;
     }
     return Date.parse(left) === Date.parse(right);
