@@ -21,7 +21,7 @@ import {
     TargetRef,
 } from '../core/model.js';
 import { Finding, countFindings } from '../core/finding.js';
-import { OrgClient } from './org-client.js';
+import { OrgClient } from './adapters/org-client.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 

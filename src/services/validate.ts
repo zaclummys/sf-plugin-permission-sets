@@ -2,7 +2,7 @@ import { loadFiles } from '../core/load.js';
 import { kinds, distinctAssignees, distinctTargets, evaluateUsers, evaluateTargets } from '../core/resolve.js';
 import { DesiredAssignment } from '../core/model.js';
 import { Finding, countFindings } from '../core/finding.js';
-import { OrgClient } from './org-client.js';
+import { OrgClient } from './adapters/org-client.js';
 
 export type ValidateResult = {
     files: string[];
