@@ -50,3 +50,7 @@ node_modules
 
 # local scratch
 scratchpad/
+
+# local permission files (real org usernames/ids, not for the repo)
+/permissions.yml
+/permissions/
