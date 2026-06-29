@@ -1,6 +1,6 @@
 {
     "name": "sf-plugin-permission-sets",
-    "description": "",
+    "description": "Declarative permission set assignment management for Salesforce. Under active development, with breaking changes possible until v1.0.0.",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/zaclummys/sf-plugin-permission-sets.git"

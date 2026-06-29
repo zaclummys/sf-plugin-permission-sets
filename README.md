@@ -1,9 +1,11 @@
 # sf-plugin-permission-sets
 
-[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.txt)
+[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.txt)
 
 > Declarative, GitOps-style management of **permission set assignments** for Salesforce orgs.
 > Define who gets what in version-controlled YAML. The plugin reconciles your org to match it: `plan` then `apply`, just like Terraform.
+
+> ⚠️ **Under active development.** This plugin is `0.x`. Per [semver's major-version-zero rule](https://semver.org/#spec-item-4), anything (commands, flags, the YAML schema) may change in a breaking way between `0.x` releases. Pin a version in CI. The public API stabilizes at `v1.0.0`.
 
 Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let CI show the diff, and merge to apply. Your git history becomes the audit log of who-had-access-when.
 
@@ -320,6 +322,8 @@ Releases follow [semantic versioning](https://semver.org). Snapshots are automat
 
 - Choosing the version bump (patch, minor, or major).
 - Creating the GitHub Release, which is what triggers the publish above.
+
+**While on `0.x`:** breaking changes may ship in **any** release, including minor bumps. The plugin is under active development and the public API is not yet stable. The table below describes the contract that takes effect at `v1.0.0`.
 
 | Bump | When | Example tag |
 | --- | --- | --- |
