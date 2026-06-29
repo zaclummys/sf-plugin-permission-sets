@@ -169,7 +169,7 @@ A run performs two atomic operations: **add** missing assignments and **remove**
 | `destructive` | ❌           | ✅                 | Prune/revoke access that isn't declared, without granting anything new. |
 | `sync`        | ✅           | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
 
-`plan` always shows the *full* picture (both adds **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**. Gate CI on it with `--fail-on-drift`.
+`plan` always shows the *full* picture (both adds **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**.
 
 ## Validations
 
@@ -189,7 +189,7 @@ Every run checks the files first. `check` runs the offline checks with no org, a
 | ---------------- | ---------------------------------------------------------------------- |
 | `sf ps check`    | Static analysis of the files alone: schema, duplicates, conflicts, identifier shape. No org, no auth. |
 | `sf ps validate` | Everything `check` does, plus resolving every user/permission set against the org. |
-| `sf ps plan`     | Compute and display the change set. Optionally fail on drift. |
+| `sf ps plan`     | Compute and display the change set: a read-only preview of what `apply` would do. |
 | `sf ps apply`    | Reconcile the org. Honors `--mode`, prompts before deletes, enforces guardrails. |
 | `sf ps export`   | Generate YAML from the current org state to bootstrap adoption.        |
 
@@ -235,13 +235,12 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--fail-on-drift] [--watch] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--watch] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
-  --fail-on-drift          Exit non-zero if any change is pending (for CI gates).
   -w, --watch              Re-diff against the org on every change to a matched file. Read-only (never applies), but each run queries the org.
 ```
 
@@ -351,7 +350,7 @@ The `next` tag is selected whenever the version contains a hyphen, not by GitHub
 The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
-- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, and `apply` today, then `plan`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
+- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
@@ -368,7 +367,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
 | `report` | Format a diff as a plan. |
 
-Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` will be that same pipeline stopping before the DML, which is exactly what `apply --dry-run` already does.
+Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
 
 ## License
 
