@@ -179,15 +179,15 @@ The two compose: a directory per environment, each split into functional files.
 
 ## Modes
 
-A run performs two atomic operations: **add** missing assignments and **remove** undeclared ones. The mode selects which it actually executes. Set it with `--mode` (default `additive`):
+A run performs three operations: **add** missing assignments, **update** changed expirations on declared ones, and **remove** undeclared ones. Updates ride with the additive half (they touch a declared grant, never revoke access). The mode selects which it actually executes. Set it with `--mode` (default `additive`):
 
-| Mode          | Adds missing | Removes undeclared | Use when…                                                              |
-| ------------- | :----------: | :----------------: | --------------------------------------------------------------------- |
-| `additive`    | ✅           | ❌                 | **Default.** Grant access, never revoke. Safe rollout.                |
-| `destructive` | ❌           | ✅                 | Prune/revoke access that isn't declared, without granting anything new. |
-| `sync`        | ✅           | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
+| Mode          | Adds missing | Updates expirations | Removes undeclared | Use when…                                                              |
+| ------------- | :----------: | :-----------------: | :----------------: | --------------------------------------------------------------------- |
+| `additive`    | ✅           | ✅                  | ❌                 | **Default.** Grant access, never revoke. Safe rollout.                |
+| `destructive` | ❌           | ❌                  | ✅                 | Prune/revoke access that isn't declared, without granting anything new. |
+| `sync`        | ✅           | ✅                  | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
 
-`plan` always shows the *full* picture (both adds **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**.
+`plan` always shows the *full* picture (adds, expiration updates, **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**.
 
 ## Validations
 
