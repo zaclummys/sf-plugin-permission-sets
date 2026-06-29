@@ -18,8 +18,8 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Quick start](#quick-start)
 - [Permission files](#permission-files)
 - [Organizing files](#organizing-files)
-- [Validations](#validations)
 - [Modes](#modes)
+- [Validations](#validations)
 - [Commands](#commands)
 - [Inspiration & equivalents](#inspiration--equivalents)
 - [Versioning](#versioning)
@@ -159,18 +159,6 @@ sf ps apply -o qa   --file "permissions/qa/*.yml"
 
 The two compose: a directory per environment, each split into functional files.
 
-## Validations
-
-Every run checks the files first. `check` runs the offline checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
-
-| Situation | Checked by | Severity | Result |
-| --- | --- | :---: | --- |
-| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
-| Same target listed twice for a user | `check` (offline) | ⚠️ warning | Deduped |
-| A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
-| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
-| Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
-
 ## Modes
 
 A run performs two atomic operations: **add** missing assignments and **remove** undeclared ones. The mode selects which it actually executes. Set it with `--mode` (default `additive`):
@@ -182,6 +170,18 @@ A run performs two atomic operations: **add** missing assignments and **remove**
 | `sync`        | ✅           | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
 
 `plan` always shows the *full* picture (both adds **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**. Gate CI on it with `--fail-on-drift`.
+
+## Validations
+
+Every run checks the files first. `check` runs the offline checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
+
+| Situation | Checked by | Severity | Result |
+| --- | --- | :---: | --- |
+| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
+| Same target listed twice for a user | `check` (offline) | ⚠️ warning | Deduped |
+| A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
+| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
+| Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
 
 ## Commands
 
