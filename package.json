@@ -1,6 +1,6 @@
 {
     "name": "sf-plugin-permission-sets",
-    "description": "Declarative permission set assignment management for Salesforce. Under active development, with breaking changes possible until v1.0.0.",
+    "description": "Declarative, GitOps-style management of permission set assignments for Salesforce orgs.",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/zaclummys/sf-plugin-permission-sets.git"
@@ -32,13 +32,16 @@
         "/oclif.lock"
     ],
     "keywords": [
-        "force",
         "salesforce",
-        "salesforcedx",
-        "sf",
         "sf-plugin",
-        "sfdx",
-        "sfdx-plugin"
+        "sfdx-plugin",
+        "permission-sets",
+        "permission-set-assignment",
+        "permission-set-group",
+        "access-management",
+        "user-provisioning",
+        "gitops",
+        "declarative"
     ],
     "license": "BSD-3-Clause",
     "oclif": {
