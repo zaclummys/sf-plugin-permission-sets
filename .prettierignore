@@ -1,2 +1,0 @@
-# Markdown is authored by hand; keep prettier from restyling it (e.g. list markers).
-*.md

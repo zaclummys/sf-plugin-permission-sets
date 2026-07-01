@@ -14,10 +14,8 @@
         "zod": "^4.4.3"
     },
     "devDependencies": {
-        "@salesforce/dev-scripts": "^10",
-        "eslint-plugin-sf-plugin": "^1.18.6",
-        "husky": "^7.0.4",
-        "oclif": "^4.14.0",
+        "@eslint/js": "^10.0.1",
+        "eslint": "^10.6.0",
         "ts-node": "^10.9.2",
         "typescript": "^5.4.5",
         "vitest": "^4.1.9"
@@ -27,9 +25,7 @@
     },
     "files": [
         "/lib",
-        "/messages",
-        "/oclif.manifest.json",
-        "/oclif.lock"
+        "/messages"
     ],
     "keywords": [
         "salesforce",
@@ -60,15 +56,10 @@
     },
     "scripts": {
         "build": "wireit",
-        "clean": "sf-clean",
-        "clean-all": "sf-clean all",
+        "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
-        "docs": "sf-docs",
-        "format": "wireit",
         "lint": "wireit",
-        "prepare": "husky install",
-        "postpack": "sf-clean --ignore-signing-artifacts",
-        "prepack": "sf-prepack",
+        "prepack": "npm run compile",
         "test": "wireit",
         "test:only": "wireit",
         "version": "oclif readme"
@@ -95,14 +86,6 @@
                 "*.tsbuildinfo"
             ],
             "clean": "if-file-deleted"
-        },
-        "format": {
-            "command": "prettier --write \"src/**/*.+(ts|js|json)\"",
-            "files": [
-                "src/**/*.ts",
-                ".prettier*"
-            ],
-            "output": []
         },
         "lint": {
             "command": "eslint src --color --cache --cache-location .eslintcache",
