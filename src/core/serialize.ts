@@ -22,10 +22,13 @@ export function serializeAssignments(assignments: DesiredAssignment[]): string {
         const entry: OutputFile['users'][string] = {};
 
         for (const [kind, key] of kindKeys) {
+            const matching = assignments.filter(
+                (assignment) => assignment.assignee === username && assignment.kind === kind
+            );
+
             const expirationByTarget = new Map<string, string | undefined>();
-            for (const assignment of assignments) {
-                const mine = assignment.assignee === username && assignment.kind === kind;
-                if (mine && !expirationByTarget.has(assignment.target)) {
+            for (const assignment of matching) {
+                if (!expirationByTarget.has(assignment.target)) {
                     expirationByTarget.set(assignment.target, assignment.expiration);
                 }
             }

@@ -1,22 +1,30 @@
 import { z } from 'zod';
 import { Finding, schemaError } from './finding.js';
 
-/** A target with an expiration: the object form of an entry. */
-const expiringTarget = z.strictObject({
-    name: z.string().min(1),
-    expiration: z.iso.datetime({ offset: true }),
-});
+// The permission set name
+const name = z.string().min(1);
+
+// The permission set expiration date
+const expiration = z.iso.datetime({ offset: true });
 
 /** An entry is either a bare target name or a name with an expiration. */
-const expiringList = z.array(z.union([z.string().min(1), expiringTarget])).optional();
+const expiringList = z.array(
+    z.union([
+        name,
+        z.strictObject({
+            name,
+            expiration,
+        }),
+    ])
+);
 
 /** Licenses cannot expire (PermissionSetLicenseAssign has no ExpirationDate), so names only. */
-const plainList = z.array(z.string().min(1)).optional();
+const plainList = z.array(name);
 
 export const userEntrySchema = z.strictObject({
-    permissionSets: expiringList,
-    permissionSetGroups: expiringList,
-    permissionSetLicenses: plainList,
+    permissionSets: expiringList.optional(),
+    permissionSetGroups: expiringList.optional(),
+    permissionSetLicenses: plainList.optional(),
 });
 
 export const fileSchema = z.strictObject({

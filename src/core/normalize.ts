@@ -31,10 +31,13 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
             }
 
             scopeCount += 1;
+            const items = list.map((item) => ({
+                target: typeof item === 'string' ? item : item.name,
+                expiration: typeof item === 'string' ? undefined : item.expiration,
+            }));
+
             const seen = new Set<string>();
-            for (const item of list) {
-                const target = typeof item === 'string' ? item : item.name;
-                const expiration = typeof item === 'string' ? undefined : item.expiration;
+            for (const { target, expiration } of items) {
                 if (seen.has(target)) {
                     findings.push(dupTargetWarning(username, target, key, file));
                     continue;

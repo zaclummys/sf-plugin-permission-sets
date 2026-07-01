@@ -98,7 +98,6 @@ export class PlanService {
         const [foundUsers, perKind] = await Promise.all([usersTask, targetsTask]);
 
         const findings: Finding[] = [...evaluateUsers(usernames, foundUsers)];
-        const targetIds = {} as Record<Kind, Map<string, string>>;
         for (const { kind, targets, found } of perKind) {
             findings.push(
                 ...evaluateTargets(
@@ -107,6 +106,10 @@ export class PlanService {
                     found.map((target) => target.name)
                 )
             );
+        }
+
+        const targetIds = {} as Record<Kind, Map<string, string>>;
+        for (const { kind, found } of perKind) {
             targetIds[kind] = indexTargetsById(found);
         }
 
