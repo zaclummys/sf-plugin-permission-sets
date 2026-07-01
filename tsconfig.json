@@ -1,9 +1,21 @@
 {
-  "extends": "@salesforce/dev-config/tsconfig-strict-esm",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
     "outDir": "lib",
     "rootDir": "src",
-    "skipLibCheck": true
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "skipLibCheck": true,
+    "incremental": true
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["**/*.test.ts", "**/*.nut.ts"]
