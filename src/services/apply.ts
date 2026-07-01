@@ -1,28 +1,16 @@
 import { loadFiles } from '../core/load.js';
 import { diffAssignments } from '../core/diff.js';
 import {
-    kinds,
-    distinctAssignees,
-    distinctTargets,
-    evaluateUsers,
-    evaluateTargets,
-    indexUsersById,
-    indexTargetsById,
-} from '../core/resolve.js';
-import {
     ActualAssignment,
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
     Diff,
-    Kind,
-    OrgTarget,
-    OrgUser,
     ResolvedAddition,
-    TargetRef,
 } from '../core/model.js';
 import { Finding, countFindings } from '../core/finding.js';
 import { OrgClient } from './adapters/org-client.js';
+import { Resolution, ResolutionService, managedTargets } from './resolution.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 
@@ -46,12 +34,6 @@ export type ApplyResult = {
     failed: boolean;
 };
 
-type Resolution = {
-    findings: Finding[];
-    userIds: Map<string, string>;
-    targetIds: Record<Kind, Map<string, string>>;
-};
-
 const emptyDiff: Diff = { toAdd: [], toUpdate: [], toRemove: [], unchanged: [] };
 
 /** An aborted-before-any-change result, carrying the findings that explain why. */
@@ -65,17 +47,6 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
         status: 'invalid',
         failed: true,
     };
-}
-
-/** The resolved ids of every declared target, to fetch their current memberships. */
-function managedTargets(resolution: Resolution): TargetRef[] {
-    const refs: TargetRef[] = [];
-    for (const kind of kinds) {
-        for (const id of resolution.targetIds[kind].values()) {
-            refs.push({ kind, id });
-        }
-    }
-    return refs;
 }
 
 /**
@@ -97,7 +68,8 @@ export class ApplyService {
             return invalidResult(loaded.files, loaded.findings);
         }
 
-        const resolution = await this.resolve(loaded.assignments);
+        const resolutionService = new ResolutionService(this.org, loaded.assignments);
+        const resolution = await resolutionService.run();
         const findings = [...loaded.findings, ...resolution.findings];
         if (countFindings(findings).errors > 0) {
             return invalidResult(loaded.files, findings);
@@ -143,42 +115,6 @@ export class ApplyService {
         const failed = outcomes.some((outcome) => !outcome.success);
 
         return { files: loaded.files, findings, diff, drift, outcomes, status: 'applied', failed };
-    }
-
-    /** Look every declared reference up in the org, returning findings and the id maps. */
-    private async resolve(assignments: DesiredAssignment[]): Promise<Resolution> {
-        const usernames = distinctAssignees(assignments);
-        const targetsByKind = kinds.map((kind) => ({ kind, targets: distinctTargets(assignments, kind) }));
-
-        const usersTask: Promise<OrgUser[]> =
-            usernames.length > 0 ? this.org.findUsers(usernames) : Promise.resolve([]);
-        const targetsTask = Promise.all(
-            targetsByKind.map(({ kind, targets }) =>
-                (targets.length > 0 ? this.org.findTargets(kind, targets) : Promise.resolve<OrgTarget[]>([])).then(
-                    (found) => ({ kind, targets, found })
-                )
-            )
-        );
-
-        const [foundUsers, perKind] = await Promise.all([usersTask, targetsTask]);
-
-        const findings: Finding[] = [...evaluateUsers(usernames, foundUsers)];
-        for (const { kind, targets, found } of perKind) {
-            findings.push(
-                ...evaluateTargets(
-                    kind,
-                    targets,
-                    found.map((target) => target.name)
-                )
-            );
-        }
-
-        const targetIds = {} as Record<Kind, Map<string, string>>;
-        for (const { kind, found } of perKind) {
-            targetIds[kind] = indexTargetsById(found);
-        }
-
-        return { findings, userIds: indexUsersById(foundUsers), targetIds };
     }
 
     private async execute(
