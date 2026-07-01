@@ -19,9 +19,9 @@ jobs:
                   # Pinned to 24: Node 26 removed Buffer.SlowBuffer, which the current
                   # lint toolchain still depends on transitively.
                   node-version: '24'
-                  cache: yarn
-            - run: yarn install --frozen-lockfile
-            - run: yarn build
+                  cache: npm
+            - run: npm ci
+            - run: npm run build
 
     test:
         runs-on: ubuntu-latest
@@ -30,6 +30,6 @@ jobs:
             - uses: actions/setup-node@v4
               with:
                   node-version: '24'
-                  cache: yarn
-            - run: yarn install --frozen-lockfile
-            - run: yarn test:only
+                  cache: npm
+            - run: npm ci
+            - run: npm run test:only
