@@ -10,6 +10,13 @@ on:
     pull_request:
     workflow_dispatch:
     workflow_call:
+        # Reusable workflows do not inherit the caller's secrets, so the release gate
+        # (publish.yml) must pass this in. Optional: on triggers without it (fork PRs)
+        # the auth step just fails, same as running ci directly without the secret.
+        secrets:
+            SFDX_AUTH_URL:
+                description: Auth URL for the org the real-org tests authenticate against.
+                required: false
 
 jobs:
     build:
