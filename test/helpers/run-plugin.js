@@ -2,7 +2,7 @@ import { execa } from 'execa';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 // Real-org tests drive `sf ps ... --target-org <targetOrg>` against an already-authenticated
 // org that the caller always provides via PS_TARGET_ORG: a locally logged-in org you name, or
