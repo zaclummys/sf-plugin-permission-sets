@@ -47,7 +47,7 @@ jobs:
               # token after it as the flag's value before reading stdin.
             - name: Authenticate the test org
               run: |
-                  echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias ci-target-org --json --sfdx-url-stdin
+                  echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias ci-target-org --sfdx-url-stdin
                   echo "PS_TARGET_ORG=ci-target-org" >> "$GITHUB_ENV"
               env:
                   SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
