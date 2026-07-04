@@ -1,4 +1,5 @@
 import { execa } from 'execa';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,11 +13,20 @@ function sf(args) {
     return execa('sf', args, { reject: false, env });
 }
 
+// The real-org suites target an already-authenticated org named by PS_TARGET_ORG.
+// Locally that can live in a gitignored .env, so load it to fill the gap; an env var
+// already set (CI) always wins. Runs before workers spawn, so they inherit the value.
+const envFile = path.join(projectRoot, '.env');
+if (!process.env.PS_TARGET_ORG && existsSync(envFile)) {
+    process.loadEnvFile(envFile);
+}
+
 /**
- * vitest globalSetup: make `sf ps` resolve to this repo before any spec runs.
- * The lib is already compiled (a wireit dependency of test:only), so we link the
- * built plugin. If the developer already linked or installed it, we leave their
- * setup untouched; otherwise we link now and unlink on teardown.
+ * vitest globalSetup: make `sf ps` resolve to this repo before any spec runs. The lib is
+ * already compiled (a wireit dependency of test:only), so we link the built plugin. If the
+ * developer already linked or installed it, we leave their setup untouched; otherwise we
+ * link now and unlink on teardown. Authentication is the caller's job: the online suites
+ * target whatever org PS_TARGET_ORG names, so nothing is logged in or out here.
  */
 export default async function setup() {
     const version = await sf(['version']);

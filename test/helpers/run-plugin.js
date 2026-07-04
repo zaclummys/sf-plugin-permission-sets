@@ -2,7 +2,12 @@ import { execa } from 'execa';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+export const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+
+// Real-org tests drive `sf ps ... --target-org <targetOrg>` against an already-authenticated
+// org that the caller always provides via PS_TARGET_ORG: a locally logged-in org you name, or
+// one a CI step logs in and points here.
+export const targetOrg = process.env.PS_TARGET_ORG;
 
 // NODE_ENV=production makes sf load the plugin's compiled ./lib. Vitest otherwise
 // sets NODE_ENV=test, which flips the linked plugin into dev mode and fails to load

@@ -35,4 +35,13 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm install --global @salesforce/cli
+              # Authenticate the org the real-org suites target and hand its alias to the
+              # tests via PS_TARGET_ORG. --sfdx-url-stdin must come last: the parser eats the
+              # token after it as the flag's value before reading stdin.
+            - name: Authenticate the test org
+              run: |
+                  echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias ci-target-org --json --sfdx-url-stdin
+                  echo "PS_TARGET_ORG=ci-target-org" >> "$GITHUB_ENV"
+              env:
+                  SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
             - run: npm run test:only
