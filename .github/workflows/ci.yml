@@ -2,8 +2,10 @@ name: ci
 
 # Runs on PRs and manual dispatch, and is callable by the publish workflow as
 # its release gate (workflow_call), so build + test are defined once here.
-# Split into parallel jobs: build typechecks and lints, test runs vitest (which
-# transpiles TS itself, so it needs no prior build).
+# Split into parallel jobs: build typechecks and lints, test compiles lib (a
+# wireit dependency of test:only) then runs the black-box plugin tests, which
+# drive `sf ps ...`. The sf CLI is installed here and the vitest globalSetup
+# links the built plugin into it.
 on:
     pull_request:
     workflow_dispatch:
@@ -32,4 +34,5 @@ jobs:
                   node-version: '24'
                   cache: npm
             - run: npm ci
+            - run: npm install --global @salesforce/cli
             - run: npm run test:only

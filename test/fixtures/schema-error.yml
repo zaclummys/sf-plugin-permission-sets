@@ -1,0 +1,7 @@
+# Schema error: licenses are a plain list of strings, so the object form
+# (name + expiration) is rejected. Produces a SCHEMA error.
+users:
+  carol@example.com:
+    permissionSetLicenses:
+      - name: Analytics_License
+        expiration: 2026-12-31T23:59:59Z

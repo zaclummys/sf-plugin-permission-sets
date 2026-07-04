@@ -1,0 +1,3 @@
+# Malformed YAML: an unclosed flow sequence. The parser rejects it, producing
+# a YAML error.
+users: [unclosed

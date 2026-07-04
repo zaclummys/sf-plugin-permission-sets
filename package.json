@@ -16,9 +16,10 @@
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "eslint": "^10.6.0",
+        "execa": "^9.6.1",
         "globals": "^17.7.0",
         "ts-node": "^10.9.2",
-        "typescript": "^5.4.5",
+        "typescript": "^6.0.3",
         "typescript-eslint": "^8.62.1",
         "vitest": "^4.1.9",
         "wireit": "^0.14.0"
@@ -108,13 +109,15 @@
         },
         "test:only": {
             "command": "vitest run",
+            "dependencies": [
+                "compile"
+            ],
             "env": {
                 "FORCE_COLOR": "2"
             },
             "files": [
-                "src/**/*.ts",
-                "vitest.config.ts",
-                "**/tsconfig.json"
+                "test/**",
+                "vitest.config.js"
             ],
             "output": []
         }

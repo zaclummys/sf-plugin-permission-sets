@@ -1,0 +1,11 @@
+# Valid file: no findings expected.
+users:
+  alice@example.com:
+    permissionSets:
+      - Sales_Ops
+      - name: Temp_Admin
+        expiration: 2026-12-31T23:59:59Z
+    permissionSetGroups:
+      - Onboarding
+    permissionSetLicenses:
+      - Sales_User_License

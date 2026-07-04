@@ -1,0 +1,8 @@
+# Warnings only, no errors: a duplicate target (DUP_TARGET) and an empty scope
+# list (EMPTY_LIST). The user still has a non-empty scope, so no EMPTY_USER.
+users:
+  bob@example.com:
+    permissionSets:
+      - Field_Service
+      - Field_Service
+    permissionSetGroups: []
