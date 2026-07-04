@@ -183,9 +183,9 @@ A run performs three operations: **add** missing assignments, **update** changed
 
 | Mode          | Adds missing | Updates expirations | Removes undeclared | Use when…                                                              |
 | ------------- | :----------: | :-----------------: | :----------------: | --------------------------------------------------------------------- |
+| `sync`        | ✅           | ✅                  | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
 | `additive`    | ✅           | ✅                  | ❌                 | **Default.** Grant access, never revoke. Safe rollout.                |
 | `destructive` | ❌           | ❌                  | ✅                 | Prune/revoke access that isn't declared, without granting anything new. |
-| `sync`        | ✅           | ✅                  | ✅                 | Full reconcile: make the org exactly match the YAML (`sync` = `additive` + `destructive`). |
 
 `plan` always shows the *full* picture (adds, expiration updates, **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**.
 
@@ -195,10 +195,10 @@ Every run checks the files first. `check` runs the offline checks with no org, a
 
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
-| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
+| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
 | Same target listed twice for a user | `check` (offline) | ⚠️ warning | Deduped |
 | A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
-| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
+| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
 | Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
 
 ## Commands
