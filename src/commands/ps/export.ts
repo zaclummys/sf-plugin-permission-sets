@@ -19,7 +19,6 @@ export default class Export extends SfCommand<PsExportResult> {
 
     public static readonly flags = {
         'target-org': Flags.requiredOrg(),
-        'api-version': Flags.orgApiVersion(),
         'output-file': Flags.string({
             summary: messages.getMessage('flags.output-file.summary'),
             required: true,
@@ -29,7 +28,7 @@ export default class Export extends SfCommand<PsExportResult> {
     public async run(): Promise<PsExportResult> {
         const { flags } = await this.parse(Export);
 
-        const connection = flags['target-org'].getConnection(flags['api-version']);
+        const connection = flags['target-org'].getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const service = new ExportService(orgClient, flags['output-file']);
         const result = await service.run();

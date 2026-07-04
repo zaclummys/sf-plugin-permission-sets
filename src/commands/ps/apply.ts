@@ -26,7 +26,6 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
     public static readonly flags = {
         'target-org': Flags.requiredOrg(),
-        'api-version': Flags.orgApiVersion(),
         file: Flags.string({
             char: 'f',
             summary: messages.getMessage('flags.file.summary'),
@@ -54,7 +53,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
     public async run(): Promise<PsApplyResult> {
         const { flags } = await this.parse(Apply);
 
-        const connection = flags['target-org'].getConnection(flags['api-version']);
+        const connection = flags['target-org'].getConnection();
         const orgClient = new ConnectionOrgClient(connection);
 
         const confirmDeletions = async (count: number): Promise<boolean> => {

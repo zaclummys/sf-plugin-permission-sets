@@ -24,7 +24,6 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
     public static readonly flags = {
         'target-org': Flags.requiredOrg(),
-        'api-version': Flags.orgApiVersion(),
         file: Flags.string({
             char: 'f',
             summary: messages.getMessage('flags.file.summary'),
@@ -41,7 +40,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
     public async run(): Promise<PsPlanResult> {
         const { flags } = await this.parse(Plan);
 
-        const connection = flags['target-org'].getConnection(flags['api-version']);
+        const connection = flags['target-org'].getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const service = new PlanService(orgClient, flags.file, { mode: flags.mode });
         const result = await service.run();
