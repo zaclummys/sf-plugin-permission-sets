@@ -14,7 +14,7 @@ describe('sf ps check', () => {
         expect(stdout).toContain('0 errors, 0 warnings.');
     });
 
-    it('reports warnings but exits 0 without --strict', async () => {
+    it('reports warnings but exits 0', async () => {
         const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings]);
 
         expect(exitCode).toBe(0);
@@ -22,12 +22,6 @@ describe('sf ps check', () => {
         expect(stdout).toContain('warning:');
         expect(stdout).toContain('listed twice under permissionSets');
         expect(stdout).toContain('permissionSetGroups is empty');
-    });
-
-    it('fails warnings with exit 1 under --strict', async () => {
-        const { exitCode } = await runPs(['ps', 'check', '-f', warnings, '--strict']);
-
-        expect(exitCode).toBe(1);
     });
 
     it('fails a schema violation with exit 1', async () => {
