@@ -29,7 +29,7 @@ if (!process.env.PS_TARGET_ORG && existsSync(envFile)) {
 
 /**
  * vitest globalSetup: make `sf ps` resolve to this repo before any spec runs. The lib is
- * already compiled (a wireit dependency of test:only), so we link the built plugin and
+ * already compiled (a wireit dependency of test), so we link the built plugin and
  * unlink it on teardown. Authentication is the caller's job: the online suites target
  * whatever org PS_TARGET_ORG names, so nothing is logged in or out here.
  */

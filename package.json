@@ -65,7 +65,6 @@
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
-        "test:only": "wireit",
         "version": "oclif readme"
     },
     "publishConfig": {
@@ -102,12 +101,6 @@
             "output": []
         },
         "test": {
-            "dependencies": [
-                "test:only",
-                "lint"
-            ]
-        },
-        "test:only": {
             "command": "vitest run",
             "dependencies": [
                 "compile"
