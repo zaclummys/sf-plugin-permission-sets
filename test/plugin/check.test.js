@@ -78,4 +78,11 @@ describe('sf ps check', () => {
         expect(exitCode).not.toBe(0);
         expect(stderr.toLowerCase()).toContain('file');
     });
+
+    it('--help documents its flags', async () => {
+        const { stdout, exitCode } = await runPs(['ps', 'check', '--help']);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('--file');
+    });
 });
