@@ -9,7 +9,7 @@
         "@oclif/core": "^4",
         "@salesforce/core": "^8",
         "@salesforce/sf-plugins-core": "^12",
-        "globby": "^16.2.0",
+        "globby": "^16.2.1",
         "yaml": "^2.9.0",
         "zod": "^4.4.3"
     },
