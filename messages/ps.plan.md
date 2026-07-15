@@ -4,7 +4,7 @@ Preview the changes that would reconcile a target org to the assignment files.
 
 # description
 
-Load the files, resolve every user and target against the org, fetch the org's current assignments, and diff the desired state against them. Read-only: it queries the org but never changes it, so it is the apply pipeline stopping before any DML. The full picture (assignments to add and would-be removes) is always shown regardless of mode, and whatever the chosen mode would not act on is surfaced as drift. Run it before apply to preview what would change.
+Load the files, resolve every user and target against the org, fetch the org's current assignments, and diff the desired state against them. Read-only: it queries the org but never changes it, so it is the apply pipeline stopping before any DML. The body shows only what the chosen mode would do, so what plan shows is what apply does. Anything the mode would not touch is reported beneath the plan as drift. Run it before apply to preview what would change.
 
 # flags.file.summary
 
@@ -12,19 +12,59 @@ YAML file or glob to plan. Repeatable.
 
 # flags.mode.summary
 
-Which half of the reconcile to preview: additive adds and updates expirations, destructive removes only, sync does both. Adds, expiration updates, and removes are always shown either way.
+Which half of the reconcile to preview: additive adds and updates expirations, destructive removes only, sync does both. The plan shows only what the chosen mode would do; anything it skips is reported as drift.
 
-# summary.counts
+# flags.show-unchanged.summary
 
-Plan: %s to add, %s to update, %s to remove, %s unchanged.
+List assignments that already match, instead of only counting them.
+
+# header.title
+
+Permission Set Assignments Plan
+
+# header.org
+
+Org: %s (%s)   Mode: %s
+
+# summary.counts.additive
+
+Plan: %s to add, %s to update. %s users affected.
+
+# summary.counts.destructive
+
+Plan: %s to remove. %s users affected.
+
+# summary.counts.sync
+
+Plan: %s to add, %s to update, %s to remove. %s users affected.
+
+# summary.unchanged
+
+Unchanged: %s assignments (--show-unchanged to list).
+
+# summary.unchangedListed
+
+Unchanged: %s assignments.
 
 # summary.next
 
-Reviewed the plan? Apply it with the same files: sf ps apply --mode %s
+Next: %s
 
-# drift.note
+# drift.additive
 
-%s change(s) the %s mode does not act on were surfaced as drift.
+Drift: %s undeclared assignment(s) not removed in additive mode. Run --mode sync to remove them.
+
+# drift.destructive
+
+Drift: %s declared assignment(s) not applied in destructive mode. Run --mode additive or sync to apply them.
+
+# empty.noChanges
+
+No changes. %s already matches your files.
+
+# empty.nothingToApply
+
+Nothing to apply in %s mode.
 
 # error.invalid
 

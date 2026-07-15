@@ -48,6 +48,7 @@ export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssi
                 kind: existing.kind,
                 target: existing.target,
                 expiration: assignment.expiration,
+                previousExpiration: existing.expiration,
             });
         }
     }

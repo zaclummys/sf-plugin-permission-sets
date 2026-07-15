@@ -4,17 +4,24 @@ import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
 import { PlanService } from '../../services/plan.js';
 import { formatDiff } from '../../core/report.js';
 import { formatFindings } from '../../core/finding.js';
+import { ActualAssignment, AssignmentUpdate, DesiredAssignment, Diff, ReconcileMode } from '../../core/model.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.plan');
 
 export type PsPlanResult = {
-    status: string;
-    toAdd: number;
-    toUpdate: number;
-    toRemove: number;
-    unchanged: number;
-    drift: number;
+    org: { username: string; id: string };
+    mode: string;
+    counts: { toAdd: number; toUpdate: number; toRemove: number; unchanged: number; usersAffected: number };
+    /** What the chosen mode would not act on (surfaced as drift). */
+    drift: { adds: number; updates: number; removes: number };
+    /** The full diff, regardless of mode, so machine consumers see everything the text scopes away. */
+    changes: {
+        toAdd: DesiredAssignment[];
+        toUpdate: AssignmentUpdate[];
+        toRemove: ActualAssignment[];
+        unchanged: ActualAssignment[];
+    };
 };
 
 export default class Plan extends SfCommand<PsPlanResult> {
@@ -35,27 +42,50 @@ export default class Plan extends SfCommand<PsPlanResult> {
             options: ['additive', 'destructive', 'sync'] as const,
             default: 'additive',
         })(),
+        'show-unchanged': Flags.boolean({
+            summary: messages.getMessage('flags.show-unchanged.summary'),
+        }),
     };
 
     public async run(): Promise<PsPlanResult> {
         const { flags } = await this.parse(Plan);
+        const mode = flags.mode;
+        const targetOrg = flags['target-org'];
 
-        const connection = flags['target-org'].getConnection();
+        const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
-        const service = new PlanService(orgClient, flags.file, { mode: flags.mode });
+        const service = new PlanService(orgClient, flags.file, { mode });
         const result = await service.run();
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);
         }
 
+        const diff = result.diff;
+        const orgId = targetOrg.getOrgId();
+        const username = targetOrg.getUsername() ?? '';
+        const orgName = username || orgId;
+
+        const actionable = this.actionable(diff, mode);
+        const usersAffected = new Set(actionable.map((assignment) => assignment.assignee.toLowerCase())).size;
+
         const summary: PsPlanResult = {
-            status: result.status,
-            toAdd: result.diff.toAdd.length,
-            toUpdate: result.diff.toUpdate.length,
-            toRemove: result.diff.toRemove.length,
-            unchanged: result.diff.unchanged.length,
-            drift: result.drift.adds + result.drift.updates + result.drift.removes,
+            org: { username, id: orgId },
+            mode,
+            counts: {
+                toAdd: diff.toAdd.length,
+                toUpdate: diff.toUpdate.length,
+                toRemove: diff.toRemove.length,
+                unchanged: diff.unchanged.length,
+                usersAffected,
+            },
+            drift: result.drift,
+            changes: {
+                toAdd: diff.toAdd,
+                toUpdate: diff.toUpdate,
+                toRemove: diff.toRemove,
+                unchanged: diff.unchanged,
+            },
         };
 
         if (result.status === 'invalid') {
@@ -64,33 +94,92 @@ export default class Plan extends SfCommand<PsPlanResult> {
             return summary;
         }
 
-        this.log('');
-        for (const line of formatDiff(result.diff)) {
-            this.log(line);
+        this.log(messages.getMessage('header.title'));
+        this.log(messages.getMessage('header.org', [orgName, orgId, mode]));
+
+        const totalChanges = diff.toAdd.length + diff.toUpdate.length + diff.toRemove.length;
+        const showUnchanged = flags['show-unchanged'];
+
+        if (totalChanges === 0) {
+            if (showUnchanged && diff.unchanged.length > 0) {
+                this.logBody(formatDiff(diff, { mode, showUnchanged: true }));
+            } else {
+                this.log('');
+            }
+            this.log(messages.getMessage('empty.noChanges', [orgName]));
+            return summary;
         }
-        this.log('');
 
-        this.reportDrift(result.drift, flags.mode);
-        this.log(
-            messages.getMessage('summary.counts', [
-                String(summary.toAdd),
-                String(summary.toUpdate),
-                String(summary.toRemove),
-                String(summary.unchanged),
-            ])
-        );
+        this.logBody(formatDiff(diff, { mode, showUnchanged }));
 
-        const pending = summary.toAdd + summary.toUpdate + summary.toRemove;
-        if (pending > 0) {
-            this.log(messages.getMessage('summary.next', [flags.mode]));
+        if (actionable.length === 0) {
+            this.log(messages.getMessage('empty.nothingToApply', [mode]));
+        } else {
+            this.log(this.countsLine(diff, mode, usersAffected));
+        }
+
+        this.reportDrift(diff, mode);
+        this.reportUnchanged(diff.unchanged.length, showUnchanged);
+
+        if (actionable.length > 0) {
+            this.log(messages.getMessage('summary.next', [this.applyCommand(orgName, flags.file, mode)]));
         }
 
         return summary;
     }
 
-    private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
-        if (drift.adds > 0) this.log(messages.getMessage('drift.note', [String(drift.adds), mode]));
-        if (drift.updates > 0) this.log(messages.getMessage('drift.note', [String(drift.updates), mode]));
-        if (drift.removes > 0) this.log(messages.getMessage('drift.note', [String(drift.removes), mode]));
+    /** The assignments the chosen mode would actually act on. */
+    private actionable(diff: Diff, mode: ReconcileMode): Array<{ assignee: string }> {
+        if (mode === 'destructive') return diff.toRemove;
+        if (mode === 'additive') return [...diff.toAdd, ...diff.toUpdate];
+        return [...diff.toAdd, ...diff.toUpdate, ...diff.toRemove];
+    }
+
+    private logBody(body: string[]): void {
+        this.log('');
+        for (const line of body) this.log(line);
+        if (body.length > 0) this.log('');
+    }
+
+    private countsLine(diff: Diff, mode: ReconcileMode, usersAffected: number): string {
+        const affected = String(usersAffected);
+        if (mode === 'destructive') {
+            return messages.getMessage('summary.counts.destructive', [String(diff.toRemove.length), affected]);
+        }
+        if (mode === 'additive') {
+            return messages.getMessage('summary.counts.additive', [
+                String(diff.toAdd.length),
+                String(diff.toUpdate.length),
+                affected,
+            ]);
+        }
+        return messages.getMessage('summary.counts.sync', [
+            String(diff.toAdd.length),
+            String(diff.toUpdate.length),
+            String(diff.toRemove.length),
+            affected,
+        ]);
+    }
+
+    private reportDrift(diff: Diff, mode: ReconcileMode): void {
+        if (mode === 'additive' && diff.toRemove.length > 0) {
+            this.log(messages.getMessage('drift.additive', [String(diff.toRemove.length)]));
+        }
+        if (mode === 'destructive') {
+            const skipped = diff.toAdd.length + diff.toUpdate.length;
+            if (skipped > 0) this.log(messages.getMessage('drift.destructive', [String(skipped)]));
+        }
+    }
+
+    private reportUnchanged(count: number, showUnchanged: boolean): void {
+        if (count === 0) return;
+        const key = showUnchanged ? 'summary.unchangedListed' : 'summary.unchanged';
+        this.log(messages.getMessage(key, [String(count)]));
+    }
+
+    private applyCommand(orgName: string, files: string[], mode: ReconcileMode): string {
+        const fileArgs = files.map((file) => `-f "${file}"`).join(' ');
+        const modeArg = mode === 'additive' ? '' : ` --mode ${mode}`;
+        return `${this.config.bin} ps apply -o ${orgName} ${fileArgs}${modeArg}`;
     }
 }

@@ -22,6 +22,10 @@ Abort before any change if the run would remove more than this many assignments.
 
 Resolve and diff, print the plan, and change nothing.
 
+# flags.show-unchanged.summary
+
+List assignments that already match, instead of only counting them.
+
 # flags.no-prompt.summary
 
 Skip the deletion confirmation prompt. Required to delete in JSON or other non-interactive runs.

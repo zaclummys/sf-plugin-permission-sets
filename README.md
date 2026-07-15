@@ -130,7 +130,7 @@ users:
         expiration: 2026-09-30T00:00:00Z
 ```
 
-Expiration is a property of the grant, so `plan` and `apply` treat a changed `expiration` on an already-assigned target as an **update** (the `~` line), not an add or a remove. Updates ride with the additive half: they run in `additive` and `sync` modes and never count against `--max-deletes`. Permission set **licenses** cannot expire (Salesforce has no expiration on `PermissionSetLicenseAssign`), so the object form is rejected there. `export` writes the object form for any assignment that currently has an expiration in the org.
+Expiration is a property of the grant, so `plan` and `apply` treat a changed `expiration` on an already-assigned target as an **update** (the `~` line, which shows the `old → new` transition), not an add or a remove. Updates ride with the additive half: they run in `additive` and `sync` modes and never count against `--max-deletes`. Permission set **licenses** cannot expire (Salesforce has no expiration on `PermissionSetLicenseAssign`), so the object form is rejected there. `export` writes the object form for any assignment that currently has an expiration in the org.
 
 The `--file` flag is repeatable and the plugin expands globs itself, so all of these work:
 
@@ -187,7 +187,7 @@ A run performs three operations: **add** missing assignments, **update** changed
 | `additive`    | ✅           | ✅                  | ❌                 | **Default.** Grant access, never revoke. Safe rollout.                |
 | `destructive` | ❌           | ❌                  | ✅                 | Prune/revoke access that isn't declared, without granting anything new. |
 
-`plan` always shows the *full* picture (adds, expiration updates, **and** would-be removes) regardless of mode, so you can preview the impact before running it. Whatever the chosen mode won't act on is surfaced as **drift**.
+`plan` and `apply` preview and act on exactly what the selected mode covers, so the body shows only those operations and what `plan` shows is what `apply` does. Anything the mode won't touch (an undeclared assignment under `additive`, a missing grant under `destructive`) is reported beneath the plan as **drift**, naming the mode that would include it. `sync` covers everything, so it never reports drift.
 
 ## Validations
 
@@ -249,36 +249,57 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
+  --show-unchanged         List assignments that already match, instead of only counting them.
 ```
 
-Example output:
+The body shows only what the mode will do, and unchanged assignments are summarized as a count (pass `--show-unchanged` to list them). The default `additive` run previews only what it grants, and reports the undeclared assignment it won't remove as drift:
 
 ```text
-$ sf ps plan -o prod --mode sync
+$ sf ps plan -o prod -f "permissions/*.yml"
+
+Permission Set Assignments Plan
+Org: prod (00D5g0000000abcEAA)   Mode: additive
+
+Permission Sets
+  Report_Builder
+    + jdoe@acme.com
+  Sales_Manager
+    + asmith@acme.com
+    ~ csmith@acme.com   expires 2026-12-31T23:59:59Z → 2027-06-30T23:59:59Z
+
+Plan: 2 to add, 1 to update. 3 users affected.
+Drift: 1 undeclared assignment not removed in additive mode. Run --mode sync to remove it.
+Unchanged: 4 assignments (--show-unchanged to list).
+
+Next: sf ps apply -o prod -f "permissions/*.yml"
+```
+
+The same files under `--mode sync` act on that drift too, so the removal now appears in the body and the drift line is gone:
+
+```text
+$ sf ps plan -o prod -f "permissions/*.yml" --mode sync
 
 Permission Set Assignments Plan
 Org: prod (00D5g0000000abcEAA)   Mode: sync
 
-permissionSets:
-  Sales_Manager
-    + asmith@acme.com
-    ~ csmith@acme.com (expires 2026-12-31T23:59:59Z)
-    - bwayne@acme.com        (undeclared, will be removed)
-    = jdoe@acme.com          (no change)
+Permission Sets
   Report_Builder
     + jdoe@acme.com
+  Sales_Manager
+    + asmith@acme.com
+    ~ csmith@acme.com   expires 2026-12-31T23:59:59Z → 2027-06-30T23:59:59Z
+    - bwayne@acme.com
 
-permissionSetGroups:
-  Sales_Team_Bundle          (no changes)
+Plan: 2 to add, 1 to update, 1 to remove. 4 users affected.
+Unchanged: 4 assignments (--show-unchanged to list).
 
-Plan: 2 to add, 1 to update, 1 to remove, 1 unchanged.
-► Review, then run:  sf ps apply -o prod --mode sync
+Next: sf ps apply -o prod -f "permissions/*.yml" --mode sync
 ```
 
 ### `sf ps apply`
@@ -286,7 +307,7 @@ Plan: 2 to add, 1 to update, 1 to remove, 1 unchanged.
 ```
 USAGE
   $ sf ps apply -o <org> -f <glob>... [--mode <value>] [--max-deletes <n>]
-                [--dry-run] [--no-prompt] [--json]
+                [--dry-run] [--show-unchanged] [--no-prompt] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
@@ -294,6 +315,7 @@ FLAGS
   --mode=<value>           additive | destructive | sync   [default: additive]
   --max-deletes=<n>        Abort if a run would remove more than n assignments. [default: 50]
   --dry-run                Resolve and diff, print what would happen, change nothing.
+  --show-unchanged         List assignments that already match, instead of only counting them.
   --no-prompt              Skip the deletion confirmation prompt (for CI).
 ```
 

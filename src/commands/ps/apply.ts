@@ -45,6 +45,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
         'dry-run': Flags.boolean({
             summary: messages.getMessage('flags.dry-run.summary'),
         }),
+        'show-unchanged': Flags.boolean({
+            summary: messages.getMessage('flags.show-unchanged.summary'),
+        }),
         'no-prompt': Flags.boolean({
             summary: messages.getMessage('flags.no-prompt.summary'),
         }),
@@ -97,7 +100,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
 
         this.log('');
-        for (const line of formatDiff(result.diff)) {
+        for (const line of formatDiff(result.diff, { mode: flags.mode, showUnchanged: flags['show-unchanged'] })) {
             this.log(line);
         }
         this.log('');
@@ -112,11 +115,13 @@ export default class Apply extends SfCommand<PsApplyResult> {
         this.reportDrift(result.drift, flags.mode);
 
         if (result.status === 'dry-run') {
+            // Report what this mode would actually do, matching the mode-scoped body: the full
+            // diff minus whatever the mode leaves as drift. Otherwise the counts contradict it.
             this.log(
                 messages.getMessage('summary.dryRun', [
-                    String(summary.toAdd),
-                    String(summary.toUpdate),
-                    String(summary.toRemove),
+                    String(summary.toAdd - result.drift.adds),
+                    String(summary.toUpdate - result.drift.updates),
+                    String(summary.toRemove - result.drift.removes),
                 ])
             );
             return summary;

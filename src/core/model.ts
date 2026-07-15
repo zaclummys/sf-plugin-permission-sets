@@ -2,6 +2,9 @@ import { Finding } from './finding.js';
 
 export type Kind = 'permissionSet' | 'permissionSetGroup' | 'permissionSetLicense';
 
+/** Which half of the reconcile a run acts on. Shared by plan, apply, and the report. */
+export type ReconcileMode = 'additive' | 'destructive' | 'sync';
+
 export type DesiredAssignment = {
     assignee: string;
     kind: Kind;
@@ -40,6 +43,8 @@ export type AssignmentUpdate = {
     kind: Kind;
     target: string;
     expiration?: string;
+    /** The expiration the org has now, before the update. Undefined means it had none. */
+    previousExpiration?: string;
 };
 
 /** A resolved managed target: its kind and the org id it resolved to. */
