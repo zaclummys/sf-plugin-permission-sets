@@ -327,12 +327,12 @@ Read-only. Snapshots the org's current assignments into a single YAML file you c
 
 ```
 USAGE
-  $ sf ps export -o <org> --output-file <file> [--user <username>...]
+  $ sf ps export -o <org> -f <file> [--user <username>...]
                  [--kind <scope>...] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required) Org to read assignments from.
-  --output-file=<file>     (required) Path of the YAML file to write. Parent directories are created; an existing file is overwritten.
+  -f, --output-file=<file> (required) Path of the YAML file to write. Parent directories are created; an existing file is overwritten.
   --user=<username>...      Only export these users. Repeatable, matched on exact username.
   --kind=<scope>...         Only export these scopes: permissionSets | permissionSetGroups | permissionSetLicenses. Repeatable.
 ```

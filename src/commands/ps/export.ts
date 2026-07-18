@@ -23,6 +23,7 @@ export default class Export extends SfCommand<PsExportResult> {
     public static readonly flags = {
         'target-org': Flags.requiredOrg(),
         'output-file': Flags.string({
+            char: 'f',
             summary: messages.getMessage('flags.output-file.summary'),
             required: true,
         }),
