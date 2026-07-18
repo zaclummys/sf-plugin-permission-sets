@@ -6,7 +6,7 @@ export default defineConfig({
         // give them room beyond the default 5s timeout. globalSetup links the built
         // plugin into sf so those commands resolve.
         include: ['test/**/*.test.js'],
-        testTimeout: 30_000,
+        testTimeout: 60_000,
         globalSetup: ['./test/global-setup.js'],
         // Run every test concurrently, not just files in parallel. Each test is an
         // independent `sf` subprocess (the real-org ones write their own temp files), so there is
