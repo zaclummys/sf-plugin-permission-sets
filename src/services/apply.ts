@@ -10,7 +10,7 @@ import {
     Finding,
     countFindings,
 } from '../core/index.js';
-import { OrgClient } from './adapters/org-client.js';
+import { OrgClient } from './adapters/index.js';
 import { Resolution, ResolutionService, managedTargets } from './resolution.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';

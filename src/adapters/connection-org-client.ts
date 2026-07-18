@@ -10,7 +10,7 @@ import {
     ResolvedAddition,
     TargetRef,
 } from '../core/index.js';
-import { OrgClient } from '../services/adapters/org-client.js';
+import { OrgClient } from '../services/adapters/index.js';
 
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
 

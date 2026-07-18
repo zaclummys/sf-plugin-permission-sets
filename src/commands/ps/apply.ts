@@ -1,6 +1,6 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
-import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
+import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService } from '../../services/index.js';
 import { formatDiff, formatFindings } from '../../core/index.js';
 

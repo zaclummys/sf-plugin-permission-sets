@@ -9,7 +9,7 @@ import {
     Finding,
     countFindings,
 } from '../core/index.js';
-import { OrgClient } from './adapters/org-client.js';
+import { OrgClient } from './adapters/index.js';
 
 export type ValidateResult = {
     files: string[];

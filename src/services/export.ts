@@ -1,7 +1,7 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { serializeAssignments } from '../core/index.js';
-import { OrgClient } from './adapters/org-client.js';
+import { OrgClient } from './adapters/index.js';
 
 export type ExportResult = {
     outputFile: string;

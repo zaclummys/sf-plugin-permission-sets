@@ -1,5 +1,5 @@
 import { loadFiles, diffAssignments, Diff, Finding, countFindings } from '../core/index.js';
-import { OrgClient } from './adapters/org-client.js';
+import { OrgClient } from './adapters/index.js';
 import { ResolutionService, managedTargets } from './resolution.js';
 
 export type PlanMode = 'additive' | 'destructive' | 'sync';
