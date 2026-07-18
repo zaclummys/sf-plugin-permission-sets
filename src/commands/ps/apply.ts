@@ -2,7 +2,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
-import { ApplyService } from '../../services/index.js';
+import { ApplyService, ConfirmDeletions } from '../../services/index.js';
 import { formatDiff, formatFindings } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -59,7 +59,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         const connection = flags['target-org'].getConnection();
         const orgClient = new ConnectionOrgClient(connection);
 
-        const confirmDeletions = async (count: number): Promise<boolean> => {
+        const confirmDeletions: ConfirmDeletions = async (count) => {
             if (flags['no-prompt']) return true;
             if (this.jsonEnabled()) throw messages.createError('error.promptInJson');
             return this.confirm({ message: messages.getMessage('confirm.delete', [String(count)]) });

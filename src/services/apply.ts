@@ -15,6 +15,9 @@ import { Resolution, ResolutionService, managedTargets } from './resolution.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 
+/** How the service asks its caller to approve a destructive batch before applying it. */
+export type ConfirmDeletions = (count: number) => Promise<boolean>;
+
 export type ApplyInput = {
     mode: ApplyMode;
     maxDeletes: number;
@@ -58,7 +61,7 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
 export class ApplyService {
     public constructor(
         private readonly org: OrgClient,
-        private readonly confirmDeletions: (count: number) => Promise<boolean>
+        private readonly confirmDeletions: ConfirmDeletions
     ) {}
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
