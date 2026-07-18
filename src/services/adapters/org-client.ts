@@ -23,7 +23,7 @@ export interface OrgClient {
     /** Every assignable permission set, group, and license assignment held by active users, narrowed by the filter. */
     listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]>;
     /** The current assignments of the given managed targets, with their record ids. */
-    currentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]>;
+    listCurrentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]>;
     /** Insert the given assignments, reporting per-record success or failure. */
     addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]>;
     /** Update the expiration of the given assignments, reporting per-record success or failure. */

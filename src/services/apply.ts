@@ -82,7 +82,7 @@ export class ApplyService {
             return invalidResult(loaded.files, findings);
         }
 
-        const actual = await this.org.currentAssignments(managedTargets(resolution));
+        const actual = await this.org.listCurrentAssignments(managedTargets(resolution));
         const diff = diffAssignments(loaded.assignments, actual);
 
         const { mode, maxDeletes, dryRun } = input;

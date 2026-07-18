@@ -55,13 +55,107 @@ const assignmentObjects: Record<Kind, AssignmentObject> = {
 const collectionBatchSize = 200;
 
 /** Escape a value for safe inclusion in a SOQL string literal. */
-function soqlLiteral(value: string): string {
+function escapeSoqlLiteral(value: string): string {
     return value.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 /** Build a comma-separated, quoted IN list from the values. */
-function inList(values: string[]): string {
-    return values.map((value) => `'${soqlLiteral(value)}'`).join(', ');
+function buildInList(values: string[]): string {
+    return values.map((value) => `'${escapeSoqlLiteral(value)}'`).join(', ');
+}
+
+/** Full membership SOQL for the active, non-profile-owned assignments matching the filter. */
+function buildMembershipQuery(usernames: string[] | undefined, wantsPermissionSet: boolean, wantsGroup: boolean): string {
+    const clauses = [
+        'Assignee.IsActive = true',
+        'PermissionSet.IsOwnedByProfile = false',
+    ];
+    if (usernames) clauses.push(`Assignee.Username IN(${buildInList(usernames)})`);
+    if (!wantsGroup) clauses.push('PermissionSetGroupId = null');
+    if (!wantsPermissionSet) clauses.push('PermissionSetGroupId != null');
+
+    return `
+        SELECT
+            Id,
+            Assignee.Username,
+            PermissionSet.Name,
+            PermissionSetGroup.DeveloperName,
+            PermissionSetGroupId,
+            ExpirationDate
+        FROM PermissionSetAssignment
+        WHERE ${clauses.join(' AND ')}
+    `;
+}
+
+/** Full membership SOQL for the current assignments of the given permission set and group ids. */
+function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds: string[]): string {
+    const clauses: string[] = [];
+    if (permissionSetIds.length > 0) clauses.push(`PermissionSetId IN(${buildInList(permissionSetIds)})`);
+    if (groupIds.length > 0) clauses.push(`PermissionSetGroupId IN(${buildInList(groupIds)})`);
+
+    return `
+        SELECT
+            Id,
+            Assignee.Username,
+            PermissionSet.Name,
+            PermissionSetGroup.DeveloperName,
+            PermissionSetGroupId,
+            ExpirationDate
+        FROM PermissionSetAssignment
+        WHERE ${clauses.join(' OR ')}
+    `;
+}
+
+/** Full license SOQL for the active assignments matching the filter. */
+function buildLicenseQuery(usernames: string[] | undefined): string {
+    const clauses = ['Assignee.IsActive = true'];
+    if (usernames) clauses.push(`Assignee.Username IN(${buildInList(usernames)})`);
+
+    return `
+        SELECT
+            Id,
+            Assignee.Username,
+            PermissionSetLicense.DeveloperName
+        FROM PermissionSetLicenseAssign
+        WHERE ${clauses.join(' AND ')}
+    `;
+}
+
+/** Full license SOQL for the current assignments of the given license ids. */
+function buildCurrentLicenseQuery(licenseIds: string[]): string {
+    return `
+        SELECT
+            Id,
+            Assignee.Username,
+            PermissionSetLicense.DeveloperName
+        FROM PermissionSetLicenseAssign
+        WHERE PermissionSetLicenseId IN(${buildInList(licenseIds)})
+    `;
+}
+
+/** Full SOQL for the users with the given usernames. */
+function buildUserQuery(usernames: string[]): string {
+    return `
+        SELECT
+            Id,
+            Username,
+            IsActive
+        FROM User
+        WHERE Username IN(${buildInList(usernames)})
+    `;
+}
+
+/** Full SOQL for the targets of a kind with the given names. */
+function buildTargetQuery(kind: Kind, names: string[]): string {
+    const { sobject, field } = targetObjects[kind];
+
+    return `
+        SELECT
+            Id,
+            ${field}
+        FROM ${sobject}
+        WHERE ${field} IN(${buildInList(names)})
+    `;
 }
 
 /** Split items into chunks of at most `size`. */
@@ -74,7 +168,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 }
 
 /** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
-function outcomeOf(
+function deriveOutcome(
     assignment: { assignee: string; kind: Kind; target: string },
     operation: 'add' | 'update' | 'remove',
     result: DmlResult | undefined
@@ -99,7 +193,7 @@ type DmlRecord = Record<string, string | null>;
 type UpdateRecord = { Id: string; ExpirationDate: string | null };
 
 /** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */
-function additionBatches(
+function buildAdditionBatches(
     additions: ResolvedAddition[]
 ): Array<{ sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }> {
     const bySobject = new Map<string, ResolvedAddition[]>();
@@ -125,7 +219,7 @@ function additionBatches(
 }
 
 /** Group expiration updates by sObject and chunk them, building the Id + ExpirationDate records. */
-function updateBatches(
+function buildUpdateBatches(
     updates: AssignmentUpdate[]
 ): Array<{ sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }> {
     const bySobject = new Map<string, AssignmentUpdate[]>();
@@ -150,7 +244,7 @@ function updateBatches(
 }
 
 /** Group removals by sObject and chunk them for the Collections API. */
-function removalBatches(removals: ActualAssignment[]): Array<{ sobject: string; removals: ActualAssignment[] }> {
+function buildRemovalBatches(removals: ActualAssignment[]): Array<{ sobject: string; removals: ActualAssignment[] }> {
     const bySobject = new Map<string, ActualAssignment[]>();
     for (const removal of removals) {
         const { sobject } = assignmentObjects[removal.kind];
@@ -179,21 +273,17 @@ function classifyMembership(record: MembershipRecord): { kind: 'permissionSet' |
 
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
 export class ConnectionOrgClient implements OrgClient {
-    public constructor(private readonly connection: Connection) {}
+    public constructor(private readonly connection: Connection) { }
 
     public async findUsers(usernames: string[]): Promise<OrgUser[]> {
-        const records = await this.query<{ Id: string; Username: string; IsActive: boolean }>(
-            `SELECT Id, Username, IsActive FROM User WHERE Username IN (${inList(usernames)})`
-        );
+        const records = await this.query<{ Id: string; Username: string; IsActive: boolean }>(buildUserQuery(usernames));
 
         return records.map((record) => ({ id: record.Id, username: record.Username, isActive: record.IsActive }));
     }
 
     public async findTargets(kind: Kind, names: string[]): Promise<OrgTarget[]> {
-        const { sobject, field } = targetObjects[kind];
-        const records = await this.query<Record<string, string>>(
-            `SELECT Id, ${field} FROM ${sobject} WHERE ${field} IN (${inList(names)})`
-        );
+        const { field } = targetObjects[kind];
+        const records = await this.query<Record<string, string>>(buildTargetQuery(kind, names));
 
         return records.map((record) => ({ id: record.Id, name: record[field] }));
     }
@@ -221,17 +311,7 @@ export class ConnectionOrgClient implements OrgClient {
         wantsPermissionSet: boolean,
         wantsGroup: boolean
     ): Promise<DesiredAssignment[]> {
-        const clauses = [
-            'Assignee.IsActive = true',
-            'PermissionSet.IsOwnedByProfile = false',
-        ];
-        if (usernames) clauses.push(`Assignee.Username IN (${inList(usernames)})`);
-        if (!wantsGroup) clauses.push('PermissionSetGroupId = null');
-        if (!wantsPermissionSet) clauses.push('PermissionSetGroupId != null');
-
-        const soql =
-            'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
-            `FROM PermissionSetAssignment WHERE ${clauses.join(' AND ')}`;
+        const soql = buildMembershipQuery(usernames, wantsPermissionSet, wantsGroup);
         const records = await this.query<MembershipRecord>(soql);
 
         return records.map((record) => {
@@ -247,12 +327,7 @@ export class ConnectionOrgClient implements OrgClient {
     }
 
     private async listLicenses(usernames: string[] | undefined): Promise<DesiredAssignment[]> {
-        const clauses = ['Assignee.IsActive = true'];
-        if (usernames) clauses.push(`Assignee.Username IN (${inList(usernames)})`);
-
-        const soql =
-            'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
-            `FROM PermissionSetLicenseAssign WHERE ${clauses.join(' AND ')}`;
+        const soql = buildLicenseQuery(usernames);
         const records = await this.query<LicenseRecord>(soql);
 
         return records.map((record) => ({
@@ -263,35 +338,28 @@ export class ConnectionOrgClient implements OrgClient {
         }));
     }
 
-    public async currentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]> {
+    public async listCurrentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]> {
         const permissionSetIds = targets.filter((ref) => ref.kind === 'permissionSet').map((ref) => ref.id);
         const groupIds = targets.filter((ref) => ref.kind === 'permissionSetGroup').map((ref) => ref.id);
         const licenseIds = targets.filter((ref) => ref.kind === 'permissionSetLicense').map((ref) => ref.id);
 
         const tasks: Array<Promise<ActualAssignment[]>> = [];
 
-        const memberClauses: string[] = [];
-        if (permissionSetIds.length > 0) memberClauses.push(`PermissionSetId IN (${inList(permissionSetIds)})`);
-        if (groupIds.length > 0) memberClauses.push(`PermissionSetGroupId IN (${inList(groupIds)})`);
-        if (memberClauses.length > 0) {
-            const soql =
-                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
-                `FROM PermissionSetAssignment WHERE ${memberClauses.join(' OR ')}`;
-            tasks.push(this.membershipAssignments(soql));
+        if (permissionSetIds.length > 0 || groupIds.length > 0) {
+            const soql = buildCurrentMembershipQuery(permissionSetIds, groupIds);
+            tasks.push(this.listMembershipAssignments(soql));
         }
 
         if (licenseIds.length > 0) {
-            const soql =
-                'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
-                `FROM PermissionSetLicenseAssign WHERE PermissionSetLicenseId IN (${inList(licenseIds)})`;
-            tasks.push(this.licenseAssignments(soql));
+            const soql = buildCurrentLicenseQuery(licenseIds);
+            tasks.push(this.listLicenseAssignments(soql));
         }
 
         const results = await Promise.all(tasks);
         return results.flat();
     }
 
-    private async membershipAssignments(soql: string): Promise<ActualAssignment[]> {
+    private async listMembershipAssignments(soql: string): Promise<ActualAssignment[]> {
         const records = await this.query<MembershipRecord>(soql);
         return records.map((record) => {
             const { kind, target } = classifyMembership(record);
@@ -306,7 +374,7 @@ export class ConnectionOrgClient implements OrgClient {
         });
     }
 
-    private async licenseAssignments(soql: string): Promise<ActualAssignment[]> {
+    private async listLicenseAssignments(soql: string): Promise<ActualAssignment[]> {
         const records = await this.query<LicenseRecord>(soql);
         return records.map((record) => ({
             recordId: record.Id,
@@ -318,7 +386,7 @@ export class ConnectionOrgClient implements OrgClient {
     }
 
     public async addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]> {
-        const batches = additionBatches(additions);
+        const batches = buildAdditionBatches(additions);
         const settled = await Promise.all(
             batches.map(async (batch) => {
                 const results = await this.connection.create(batch.sobject, batch.records, { allOrNone: false });
@@ -329,14 +397,14 @@ export class ConnectionOrgClient implements OrgClient {
         const outcomes: AssignmentOutcome[] = [];
         for (const { batch, results } of settled) {
             batch.additions.forEach((addition, index) => {
-                outcomes.push(outcomeOf(addition, 'add', results[index]));
+                outcomes.push(deriveOutcome(addition, 'add', results[index]));
             });
         }
         return outcomes;
     }
 
     public async updateAssignments(updates: AssignmentUpdate[]): Promise<AssignmentOutcome[]> {
-        const batches = updateBatches(updates);
+        const batches = buildUpdateBatches(updates);
         const settled = await Promise.all(
             batches.map(async (batch) => {
                 const results = await this.connection.update(batch.sobject, batch.records, { allOrNone: false });
@@ -347,14 +415,14 @@ export class ConnectionOrgClient implements OrgClient {
         const outcomes: AssignmentOutcome[] = [];
         for (const { batch, results } of settled) {
             batch.updates.forEach((update, index) => {
-                outcomes.push(outcomeOf(update, 'update', results[index]));
+                outcomes.push(deriveOutcome(update, 'update', results[index]));
             });
         }
         return outcomes;
     }
 
     public async removeAssignments(removals: ActualAssignment[]): Promise<AssignmentOutcome[]> {
-        const batches = removalBatches(removals);
+        const batches = buildRemovalBatches(removals);
         const settled = await Promise.all(
             batches.map(async (batch) => {
                 const recordIds = batch.removals.map((removal) => removal.recordId);
@@ -366,7 +434,7 @@ export class ConnectionOrgClient implements OrgClient {
         const outcomes: AssignmentOutcome[] = [];
         for (const { batch, results } of settled) {
             batch.removals.forEach((removal, index) => {
-                outcomes.push(outcomeOf(removal, 'remove', results[index]));
+                outcomes.push(deriveOutcome(removal, 'remove', results[index]));
             });
         }
         return outcomes;

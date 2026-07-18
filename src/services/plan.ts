@@ -56,7 +56,7 @@ export class PlanService {
             return invalidResult(loaded.files, findings);
         }
 
-        const actual = await this.org.currentAssignments(managedTargets(resolution));
+        const actual = await this.org.listCurrentAssignments(managedTargets(resolution));
         const diff = diffAssignments(loaded.assignments, actual);
         const drift = {
             adds: mode === 'destructive' ? diff.toAdd.length : 0,
