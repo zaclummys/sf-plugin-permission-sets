@@ -18,6 +18,10 @@ on:
                 description: Auth URL for the org the real-org tests authenticate against.
                 required: false
 
+concurrency:
+    group: ${{ github.workflow }}
+    cancel-in-progress: false
+
 jobs:
     build:
         runs-on: ubuntu-latest
