@@ -2,6 +2,12 @@
 
 Guidelines for working in this repo (an `sf` CLI plugin). These override default behavior.
 
+## Product mindset (DX & UX)
+
+- Treat this plugin as a product, not just code. Weigh developer experience and user experience in every change, starting from the operator's workflow and pain points.
+- Design for real usage: scoping and filtering flags, sensible defaults, safe destructive actions (confirmations and guards), clear output and error messages, stdout and pipe friendliness, and round-trip ergonomics between commands.
+- When reviewing or building a command, call out UX and DX gaps proactively and recommend the highest-value improvement rather than listing every option.
+
 ## Architecture & layering
 
 - Strict dependency direction: **commands → services → core**. Never the reverse.
