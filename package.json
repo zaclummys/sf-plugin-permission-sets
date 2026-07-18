@@ -5,6 +5,10 @@
         "type": "git",
         "url": "git+https://github.com/zaclummys/sf-plugin-permission-sets.git"
     },
+    "homepage": "https://github.com/zaclummys/sf-plugin-permission-sets#readme",
+    "bugs": {
+        "url": "https://github.com/zaclummys/sf-plugin-permission-sets/issues"
+    },
     "dependencies": {
         "@oclif/core": "^4",
         "@salesforce/core": "^8",
