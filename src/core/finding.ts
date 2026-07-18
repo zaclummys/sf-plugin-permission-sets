@@ -1,7 +1,7 @@
-export type FindingLevel = 'error' | 'warning';
+type FindingLevel = 'error' | 'warning';
 
 /** The closed vocabulary of finding codes. Adding one here is required to emit it. */
-export type FindingCode =
+type FindingCode =
     | 'YAML'
     | 'EMPTY_FILE'
     | 'SCHEMA'

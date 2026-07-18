@@ -21,13 +21,13 @@ const expiringList = z.array(
 /** Licenses cannot expire (PermissionSetLicenseAssign has no ExpirationDate), so names only. */
 const plainList = z.array(name);
 
-export const userEntrySchema = z.strictObject({
+const userEntrySchema = z.strictObject({
     permissionSets: expiringList.optional(),
     permissionSetGroups: expiringList.optional(),
     permissionSetLicenses: plainList.optional(),
 });
 
-export const fileSchema = z.strictObject({
+const fileSchema = z.strictObject({
     users: z.record(z.string().min(1), userEntrySchema),
 });
 

@@ -16,7 +16,7 @@ const kindLabels: Record<Kind, string> = {
 };
 
 /** What the report shows: the mode selects which operations, plus whether to list unchanged. */
-export type ReportOptions = {
+type ReportOptions = {
     mode: ReconcileMode;
     showUnchanged: boolean;
 };
