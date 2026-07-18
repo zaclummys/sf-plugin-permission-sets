@@ -395,9 +395,11 @@ Two dead-simple workflows: check pull requests to main with no org, then apply o
 ```yaml
 # .github/workflows/permissions-check.yml
 name: permissions-check
+
 on:
   pull_request:
     branches: [main]
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -406,10 +408,13 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 20
+
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
+
       - name: Install the plugin
         run: sf plugins install sf-plugin-permission-sets
+
       - name: Check the permission files
         run: sf ps check --file "permissions/*.yml"
 ```
@@ -419,10 +424,11 @@ jobs:
 ```yaml
 # .github/workflows/permissions-apply.yml
 name: permissions-apply
+
 on:
   push:
     branches: [main]
-    paths: ["permissions/**"]
+
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -431,18 +437,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 20
+
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
+
       - name: Install the plugin
         run: sf plugins install sf-plugin-permission-sets
+
       - name: Log in to the org
-        run: echo '${{ secrets.SF_AUTH_URL }}' | sf org login sfdx-url --sfdx-url-stdin --alias prod
-      # --no-prompt so a deletion never blocks on a confirmation in CI.
+        run: echo '${{ secrets.SFDX_AUTH_URL }}' | sf org login sfdx-url --sfdx-url-stdin --alias prod
+
       - name: Apply the assignments
         run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
 ```
 
-Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SF_AUTH_URL`.
+Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SFDX_AUTH_URL`.
 
 Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.yml" --target-org prod` step (it needs the same org auth) to the check workflow.
 
