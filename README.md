@@ -250,18 +250,14 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged]
-               [--out <file>] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --show-unchanged         List assignments that already match, instead of only counting them.
-  --out=<file>             Write the computed change set to a plan file that `apply` can run verbatim.
 ```
-
-With `--out` the plan is also saved to a file: the resolved change set (adds, updates, removes with their record ids), the mode it was computed for, and the org it targets. Feed that file to `apply --plan` to execute exactly what you reviewed, with no recomputation. See [Saved plans](#saved-plans).
 
 The body shows only what the mode will do, and unchanged assignments are summarized as a count (pass `--show-unchanged` to list them). The default `additive` run previews only what it grants, and reports the undeclared assignment it won't remove as drift:
 
@@ -311,13 +307,12 @@ Next: sf ps apply -o prod -f "permissions/*.yml" --mode sync
 
 ```
 USAGE
-  $ sf ps apply -o <org> (-f <glob>... | --plan <file>) [--mode <value>]
+  $ sf ps apply -o <org> -f <glob>... [--mode <value>]
                 [--max-deletes <n>] [--dry-run] [--show-unchanged] [--no-prompt] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
-  -f, --file=<glob>...     YAML file(s) to read. Repeatable, globs expanded by the plugin.
-  --plan=<file>            Apply a saved plan file from `plan --out` instead of re-reading YAML.
+  -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --max-deletes=<n>        Abort if a run would remove more than n assignments. [default: 50]
   --dry-run                Resolve and diff, print what would happen, change nothing.
@@ -325,27 +320,9 @@ FLAGS
   --no-prompt              Skip the deletion confirmation prompt (for CI).
 ```
 
-Provide exactly one source: `--file` (read and diff the YAML now) or `--plan` (run a saved plan). They cannot be combined, and `--mode` cannot accompany `--plan` (the plan already carries its mode). `--max-deletes`, `--dry-run`, and `--no-prompt` apply to both.
+`apply` recomputes from the files every run: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state, then acts per `--mode`. Run `plan` shortly before `apply` so the preview you review reflects what `apply` will do (an edited file, a renamed permission set, or another admin's change between the two shifts the outcome).
 
 Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org. DML is executed with the sObject Collections API and reports partial successes/failures per record.
-
-#### Saved plans
-
-`plan --out` and `apply --plan` split review from execution, so what you approve is exactly what runs:
-
-```bash
-sf ps plan  -o prod -f "permissions/*.yml" --mode sync --out prod.plan
-# ... review prod.plan, get sign-off ...
-sf ps apply -o prod --plan prod.plan
-```
-
-Without a saved plan, `apply` recomputes from the files: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state. Anything that changed since you ran `plan` (an edited file, a renamed permission set, another admin's assignment) silently changes what `apply` does. A saved plan freezes the resolved change set, so `apply --plan` executes those exact records with no recomputation.
-
-Guardrails:
-
-- `apply --plan` refuses a plan built for a different org (the plan records the org id).
-- It refuses a plan file it cannot parse or whose format version it does not recognize.
-- The plan is executed as recorded. If the org drifted after the plan was written, individual records may fail (a removed target, an already-deleted assignment); those surface as per-record failures in the outcome report rather than aborting the run. Re-run `plan` to get a fresh plan when in doubt.
 
 ### `sf ps export`
 
@@ -519,9 +496,8 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
 | `mode` | Scope a diff to what a reconcile mode acts on, plus the drift it leaves alone. |
 | `report` | Format a diff as a plan. |
-| `plan-file` | Serialize and parse a saved plan: the frozen change set `apply --plan` runs. |
 
-Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces. `plan --out` freezes that resolved change set to a file, and `apply --plan` runs it verbatim, skipping load, resolve, and diff.
+Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
 
 ## License
 

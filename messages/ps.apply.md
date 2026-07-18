@@ -8,15 +8,11 @@ Load the files, resolve every user and target against the org, diff the desired 
 
 # flags.file.summary
 
-YAML file or glob to apply. Repeatable. Provide either this or --plan.
-
-# flags.plan.summary
-
-Apply a saved plan file from plan --out, running the reviewed change set verbatim. Provide either this or --file.
+YAML file or glob to apply. Repeatable.
 
 # flags.mode.summary
 
-Which half of the reconcile to run: additive adds missing assignments and updates expirations, destructive removes only, sync does both. Cannot be combined with --plan, which carries its own mode.
+Which half of the reconcile to run: additive adds missing assignments and updates expirations, destructive removes only, sync does both.
 
 # flags.max-deletes.summary
 
@@ -33,10 +29,6 @@ List assignments that already match, instead of only counting them.
 # flags.no-prompt.summary
 
 Skip the deletion confirmation prompt. Required to delete in JSON or other non-interactive runs.
-
-# info.applyingPlan
-
-Applying saved plan (mode %s).
 
 # confirm.delete
 
@@ -61,30 +53,6 @@ Aborted at the confirmation prompt. Nothing was changed.
 # failure.line
 
 failed to %s %s on %s: %s
-
-# error.sourceConflict
-
-Pass either --file or --plan, not both. --plan runs a saved plan; --file reads and diffs the YAML now.
-
-# error.sourceMissing
-
-Provide a source to apply: --file <glob> to read the YAML now, or --plan <file> to run a saved plan.
-
-# error.modeWithPlan
-
---mode cannot be combined with --plan. A saved plan already carries the mode it was computed for. Re-run plan with the mode you want to get a new plan.
-
-# error.planRead
-
-Could not read the plan file: %s
-
-# error.planInvalid
-
-The plan file %s is not a valid plan: %s. Regenerate it with plan --out.
-
-# error.planOrg
-
-This plan was built for org %s but the target org is %s. Regenerate the plan against the target org.
 
 # error.invalid
 

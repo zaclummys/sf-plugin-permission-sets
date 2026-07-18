@@ -7,7 +7,6 @@ import {
     AssignmentUpdate,
     Diff,
     ResolvedAddition,
-    SavedPlan,
     Finding,
     countFindings,
 } from '../core/index.js';
@@ -24,14 +23,6 @@ export type ApplyInput = {
     maxDeletes: number;
     dryRun: boolean;
 };
-
-/** The inputs a saved-plan apply needs. The mode is already baked into the plan. */
-export type ApplyPlanInput = {
-    maxDeletes: number;
-    dryRun: boolean;
-};
-
-const noDrift = { adds: 0, updates: 0, removes: 0 };
 
 /** How a run ended, so the command can report and set the exit code. */
 export type ApplyStatus = 'applied' | 'dry-run' | 'declined' | 'max-deletes-exceeded' | 'invalid';
@@ -124,37 +115,6 @@ export class ApplyService {
         const failed = outcomes.some((outcome) => !outcome.success);
 
         return { files: loaded.files, findings, diff, drift, outcomes, status: 'applied', failed };
-    }
-
-    /**
-     * Apply a saved plan verbatim: no load, resolve, or diff. The plan is already
-     * mode-scoped and resolved, so there is no drift and no findings. maxDeletes and
-     * the deletion confirmation still guard the run.
-     */
-    public async runPlan(plan: SavedPlan, input: ApplyPlanInput): Promise<ApplyResult> {
-        const diff: Diff = { toAdd: plan.add, toUpdate: plan.update, toRemove: plan.remove, unchanged: [] };
-        const { maxDeletes, dryRun } = input;
-        const base = { files: [] as string[], findings: [] as Finding[], diff, drift: noDrift, outcomes: [] };
-
-        if (plan.remove.length > maxDeletes) {
-            return { ...base, status: 'max-deletes-exceeded', failed: true };
-        }
-
-        if (dryRun) {
-            return { ...base, status: 'dry-run', failed: false };
-        }
-
-        if (plan.remove.length > 0) {
-            const confirmed = await this.confirmDeletions(plan.remove.length);
-            if (!confirmed) {
-                return { ...base, status: 'declined', failed: false };
-            }
-        }
-
-        const outcomes = await this.executeResolved(plan.add, plan.update, plan.remove);
-        const failed = outcomes.some((outcome) => !outcome.success);
-
-        return { ...base, outcomes, status: 'applied', failed };
     }
 
     private async executeResolved(
