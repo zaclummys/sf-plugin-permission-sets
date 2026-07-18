@@ -168,6 +168,22 @@ function removalBatches(removals: ActualAssignment[]): Array<{ sobject: string; 
     return batches;
 }
 
+/** A membership row is a group grant when it carries a group id, otherwise a plain permission set. */
+function membershipKindTarget(record: MembershipRecord): { kind: Kind; target: string } {
+    if (record.PermissionSetGroupId && record.PermissionSetGroup) {
+        return { kind: 'permissionSetGroup', target: record.PermissionSetGroup.DeveloperName };
+    }
+
+    return { kind: 'permissionSet', target: record.PermissionSet.Name };
+}
+
+/** The spreadable expiration fragment for a record: `{ expiration }` when set, otherwise empty. */
+function expirationFragment(expirationDate: string | null): { expiration?: string } {
+    if (!expirationDate) return {};
+
+    return { expiration: expirationDate };
+}
+
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
 export class ConnectionOrgClient implements OrgClient {
     public constructor(private readonly connection: Connection) {}
@@ -225,22 +241,11 @@ export class ConnectionOrgClient implements OrgClient {
             `FROM PermissionSetAssignment WHERE ${clauses.join(' AND ')}`;
         const records = await this.query<MembershipRecord>(soql);
 
-        return records.map((record) => {
-            const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
-            return record.PermissionSetGroupId && record.PermissionSetGroup
-                ? {
-                      assignee: record.Assignee.Username,
-                      kind: 'permissionSetGroup' as const,
-                      target: record.PermissionSetGroup.DeveloperName,
-                      ...expiration,
-                  }
-                : {
-                      assignee: record.Assignee.Username,
-                      kind: 'permissionSet' as const,
-                      target: record.PermissionSet.Name,
-                      ...expiration,
-                  };
-        });
+        return records.map((record) => ({
+            assignee: record.Assignee.Username,
+            ...membershipKindTarget(record),
+            ...expirationFragment(record.ExpirationDate),
+        }));
     }
 
     private async listLicenses(usernames: string[] | undefined): Promise<DesiredAssignment[]> {
@@ -289,24 +294,12 @@ export class ConnectionOrgClient implements OrgClient {
 
     private async membershipAssignments(soql: string): Promise<ActualAssignment[]> {
         const records = await this.query<MembershipRecord>(soql);
-        return records.map((record) => {
-            const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
-            return record.PermissionSetGroupId && record.PermissionSetGroup
-                ? {
-                      recordId: record.Id,
-                      assignee: record.Assignee.Username,
-                      kind: 'permissionSetGroup' as const,
-                      target: record.PermissionSetGroup.DeveloperName,
-                      ...expiration,
-                  }
-                : {
-                      recordId: record.Id,
-                      assignee: record.Assignee.Username,
-                      kind: 'permissionSet' as const,
-                      target: record.PermissionSet.Name,
-                      ...expiration,
-                  };
-        });
+        return records.map((record) => ({
+            recordId: record.Id,
+            assignee: record.Assignee.Username,
+            ...membershipKindTarget(record),
+            ...expirationFragment(record.ExpirationDate),
+        }));
     }
 
     private async licenseAssignments(soql: string): Promise<ActualAssignment[]> {
