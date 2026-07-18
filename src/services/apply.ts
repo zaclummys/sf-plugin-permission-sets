@@ -66,14 +66,16 @@ export class ApplyService {
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
         const loaded = await loadFiles(files);
-        if (countFindings(loaded.findings).errors > 0) {
+        const loadCounts = countFindings(loaded.findings);
+        if (loadCounts.errors > 0) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
         const resolutionService = new ResolutionService(this.org);
         const resolution = await resolutionService.run(loaded.assignments);
         const findings = [...loaded.findings, ...resolution.findings];
-        if (countFindings(findings).errors > 0) {
+        const findingCounts = countFindings(findings);
+        if (findingCounts.errors > 0) {
             return invalidResult(loaded.files, findings);
         }
 

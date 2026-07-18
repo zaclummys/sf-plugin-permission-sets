@@ -34,7 +34,7 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 - Blank line after a run of `const` declarations before the next statement.
 - Don't export a symbol unless another file imports it.
 - Prefer two loops each doing one thing over one loop doing two things.
-- Avoid inline chaining on a fresh expression: bind `new X()` or `await f()` to a variable before calling a method on it.
+- Avoid member access on a fresh expression: bind `new X()`, `await f()`, or a plain call `f(...)` to a variable before reading a property or calling a method on it. Prefer `const counts = countFindings(x); if (counts.errors > 0)` over `if (countFindings(x).errors > 0)`. (Fluent library chains like `z.string().min(1)` are exempt.)
 
 ## Testing
 
