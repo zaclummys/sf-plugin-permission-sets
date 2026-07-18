@@ -42,8 +42,8 @@ export default class Export extends SfCommand<PsExportResult> {
     private logExportSuccess(assignments: number, users: number, outputFile: string): void {
         this.log(
             messages.getMessage('success', [
-                String(assignments),
-                String(users),
+                assignments,
+                users,
                 outputFile,
             ])
         );

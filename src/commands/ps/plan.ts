@@ -180,25 +180,24 @@ export default class Plan extends SfCommand<PsPlanResult> {
     }
 
     private countsLine(diff: Diff, mode: ReconcileMode, usersAffected: number): string {
-        const affected = String(usersAffected);
         if (mode === 'destructive') {
             return messages.getMessage('summary.counts.destructive', [
-                String(diff.toRemove.length),
-                affected,
+                diff.toRemove.length,
+                usersAffected,
             ]);
         }
         if (mode === 'additive') {
             return messages.getMessage('summary.counts.additive', [
-                String(diff.toAdd.length),
-                String(diff.toUpdate.length),
-                affected,
+                diff.toAdd.length,
+                diff.toUpdate.length,
+                usersAffected,
             ]);
         }
         return messages.getMessage('summary.counts.sync', [
-            String(diff.toAdd.length),
-            String(diff.toUpdate.length),
-            String(diff.toRemove.length),
-            affected,
+            diff.toAdd.length,
+            diff.toUpdate.length,
+            diff.toRemove.length,
+            usersAffected,
         ]);
     }
 
@@ -255,18 +254,18 @@ export default class Plan extends SfCommand<PsPlanResult> {
     }
 
     private logDriftAdditive(count: number): void {
-        this.log(messages.getMessage('drift.additive', [String(count)]));
+        this.log(messages.getMessage('drift.additive', [count]));
     }
 
     private logDriftDestructive(count: number): void {
-        this.log(messages.getMessage('drift.destructive', [String(count)]));
+        this.log(messages.getMessage('drift.destructive', [count]));
     }
 
     private logSummaryUnchanged(count: number): void {
-        this.log(messages.getMessage('summary.unchanged', [String(count)]));
+        this.log(messages.getMessage('summary.unchanged', [count]));
     }
 
     private logSummaryUnchangedListed(count: number): void {
-        this.log(messages.getMessage('summary.unchangedListed', [String(count)]));
+        this.log(messages.getMessage('summary.unchangedListed', [count]));
     }
 }

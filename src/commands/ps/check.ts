@@ -64,8 +64,8 @@ export default class Check extends SfCommand<PsCheckResult> {
     private logSummaryCounts(errors: number, warnings: number): void {
         this.log(
             messages.getMessage('summary.counts', [
-                String(errors),
-                String(warnings),
+                errors,
+                warnings,
             ])
         );
     }

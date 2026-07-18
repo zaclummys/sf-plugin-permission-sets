@@ -28,7 +28,7 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Commands
 
-- Every user-facing message call gets a named private method, prefixed by the sink and suffixed with the PascalCased message key: `this.log(...)` → `logHeaderTitle`/`logSummaryCounts`; `this.error(...)` → `errorInvalid`/`errorMaxDeletes`; `this.confirm(...)` → `confirmDelete`. The method takes the raw token values and does any `String()` conversion (and passes options like `{ exit: 1 }`) inside. Call sites use the method, never `this.log(messages.getMessage(...))` / `this.error(messages.getMessage(...))` / `this.confirm({ message: messages.getMessage(...) })` inline. Guards like `if (!this.jsonEnabled())` stay at the call site.
+- Every user-facing message call gets a named private method, prefixed by the sink and suffixed with the PascalCased message key: `this.log(...)` → `logHeaderTitle`/`logSummaryCounts`; `this.error(...)` → `errorInvalid`/`errorMaxDeletes`; `this.confirm(...)` → `confirmDelete`. The method takes the raw token values (pass numbers as-is; `getMessage` tokens accept `number` and every placeholder is `%s`, so no `String()` wrapping) and passes options like `{ exit: 1 }` inside. Call sites use the method, never `this.log(messages.getMessage(...))` / `this.error(messages.getMessage(...))` / `this.confirm({ message: messages.getMessage(...) })` inline. Guards like `if (!this.jsonEnabled())` stay at the call site.
 - `messages.createError(...)` and string-returning builders (e.g. `countsLine`) stay as-is.
 - Avoid clashing with `SfCommand` built-ins (e.g. `logSuccess` exists on the base class — name it `logExportSuccess` instead).
 

@@ -156,9 +156,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
     private logSummaryDryRun(toAdd: number, toUpdate: number, toRemove: number): void {
         this.log(
             messages.getMessage('summary.dryRun', [
-                String(toAdd),
-                String(toUpdate),
-                String(toRemove),
+                toAdd,
+                toUpdate,
+                toRemove,
             ])
         );
     }
@@ -170,9 +170,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
     private logSummaryApplied(added: number, updated: number, removed: number): void {
         this.log(
             messages.getMessage('summary.applied', [
-                String(added),
-                String(updated),
-                String(removed),
+                added,
+                updated,
+                removed,
             ])
         );
     }
@@ -191,14 +191,14 @@ export default class Apply extends SfCommand<PsApplyResult> {
     private logDriftNote(count: number, mode: string): void {
         this.log(
             messages.getMessage('drift.note', [
-                String(count),
+                count,
                 mode,
             ])
         );
     }
 
     private confirmDelete(count: number): Promise<boolean> {
-        return this.confirm({ message: messages.getMessage('confirm.delete', [String(count)]) });
+        return this.confirm({ message: messages.getMessage('confirm.delete', [count]) });
     }
 
     private errorInvalid(): void {
@@ -208,8 +208,8 @@ export default class Apply extends SfCommand<PsApplyResult> {
     private errorMaxDeletes(removeCount: number, maxDeletes: number): void {
         this.error(
             messages.getMessage('error.maxDeletes', [
-                String(removeCount),
-                String(maxDeletes),
+                removeCount,
+                maxDeletes,
             ]),
             { exit: 1 }
         );

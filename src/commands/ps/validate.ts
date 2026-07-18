@@ -65,8 +65,8 @@ export default class Validate extends SfCommand<PsValidateResult> {
     private logSummaryCounts(errors: number, warnings: number): void {
         this.log(
             messages.getMessage('summary.counts', [
-                String(errors),
-                String(warnings),
+                errors,
+                warnings,
             ])
         );
     }
