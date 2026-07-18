@@ -168,8 +168,8 @@ function removalBatches(removals: ActualAssignment[]): Array<{ sobject: string; 
     return batches;
 }
 
-/** A membership row is a group grant when it carries a group id, otherwise a plain permission set. */
-function membershipKindTarget(record: MembershipRecord): { kind: Kind; target: string } {
+/** Classify a membership row: a group grant when it carries a group id, otherwise a plain permission set. */
+function classifyMembership(record: MembershipRecord): { kind: 'permissionSet' | 'permissionSetGroup'; target: string } {
     if (record.PermissionSetGroupId && record.PermissionSetGroup) {
         return { kind: 'permissionSetGroup', target: record.PermissionSetGroup.DeveloperName };
     }
@@ -234,11 +234,16 @@ export class ConnectionOrgClient implements OrgClient {
             `FROM PermissionSetAssignment WHERE ${clauses.join(' AND ')}`;
         const records = await this.query<MembershipRecord>(soql);
 
-        return records.map((record) => ({
-            assignee: record.Assignee.Username,
-            ...membershipKindTarget(record),
-            expiration: record.ExpirationDate,
-        }));
+        return records.map((record) => {
+            const { kind, target } = classifyMembership(record);
+
+            return {
+                kind,
+                target,
+                assignee: record.Assignee.Username,
+                expiration: record.ExpirationDate,
+            };
+        });
     }
 
     private async listLicenses(usernames: string[] | undefined): Promise<DesiredAssignment[]> {
@@ -288,12 +293,17 @@ export class ConnectionOrgClient implements OrgClient {
 
     private async membershipAssignments(soql: string): Promise<ActualAssignment[]> {
         const records = await this.query<MembershipRecord>(soql);
-        return records.map((record) => ({
-            recordId: record.Id,
-            assignee: record.Assignee.Username,
-            ...membershipKindTarget(record),
-            expiration: record.ExpirationDate,
-        }));
+        return records.map((record) => {
+            const { kind, target } = classifyMembership(record);
+
+            return {
+                kind,
+                target,
+                recordId: record.Id,
+                assignee: record.Assignee.Username,
+                expiration: record.ExpirationDate,
+            };
+        });
     }
 
     private async licenseAssignments(soql: string): Promise<ActualAssignment[]> {
