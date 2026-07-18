@@ -5,8 +5,8 @@ function assignmentKey(assignee: string, kind: Kind, target: string): string {
     return `${assignee.toLowerCase()} ${kind} ${target.toLowerCase()}`;
 }
 
-/** Whether two expirations name the same instant. Both absent counts as equal. */
-function sameExpiration(left: string | undefined, right: string | undefined): boolean {
+/** Whether two expirations name the same instant. Both absent (null) counts as equal. */
+function sameExpiration(left: string | null, right: string | null): boolean {
     if (!left || !right) {
         return left === right;
     }

@@ -2,10 +2,10 @@ import { Diff, Kind, ReconcileMode } from './model.js';
 import { kindKeys } from './normalize.js';
 
 type DiffBucket = {
-    adds: Map<string, string | undefined>;
-    updates: Map<string, { previous: string | undefined; next: string | undefined }>;
+    adds: Map<string, string | null>;
+    updates: Map<string, { previous: string | null; next: string | null }>;
     removes: Set<string>;
-    unchanged: Map<string, string | undefined>;
+    unchanged: Map<string, string | null>;
 };
 
 /** Human labels for the section headers, so the plan reads as prose, not YAML keys. */
@@ -49,14 +49,24 @@ function canonicalExpiration(value: string): string {
 }
 
 /** An assignee line suffixed with its expiration when there is one. */
-function withExpiry(assignee: string, expiration: string | undefined): string {
-    return expiration ? `${assignee}   expires ${canonicalExpiration(expiration)}` : assignee;
+function withExpiry(assignee: string, expiration: string | null): string {
+    if (!expiration) return assignee;
+
+    return `${assignee}   expires ${canonicalExpiration(expiration)}`;
+}
+
+/** A canonical expiration for display, with `never` standing in for no expiration. */
+function expiryOrNever(expiration: string | null): string {
+    if (!expiration) return 'never';
+
+    return canonicalExpiration(expiration);
 }
 
 /** An update line showing the expiration transition, with `never` standing in for no expiration. */
-function withTransition(assignee: string, previous: string | undefined, next: string | undefined): string {
-    const from = previous ? canonicalExpiration(previous) : 'never';
-    const to = next ? canonicalExpiration(next) : 'never';
+function withTransition(assignee: string, previous: string | null, next: string | null): string {
+    const from = expiryOrNever(previous);
+    const to = expiryOrNever(next);
+
     return `${assignee}   expires ${from} → ${to}`;
 }
 
@@ -97,7 +107,7 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
 function renderBucket(bucket: DiffBucket): string[] {
     const entries: string[] = [];
     for (const assignee of [...bucket.adds.keys()].sort()) {
-        entries.push(`    + ${withExpiry(assignee, bucket.adds.get(assignee))}`);
+        entries.push(`    + ${withExpiry(assignee, bucket.adds.get(assignee) ?? null)}`);
     }
     for (const assignee of [...bucket.updates.keys()].sort()) {
         const change = bucket.updates.get(assignee)!;
@@ -105,7 +115,7 @@ function renderBucket(bucket: DiffBucket): string[] {
     }
     for (const assignee of [...bucket.removes].sort()) entries.push(`    - ${assignee}`);
     for (const assignee of [...bucket.unchanged.keys()].sort()) {
-        entries.push(`    = ${withExpiry(assignee, bucket.unchanged.get(assignee))}`);
+        entries.push(`    = ${withExpiry(assignee, bucket.unchanged.get(assignee) ?? null)}`);
     }
     return entries;
 }

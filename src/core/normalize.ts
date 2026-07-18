@@ -21,6 +21,13 @@ export function kindForScopeKey(key: ScopeKey): Kind {
 
 type ScopeItem = string | { name: string; expiration: string };
 
+/** A scope item in canonical form: the bare string is a target with no expiration. */
+function scopeItemFields(item: ScopeItem): { target: string; expiration: string | null } {
+    if (typeof item === 'string') return { target: item, expiration: null };
+
+    return { target: item.name, expiration: item.expiration };
+}
+
 function normalizeScope(
     username: string,
     kind: Kind,
@@ -28,10 +35,7 @@ function normalizeScope(
     list: ScopeItem[],
     file: string,
 ): { assignments: DesiredAssignment[]; findings: Finding[] } {
-    const items = list.map((item) => ({
-        target: typeof item === 'string' ? item : item.name,
-        expiration: typeof item === 'string' ? undefined : item.expiration,
-    }));
+    const items = list.map(scopeItemFields);
 
     const assignments: DesiredAssignment[] = [];
     const findings: Finding[] = [];
@@ -43,7 +47,7 @@ function normalizeScope(
             continue;
         }
         seen.add(target);
-        assignments.push({ assignee: username, kind, target, ...(expiration ? { expiration } : {}) });
+        assignments.push({ assignee: username, kind, target, expiration });
     }
 
     return { assignments, findings };

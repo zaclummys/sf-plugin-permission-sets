@@ -177,13 +177,6 @@ function membershipKindTarget(record: MembershipRecord): { kind: Kind; target: s
     return { kind: 'permissionSet', target: record.PermissionSet.Name };
 }
 
-/** The spreadable expiration fragment for a record: `{ expiration }` when set, otherwise empty. */
-function expirationFragment(expirationDate: string | null): { expiration?: string } {
-    if (!expirationDate) return {};
-
-    return { expiration: expirationDate };
-}
-
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
 export class ConnectionOrgClient implements OrgClient {
     public constructor(private readonly connection: Connection) {}
@@ -244,7 +237,7 @@ export class ConnectionOrgClient implements OrgClient {
         return records.map((record) => ({
             assignee: record.Assignee.Username,
             ...membershipKindTarget(record),
-            ...expirationFragment(record.ExpirationDate),
+            expiration: record.ExpirationDate,
         }));
     }
 
@@ -261,6 +254,7 @@ export class ConnectionOrgClient implements OrgClient {
             assignee: record.Assignee.Username,
             kind: 'permissionSetLicense' as const,
             target: record.PermissionSetLicense.DeveloperName,
+            expiration: null,
         }));
     }
 
@@ -298,7 +292,7 @@ export class ConnectionOrgClient implements OrgClient {
             recordId: record.Id,
             assignee: record.Assignee.Username,
             ...membershipKindTarget(record),
-            ...expirationFragment(record.ExpirationDate),
+            expiration: record.ExpirationDate,
         }));
     }
 
@@ -309,6 +303,7 @@ export class ConnectionOrgClient implements OrgClient {
             assignee: record.Assignee.Username,
             kind: 'permissionSetLicense' as const,
             target: record.PermissionSetLicense.DeveloperName,
+            expiration: null,
         }));
     }
 

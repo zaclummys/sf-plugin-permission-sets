@@ -26,7 +26,7 @@ export function serializeAssignments(assignments: DesiredAssignment[]): string {
                 (assignment) => assignment.assignee === username && assignment.kind === kind
             );
 
-            const expirationByTarget = new Map<string, string | undefined>();
+            const expirationByTarget = new Map<string, string | null>();
             for (const assignment of matching) {
                 if (!expirationByTarget.has(assignment.target)) {
                     expirationByTarget.set(assignment.target, assignment.expiration);
@@ -35,7 +35,9 @@ export function serializeAssignments(assignments: DesiredAssignment[]): string {
 
             const entries: SerializedEntry[] = [...expirationByTarget.keys()].sort().map((target) => {
                 const expiration = expirationByTarget.get(target);
-                return expiration ? { name: target, expiration } : target;
+                if (!expiration) return target;
+
+                return { name: target, expiration };
             });
 
             if (entries.length > 0) {

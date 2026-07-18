@@ -15,8 +15,8 @@ export type DesiredAssignment = {
     assignee: string;
     kind: Kind;
     target: string;
-    /** ISO 8601 datetime the grant should expire, if any. Only permission sets and groups support it. */
-    expiration?: string;
+    /** ISO 8601 datetime the grant should expire; null for no expiration. Only permission sets and groups support it. */
+    expiration: string | null;
 };
 
 /** A user as it exists in the org, in domain terms (no SObject field names). */
@@ -38,19 +38,19 @@ export type ActualAssignment = {
     assignee: string;
     kind: Kind;
     target: string;
-    /** The expiration the org has on record, if any. */
-    expiration?: string;
+    /** The expiration the org has on record; null for none. */
+    expiration: string | null;
 };
 
-/** An existing assignment whose expiration should change. `expiration` undefined clears it. */
+/** An existing assignment whose expiration should change. `expiration` null clears it. */
 export type AssignmentUpdate = {
     recordId: string;
     assignee: string;
     kind: Kind;
     target: string;
-    expiration?: string;
-    /** The expiration the org has now, before the update. Undefined means it had none. */
-    previousExpiration?: string;
+    expiration: string | null;
+    /** The expiration the org has now, before the update. Null means it had none. */
+    previousExpiration: string | null;
 };
 
 /** A resolved managed target: its kind and the org id it resolved to. */
