@@ -94,10 +94,19 @@ export function targetAmbiguousError(target: string, label: string): Finding {
     return error('TARGET_AMBIGUOUS', `${target}: ${label} is not unique in org`);
 }
 
+/** The trailing-space location prefix for a finding: `file:line `, `file `, or empty. */
+function locationPrefix(finding: Finding): string {
+    if (!finding.file) return '';
+    if (!finding.line) return `${finding.file} `;
+
+    return `${finding.file}:${finding.line} `;
+}
+
 /** Render findings as human-readable lines. Shared by check, validate, and apply. */
 export function formatFindings(findings: Finding[]): string[] {
     return findings.map((finding) => {
-        const where = finding.file ? `${finding.file}${finding.line ? `:${finding.line}` : ''} ` : '';
+        const where = locationPrefix(finding);
+
         return `${finding.level}: ${where}${finding.message}`;
     });
 }
