@@ -11,12 +11,10 @@ export type CheckResult = {
 
 /** Offline check: load the files, validate them, and summarize the findings. */
 export class CheckService {
-    public constructor(private readonly files: string[], private readonly strict: boolean) {}
-
-    public async run(): Promise<CheckResult> {
-        const loaded = await loadFiles(this.files);
+    public async run(files: string[], strict: boolean): Promise<CheckResult> {
+        const loaded = await loadFiles(files);
         const { errors, warnings } = countFindings(loaded.findings);
-        const failed = errors > 0 || (this.strict && warnings > 0);
+        const failed = errors > 0 || (strict && warnings > 0);
 
         return {
             files: loaded.files,

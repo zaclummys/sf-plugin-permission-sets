@@ -33,11 +33,11 @@ export function managedTargets(resolution: Resolution): TargetRef[] {
 
 /** Look every declared reference up in the org, returning findings and the resolved id maps. */
 export class ResolutionService {
-    public constructor(private readonly org: OrgClient, private readonly assignments: DesiredAssignment[]) {}
+    public constructor(private readonly org: OrgClient) {}
 
-    public async run(): Promise<Resolution> {
-        const usernames = distinctAssignees(this.assignments);
-        const targetsByKind = kinds.map((kind) => ({ kind, targets: distinctTargets(this.assignments, kind) }));
+    public async run(assignments: DesiredAssignment[]): Promise<Resolution> {
+        const usernames = distinctAssignees(assignments);
+        const targetsByKind = kinds.map((kind) => ({ kind, targets: distinctTargets(assignments, kind) }));
 
         const usersTask: Promise<OrgUser[]> =
             usernames.length > 0 ? this.org.findUsers(usernames) : Promise.resolve([]);

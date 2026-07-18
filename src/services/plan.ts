@@ -34,20 +34,16 @@ function invalidResult(files: string[], findings: Finding[]): PlanResult {
  * the org. This is the apply pipeline stopping before any DML.
  */
 export class PlanService {
-    public constructor(
-        private readonly org: OrgClient,
-        private readonly files: string[],
-        private readonly input: PlanInput
-    ) {}
+    public constructor(private readonly org: OrgClient) {}
 
-    public async run(): Promise<PlanResult> {
-        const loaded = await loadFiles(this.files);
+    public async run(files: string[], input: PlanInput): Promise<PlanResult> {
+        const loaded = await loadFiles(files);
         if (countFindings(loaded.findings).errors > 0) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
-        const resolutionService = new ResolutionService(this.org, loaded.assignments);
-        const resolution = await resolutionService.run();
+        const resolutionService = new ResolutionService(this.org);
+        const resolution = await resolutionService.run(loaded.assignments);
         const findings = [...loaded.findings, ...resolution.findings];
         if (countFindings(findings).errors > 0) {
             return invalidResult(loaded.files, findings);
@@ -55,7 +51,7 @@ export class PlanService {
 
         const actual = await this.org.currentAssignments(managedTargets(resolution));
         const diff = diffAssignments(loaded.assignments, actual);
-        const { mode } = this.input;
+        const { mode } = input;
         const drift = {
             adds: mode === 'destructive' ? diff.toAdd.length : 0,
             updates: mode === 'destructive' ? diff.toUpdate.length : 0,

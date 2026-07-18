@@ -22,10 +22,10 @@ export type ValidateResult = {
 
 /** Online validate: run the offline load, then resolve every reference against the org. */
 export class ValidateService {
-    public constructor(private readonly org: OrgClient, private readonly files: string[]) {}
+    public constructor(private readonly org: OrgClient) {}
 
-    public async run(): Promise<ValidateResult> {
-        const loaded = await loadFiles(this.files);
+    public async run(files: string[]): Promise<ValidateResult> {
+        const loaded = await loadFiles(files);
         const online = await this.resolve(loaded.assignments);
 
         const findings = [...loaded.findings, ...online];

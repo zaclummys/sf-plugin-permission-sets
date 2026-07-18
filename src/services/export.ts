@@ -11,19 +11,19 @@ export type ExportResult = {
 
 /** Online export: read the org's current assignments and write them as a YAML file. */
 export class ExportService {
-    public constructor(private readonly org: OrgClient, private readonly outputFile: string) {}
+    public constructor(private readonly org: OrgClient) {}
 
-    public async run(): Promise<ExportResult> {
+    public async run(outputFile: string): Promise<ExportResult> {
         const assignments = await this.org.listAssignments();
         const content = serializeAssignments(assignments);
 
-        await mkdir(dirname(this.outputFile), { recursive: true });
-        await writeFile(this.outputFile, content, 'utf8');
+        await mkdir(dirname(outputFile), { recursive: true });
+        await writeFile(outputFile, content, 'utf8');
 
         const assignees = new Set(assignments.map((assignment) => assignment.assignee));
 
         return {
-            outputFile: this.outputFile,
+            outputFile,
             users: assignees.size,
             assignments: assignments.length,
         };

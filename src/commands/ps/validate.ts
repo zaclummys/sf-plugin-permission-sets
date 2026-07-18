@@ -35,8 +35,8 @@ export default class Validate extends SfCommand<PsValidateResult> {
 
         const connection = flags['target-org'].getConnection();
         const orgClient = new ConnectionOrgClient(connection);
-        const service = new ValidateService(orgClient, flags.file);
-        const result = await service.run();
+        const service = new ValidateService(orgClient);
+        const result = await service.run(flags.file);
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);

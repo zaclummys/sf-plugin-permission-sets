@@ -34,8 +34,8 @@ export default class Check extends SfCommand<PsCheckResult> {
     public async run(): Promise<PsCheckResult> {
         const { flags } = await this.parse(Check);
 
-        const service = new CheckService(flags.file, flags.strict);
-        const result = await service.run();
+        const service = new CheckService();
+        const result = await service.run(flags.file, flags.strict);
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);

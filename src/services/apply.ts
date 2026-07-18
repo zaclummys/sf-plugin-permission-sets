@@ -58,19 +58,17 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
 export class ApplyService {
     public constructor(
         private readonly org: OrgClient,
-        private readonly files: string[],
-        private readonly input: ApplyInput,
         private readonly confirmDeletions: (count: number) => Promise<boolean>
     ) {}
 
-    public async run(): Promise<ApplyResult> {
-        const loaded = await loadFiles(this.files);
+    public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
+        const loaded = await loadFiles(files);
         if (countFindings(loaded.findings).errors > 0) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
-        const resolutionService = new ResolutionService(this.org, loaded.assignments);
-        const resolution = await resolutionService.run();
+        const resolutionService = new ResolutionService(this.org);
+        const resolution = await resolutionService.run(loaded.assignments);
         const findings = [...loaded.findings, ...resolution.findings];
         if (countFindings(findings).errors > 0) {
             return invalidResult(loaded.files, findings);
@@ -79,7 +77,7 @@ export class ApplyService {
         const actual = await this.org.currentAssignments(managedTargets(resolution));
         const diff = diffAssignments(loaded.assignments, actual);
 
-        const { mode, maxDeletes, dryRun } = this.input;
+        const { mode, maxDeletes, dryRun } = input;
         const additions = mode === 'destructive' ? [] : diff.toAdd;
         const updates = mode === 'destructive' ? [] : diff.toUpdate;
         const removals = mode === 'additive' ? [] : diff.toRemove;

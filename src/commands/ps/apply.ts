@@ -65,13 +65,12 @@ export default class Apply extends SfCommand<PsApplyResult> {
             return this.confirm({ message: messages.getMessage('confirm.delete', [String(count)]) });
         };
 
-        const service = new ApplyService(
-            orgClient,
-            flags.file,
-            { mode: flags.mode, maxDeletes: flags['max-deletes'], dryRun: flags['dry-run'] },
-            confirmDeletions
-        );
-        const result = await service.run();
+        const service = new ApplyService(orgClient, confirmDeletions);
+        const result = await service.run(flags.file, {
+            mode: flags.mode,
+            maxDeletes: flags['max-deletes'],
+            dryRun: flags['dry-run'],
+        });
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);
