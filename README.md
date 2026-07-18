@@ -53,7 +53,7 @@ Or pin a version:
 sf plugins install sf-plugin-permission-sets@x.y.z
 ```
 
-Requires Salesforce CLI (`sf`) and Node.js 18+.
+Requires Salesforce CLI (`sf`) and Node.js 20+.
 
 ## Quick start
 
@@ -79,7 +79,7 @@ sf ps apply --file "./permissions/*.yml" --target-org prod --mode sync
 
 ## Permission files
 
-You point every command at one or more YAML files with `--file` (alias `-f`).
+`check`, `validate`, `plan`, and `apply` read one or more YAML files with `--file` (alias `-f`). (`export` writes YAML rather than reading it, so there `-f` is the output file.)
 
 Multiple files are merged into one model, so splitting by team is encouraged. The files contain **only declarative data**: knobs like sync mode and exclusions are CLI flags (see [Commands](#commands)), so there's no separate config format to learn yet. Each top-level key is unique within a file, and `check` flags duplicates.
 
@@ -450,9 +450,11 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
 | `resolve` | Pure rules that turn declared references and the org's answers into findings, plus id lookups for assigning. No SOQL: the adapter owns that. |
 | `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
+| `mode` | Scope a diff to what a reconcile mode acts on, plus the drift it leaves alone. |
 | `report` | Format a diff as a plan. |
+| `plan-file` | Serialize and parse a saved plan: the frozen change set `apply --plan` runs. |
 
-Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
+Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces. `plan --out` freezes that resolved change set to a file, and `apply --plan` runs it verbatim, skipping load, resolve, and diff.
 
 ## License
 
