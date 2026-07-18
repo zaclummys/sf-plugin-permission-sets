@@ -28,6 +28,9 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Code style
 
+> Layering, barrel imports, no single-letter names, and no `=== undefined` are enforced by ESLint (`eslint.config.js`); the rest are by convention.
+
+
 - No single-letter variable names, including arrow-fn params and loop vars — use descriptive names.
 - Module-level constants are `camelCase`, not `SCREAMING_SNAKE`.
 - Prefer `!x` (or `== null` for null-or-undefined) over `x === undefined`.
