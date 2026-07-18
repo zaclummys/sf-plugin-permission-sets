@@ -97,7 +97,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.error(messages.getMessage('error.invalid'), { exit: 1 });
+            if (!this.jsonEnabled()) this.errorInvalid();
             return summary;
         }
 
@@ -222,6 +222,10 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const fileArgs = files.map((file) => `-f "${file}"`).join(' ');
         const modeArg = mode === 'additive' ? '' : ` --mode ${mode}`;
         return `${this.config.bin} ps apply -o ${orgName} ${fileArgs}${modeArg}`;
+    }
+
+    private errorInvalid(): void {
+        this.error(messages.getMessage('error.invalid'), { exit: 1 });
     }
 
     private logHeaderTitle(): void {

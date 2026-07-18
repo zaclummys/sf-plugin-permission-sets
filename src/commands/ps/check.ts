@@ -49,7 +49,7 @@ export default class Check extends SfCommand<PsCheckResult> {
         if (result.failed) {
             process.exitCode = 1;
             if (!this.jsonEnabled()) {
-                this.error(messages.getMessage('error.failed'), { exit: 1 });
+                this.errorFailed();
             }
         }
 
@@ -68,5 +68,9 @@ export default class Check extends SfCommand<PsCheckResult> {
                 String(warnings),
             ])
         );
+    }
+
+    private errorFailed(): void {
+        this.error(messages.getMessage('error.failed'), { exit: 1 });
     }
 }

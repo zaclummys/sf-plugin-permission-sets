@@ -28,8 +28,8 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Commands
 
-- Each user-facing message gets a named private log method (`logHeaderTitle`, `logHeaderOrg`, `logSummaryCounts`, ...) named `log` + the PascalCased message key, taking the raw token values and doing any `String()` conversion inside. Call sites use the method, never `this.log(messages.getMessage(...))` inline.
-- `this.error(...)` (exit-code paths), `this.confirm(...)`, and string-returning builders stay as-is.
+- Every user-facing message call gets a named private method, prefixed by the sink and suffixed with the PascalCased message key: `this.log(...)` → `logHeaderTitle`/`logSummaryCounts`; `this.error(...)` → `errorInvalid`/`errorMaxDeletes`; `this.confirm(...)` → `confirmDelete`. The method takes the raw token values and does any `String()` conversion (and passes options like `{ exit: 1 }`) inside. Call sites use the method, never `this.log(messages.getMessage(...))` / `this.error(messages.getMessage(...))` / `this.confirm({ message: messages.getMessage(...) })` inline. Guards like `if (!this.jsonEnabled())` stay at the call site.
+- `messages.createError(...)` and string-returning builders (e.g. `countsLine`) stay as-is.
 - Avoid clashing with `SfCommand` built-ins (e.g. `logSuccess` exists on the base class — name it `logExportSuccess` instead).
 
 ## Code style

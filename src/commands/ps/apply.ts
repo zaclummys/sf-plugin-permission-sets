@@ -62,7 +62,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         const confirmDeletions: ConfirmDeletions = async (count) => {
             if (flags['no-prompt']) return true;
             if (this.jsonEnabled()) throw messages.createError('error.promptInJson');
-            return this.confirm({ message: messages.getMessage('confirm.delete', [String(count)]) });
+            return this.confirmDelete(count);
         };
 
         const service = new ApplyService(orgClient, confirmDeletions);
@@ -94,7 +94,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.error(messages.getMessage('error.invalid'), { exit: 1 });
+            if (!this.jsonEnabled()) this.errorInvalid();
             return summary;
         }
 
@@ -113,11 +113,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
     private reportOutcome(result: ApplyResult, summary: PsApplyResult, mode: string, maxDeletes: number): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
-            const tokens = [
-                String(result.diff.toRemove.length),
-                String(maxDeletes),
-            ];
-            if (!this.jsonEnabled()) this.error(messages.getMessage('error.maxDeletes', tokens), { exit: 1 });
+            if (!this.jsonEnabled()) this.errorMaxDeletes(result.diff.toRemove.length, maxDeletes);
             return;
         }
 
@@ -147,7 +143,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.failed) {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.error(messages.getMessage('error.failed'), { exit: 1 });
+            if (!this.jsonEnabled()) this.errorFailed();
         }
     }
 
@@ -199,5 +195,27 @@ export default class Apply extends SfCommand<PsApplyResult> {
                 mode,
             ])
         );
+    }
+
+    private confirmDelete(count: number): Promise<boolean> {
+        return this.confirm({ message: messages.getMessage('confirm.delete', [String(count)]) });
+    }
+
+    private errorInvalid(): void {
+        this.error(messages.getMessage('error.invalid'), { exit: 1 });
+    }
+
+    private errorMaxDeletes(removeCount: number, maxDeletes: number): void {
+        this.error(
+            messages.getMessage('error.maxDeletes', [
+                String(removeCount),
+                String(maxDeletes),
+            ]),
+            { exit: 1 }
+        );
+    }
+
+    private errorFailed(): void {
+        this.error(messages.getMessage('error.failed'), { exit: 1 });
     }
 }

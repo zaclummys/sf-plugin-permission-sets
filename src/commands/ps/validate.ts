@@ -50,7 +50,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
         if (result.failed) {
             process.exitCode = 1;
             if (!this.jsonEnabled()) {
-                this.error(messages.getMessage('error.failed'), { exit: 1 });
+                this.errorFailed();
             }
         }
 
@@ -69,5 +69,9 @@ export default class Validate extends SfCommand<PsValidateResult> {
                 String(warnings),
             ])
         );
+    }
+
+    private errorFailed(): void {
+        this.error(messages.getMessage('error.failed'), { exit: 1 });
     }
 }
