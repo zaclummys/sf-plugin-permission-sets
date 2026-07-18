@@ -1,5 +1,6 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
+
 import { CheckService } from '../../services/index.js';
 import { formatFindings, Finding } from '../../core/index.js';
 
