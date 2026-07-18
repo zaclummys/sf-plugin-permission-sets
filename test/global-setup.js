@@ -23,8 +23,12 @@ function sf(args) {
 // already set (CI) always wins. Runs before workers spawn, so they inherit the value.
 const envFile = path.join(projectRoot, '.env');
 
-if (!process.env.PS_TARGET_ORG && existsSync(envFile)) {
+if (existsSync(envFile)) {
     process.loadEnvFile(envFile);
+}
+
+if (!process.env.PS_TARGET_ORG) {
+    throw new Error(`PS_TARGET_ORG must be set in the environment`);
 }
 
 /**
@@ -45,7 +49,7 @@ export default async function setup() {
     const linked = await sf(['plugins', 'link', '.', '--no-install']);
 
     if (linked.exitCode !== 0) {
-        throw new Error(`Could not link the plugin into sf:\n${linked.stderr}`);
+        throw new Error(`Could not link the plugin into sf: \n${linked.stderr}`);
     }
 
     return async () => {
