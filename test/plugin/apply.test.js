@@ -107,10 +107,10 @@ describe('sf ps apply', () => {
         });
         await writeFile(planFile, stringify(plan), 'utf8');
 
-        const { exitCode, stderr } = await runPs(['ps', 'apply', '--target-org', targetOrg, '--plan', planFile, '--json']);
+        const { exitCode, stdout } = await runPs(['ps', 'apply', '--target-org', targetOrg, '--plan', planFile, '--json']);
 
         expect(exitCode).not.toBe(0);
-        expect(stderr).toContain('without confirmation');
+        expect(stdout).toContain('without confirmation');
     });
 
     // Load errors abort before any org call or DML, so the org just needs to resolve.
