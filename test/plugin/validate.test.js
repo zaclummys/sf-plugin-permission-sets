@@ -32,13 +32,11 @@ describe('sf ps validate', () => {
         expect(stdout).toContain('--file');
         expect(stdout).toContain('--target-org');
     });
-});
 
-// Real-org tests: drive `sf ps validate` against the org named by PS_TARGET_ORG, which the
-// caller always provides. validate is read-only (it only queries the org). Exporting the org
-// and validating that snapshot back against the same org is the round-trip: every reference
-// resolves because it came from the org, so the resolution path reports no problems.
-describe('sf ps validate', () => {
+    // The tests below drive `sf ps validate` against the org named by PS_TARGET_ORG, which the
+    // caller always provides. validate is read-only (it only queries the org). Exporting the org
+    // and validating that snapshot back against the same org is the round-trip: every reference
+    // resolves because it came from the org, so the resolution path reports no problems.
     it('validates an org snapshot back against the same org with no findings', async ({ expect }) => {
         const file = await tempFile();
         const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', file]);
