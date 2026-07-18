@@ -62,7 +62,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const service = new PlanService(orgClient);
-        const result = await service.run(flags.file, { mode });
+        const result = await service.run(flags.file, mode);
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);

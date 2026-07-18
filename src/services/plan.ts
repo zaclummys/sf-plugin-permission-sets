@@ -4,10 +4,6 @@ import { ResolutionService, managedTargets } from './resolution.js';
 
 export type PlanMode = 'additive' | 'destructive' | 'sync';
 
-export type PlanInput = {
-    mode: PlanMode;
-};
-
 /** How a run ended, so the command can report and set the exit code. */
 export type PlanStatus = 'planned' | 'invalid';
 
@@ -36,7 +32,7 @@ function invalidResult(files: string[], findings: Finding[]): PlanResult {
 export class PlanService {
     public constructor(private readonly org: OrgClient) {}
 
-    public async run(files: string[], input: PlanInput): Promise<PlanResult> {
+    public async run(files: string[], mode: PlanMode): Promise<PlanResult> {
         const loaded = await loadFiles(files);
         const loadCounts = countFindings(loaded.findings);
         if (loadCounts.errors > 0) {
@@ -53,7 +49,6 @@ export class PlanService {
 
         const actual = await this.org.currentAssignments(managedTargets(resolution));
         const diff = diffAssignments(loaded.assignments, actual);
-        const { mode } = input;
         const drift = {
             adds: mode === 'destructive' ? diff.toAdd.length : 0,
             updates: mode === 'destructive' ? diff.toUpdate.length : 0,
