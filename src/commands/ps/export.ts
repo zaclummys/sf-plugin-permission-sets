@@ -34,7 +34,13 @@ export default class Export extends SfCommand<PsExportResult> {
         const service = new ExportService(orgClient);
         const result = await service.run(flags['output-file']);
 
-        this.log(messages.getMessage('success', [String(result.assignments), String(result.users), result.outputFile]));
+        this.log(
+            messages.getMessage('success', [
+                String(result.assignments),
+                String(result.users),
+                result.outputFile,
+            ])
+        );
 
         return result;
     }

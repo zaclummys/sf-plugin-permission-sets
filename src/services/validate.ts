@@ -28,7 +28,10 @@ export class ValidateService {
         const loaded = await loadFiles(files);
         const online = await this.resolve(loaded.assignments);
 
-        const findings = [...loaded.findings, ...online];
+        const findings = [
+            ...loaded.findings,
+            ...online,
+        ];
         const { errors, warnings } = countFindings(findings);
 
         return {

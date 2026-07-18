@@ -49,7 +49,10 @@ export class ResolutionService {
             )
         );
 
-        const [foundUsers, perKind] = await Promise.all([usersTask, targetsTask]);
+        const [foundUsers, perKind] = await Promise.all([
+            usersTask,
+            targetsTask,
+        ]);
 
         const findings: Finding[] = [...evaluateUsers(usernames, foundUsers)];
         for (const { kind, targets, found } of perKind) {

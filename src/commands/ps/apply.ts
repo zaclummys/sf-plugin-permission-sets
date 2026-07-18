@@ -106,7 +106,10 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
-            const tokens = [String(result.diff.toRemove.length), String(flags['max-deletes'])];
+            const tokens = [
+                String(result.diff.toRemove.length),
+                String(flags['max-deletes']),
+            ];
             if (!this.jsonEnabled()) this.error(messages.getMessage('error.maxDeletes', tokens), { exit: 1 });
             return summary;
         }
@@ -131,7 +134,13 @@ export default class Apply extends SfCommand<PsApplyResult> {
             return summary;
         }
 
-        this.log(messages.getMessage('summary.applied', [String(added), String(updated), String(removed)]));
+        this.log(
+            messages.getMessage('summary.applied', [
+                String(added),
+                String(updated),
+                String(removed),
+            ])
+        );
         for (const failure of failures) {
             this.log(
                 messages.getMessage('failure.line', [
@@ -152,8 +161,26 @@ export default class Apply extends SfCommand<PsApplyResult> {
     }
 
     private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
-        if (drift.adds > 0) this.log(messages.getMessage('drift.note', [String(drift.adds), mode]));
-        if (drift.updates > 0) this.log(messages.getMessage('drift.note', [String(drift.updates), mode]));
-        if (drift.removes > 0) this.log(messages.getMessage('drift.note', [String(drift.removes), mode]));
+        if (drift.adds > 0)
+            this.log(
+                messages.getMessage('drift.note', [
+                    String(drift.adds),
+                    mode,
+                ])
+            );
+        if (drift.updates > 0)
+            this.log(
+                messages.getMessage('drift.note', [
+                    String(drift.updates),
+                    mode,
+                ])
+            );
+        if (drift.removes > 0)
+            this.log(
+                messages.getMessage('drift.note', [
+                    String(drift.removes),
+                    mode,
+                ])
+            );
     }
 }

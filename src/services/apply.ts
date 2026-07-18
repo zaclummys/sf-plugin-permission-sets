@@ -73,7 +73,10 @@ export class ApplyService {
 
         const resolutionService = new ResolutionService(this.org);
         const resolution = await resolutionService.run(loaded.assignments);
-        const findings = [...loaded.findings, ...resolution.findings];
+        const findings = [
+            ...loaded.findings,
+            ...resolution.findings,
+        ];
         const findingCounts = countFindings(findings);
         if (findingCounts.errors > 0) {
             return invalidResult(loaded.files, findings);
@@ -139,6 +142,10 @@ export class ApplyService {
             removals.length > 0 ? this.org.removeAssignments(removals) : Promise.resolve<AssignmentOutcome[]>([]),
         ]);
 
-        return [...added, ...updated, ...removed];
+        return [
+            ...added,
+            ...updated,
+            ...removed,
+        ];
     }
 }

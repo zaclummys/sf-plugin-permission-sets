@@ -15,13 +15,23 @@ function checkContent(text: string, file: string): { assignments: DesiredAssignm
 
     const validated = validateFile(parsed.data, file);
     if (!validated.data) {
-        return { assignments: [], findings: [...parsed.findings, ...validated.findings] };
+        return {
+            assignments: [],
+            findings: [
+                ...parsed.findings,
+                ...validated.findings,
+            ],
+        };
     }
 
     const normalized = normalize(validated.data, file);
     return {
         assignments: normalized.assignments,
-        findings: [...parsed.findings, ...validated.findings, ...normalized.findings],
+        findings: [
+            ...parsed.findings,
+            ...validated.findings,
+            ...normalized.findings,
+        ],
     };
 }
 

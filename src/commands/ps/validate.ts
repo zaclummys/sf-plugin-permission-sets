@@ -45,7 +45,12 @@ export default class Validate extends SfCommand<PsValidateResult> {
         const assignees = new Set(result.assignments.map((assignment) => assignment.assignee));
 
         this.log('');
-        this.log(messages.getMessage('summary.counts', [String(result.errors), String(result.warnings)]));
+        this.log(
+            messages.getMessage('summary.counts', [
+                String(result.errors),
+                String(result.warnings),
+            ])
+        );
 
         if (result.failed) {
             process.exitCode = 1;

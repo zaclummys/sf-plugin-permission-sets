@@ -102,7 +102,13 @@ export default class Plan extends SfCommand<PsPlanResult> {
         }
 
         this.log(messages.getMessage('header.title'));
-        this.log(messages.getMessage('header.org', [orgName, orgId, mode]));
+        this.log(
+            messages.getMessage('header.org', [
+                orgName,
+                orgId,
+                mode,
+            ])
+        );
 
         const totalChanges = diff.toAdd.length + diff.toUpdate.length + diff.toRemove.length;
         const showUnchanged = flags['show-unchanged'];
@@ -138,8 +144,16 @@ export default class Plan extends SfCommand<PsPlanResult> {
     /** The assignments the chosen mode would actually act on. */
     private actionable(diff: Diff, mode: ReconcileMode): Array<{ assignee: string }> {
         if (mode === 'destructive') return diff.toRemove;
-        if (mode === 'additive') return [...diff.toAdd, ...diff.toUpdate];
-        return [...diff.toAdd, ...diff.toUpdate, ...diff.toRemove];
+        if (mode === 'additive')
+            return [
+                ...diff.toAdd,
+                ...diff.toUpdate,
+            ];
+        return [
+            ...diff.toAdd,
+            ...diff.toUpdate,
+            ...diff.toRemove,
+        ];
     }
 
     private logBody(body: string[]): void {
@@ -151,7 +165,10 @@ export default class Plan extends SfCommand<PsPlanResult> {
     private countsLine(diff: Diff, mode: ReconcileMode, usersAffected: number): string {
         const affected = String(usersAffected);
         if (mode === 'destructive') {
-            return messages.getMessage('summary.counts.destructive', [String(diff.toRemove.length), affected]);
+            return messages.getMessage('summary.counts.destructive', [
+                String(diff.toRemove.length),
+                affected,
+            ]);
         }
         if (mode === 'additive') {
             return messages.getMessage('summary.counts.additive', [
