@@ -16,6 +16,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Why](#why)
 - [Install](#install)
 - [Quick start](#quick-start)
+- [GitHub Actions](#github-actions)
 - [Permission files](#permission-files)
 - [Organizing files](#organizing-files)
 - [Modes](#modes)
@@ -76,6 +77,59 @@ sf ps apply --file "./permissions/*.yml" --target-org dev
 # 6. Full reconcile, including removals (opt-in)
 sf ps apply --file "./permissions/*.yml" --target-org prod --mode sync
 ```
+
+## GitHub Actions
+
+Two dead-simple workflows: check every pull request with no org, then apply on merge.
+
+**1. Check on every pull request** (no org, no secrets):
+
+```yaml
+# .github/workflows/permissions-check.yml
+name: permissions-check
+on: pull_request
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --global @salesforce/cli
+      - run: sf plugins install sf-plugin-permission-sets
+      - run: sf ps check --file "permissions/*.yml"
+```
+
+**2. Apply on merge to main** (needs org auth):
+
+```yaml
+# .github/workflows/permissions-apply.yml
+name: permissions-apply
+on:
+  push:
+    branches: [main]
+    paths: ["permissions/**"]
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install --global @salesforce/cli
+      - run: sf plugins install sf-plugin-permission-sets
+      # Authenticate to the org from a stored auth URL.
+      - run: echo '${{ secrets.SF_AUTH_URL }}' > auth.txt
+      - run: sf org login sfdx-url --sfdx-url-file auth.txt --alias prod
+      # --no-prompt so a deletion never blocks on a confirmation in CI.
+      - run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
+```
+
+Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SF_AUTH_URL`.
+
+Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.yml" --target-org prod` step (it needs the same org auth) to the check workflow.
 
 ## Permission files
 
