@@ -406,9 +406,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install --global @salesforce/cli
-      - run: sf plugins install sf-plugin-permission-sets
-      - run: sf ps check --file "permissions/*.yml"
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+      - name: Install the plugin
+        run: sf plugins install sf-plugin-permission-sets
+      - name: Check the permission files
+        run: sf ps check --file "permissions/*.yml"
 ```
 
 **2. Apply on merge to main** (needs org auth):
@@ -428,13 +431,17 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm install --global @salesforce/cli
-      - run: sf plugins install sf-plugin-permission-sets
-      # Authenticate to the org from a stored auth URL.
-      - run: echo '${{ secrets.SF_AUTH_URL }}' > auth.txt
-      - run: sf org login sfdx-url --sfdx-url-file auth.txt --alias prod
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+      - name: Install the plugin
+        run: sf plugins install sf-plugin-permission-sets
+      - name: Write the auth URL
+        run: echo '${{ secrets.SF_AUTH_URL }}' > auth.txt
+      - name: Log in to the org
+        run: sf org login sfdx-url --sfdx-url-file auth.txt --alias prod
       # --no-prompt so a deletion never blocks on a confirmation in CI.
-      - run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
+      - name: Apply the assignments
+        run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
 ```
 
 Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SF_AUTH_URL`.
