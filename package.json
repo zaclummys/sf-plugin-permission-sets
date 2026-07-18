@@ -9,20 +9,20 @@
         "@oclif/core": "^4",
         "@salesforce/core": "^8",
         "@salesforce/sf-plugins-core": "^12",
-        "globby": "^16.2.0",
-        "yaml": "^2.9.0",
-        "zod": "^4.4.3"
+        "globby": "^16",
+        "yaml": "^2",
+        "zod": "^4"
     },
     "devDependencies": {
-        "@eslint/js": "^10.0.1",
-        "eslint": "^10.6.0",
-        "execa": "^9.6.1",
-        "globals": "^17.7.0",
-        "ts-node": "^10.9.2",
-        "typescript": "^6.0.3",
-        "typescript-eslint": "^8.62.1",
-        "vitest": "^4.1.9",
-        "wireit": "^0.14.0"
+        "@eslint/js": "^10",
+        "eslint": "^10",
+        "execa": "^9",
+        "globals": "^17",
+        "ts-node": "^10",
+        "typescript": "^6",
+        "typescript-eslint": "^8",
+        "vitest": "^4",
+        "wireit": "^0"
     },
     "engines": {
         "node": ">=18.0.0"
