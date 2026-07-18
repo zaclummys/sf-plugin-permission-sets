@@ -56,4 +56,51 @@ describe('sf ps export [online]', () => {
         expect(checked.exitCode).toBe(0);
         expect(checked.stdout).toContain('0 errors');
     });
+
+    it('scopes the file to the requested --kind only', async ({ expect }) => {
+        const file = await tempOutputFile();
+        const { exitCode } = await runPs([
+            'ps',
+            'export',
+            '--target-org',
+            targetOrg,
+            '--output-file',
+            file,
+            '--kind',
+            'permissionSetLicenses',
+        ]);
+
+        expect(exitCode).toBe(0);
+        const content = await readFile(file, 'utf8');
+        const document = parse(content);
+        const entries = Object.values(document.users ?? {});
+        // Only the requested scope may appear; the other two are never written.
+        for (const entry of entries) {
+            expect(entry).not.toHaveProperty('permissionSets');
+            expect(entry).not.toHaveProperty('permissionSetGroups');
+        }
+    });
+
+    it('warns and continues when a requested --user matches nothing', async ({ expect }) => {
+        const file = await tempOutputFile();
+        const missing = 'no-such-user@nowhere.invalid';
+        const { stdout, exitCode } = await runPs([
+            'ps',
+            'export',
+            '--target-org',
+            targetOrg,
+            '--output-file',
+            file,
+            '--user',
+            missing,
+            '--json',
+        ]);
+
+        expect(exitCode).toBe(0);
+        const envelope = JSON.parse(stdout);
+        expect(envelope.result.unmatchedUsers).toContain(missing);
+        expect(envelope.result.users).toBe(0);
+        expect(envelope.result.assignments).toBe(0);
+        expect(envelope.warnings.some((warning) => warning.includes(missing))).toBe(true);
+    });
 });

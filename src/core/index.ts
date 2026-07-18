@@ -3,6 +3,7 @@ export { Finding, formatFindings, countFindings } from './finding.js';
 export { loadFiles } from './load.js';
 export {
   ActualAssignment,
+  AssignmentFilter,
   AssignmentOutcome,
   AssignmentUpdate,
   DesiredAssignment,
@@ -14,6 +15,7 @@ export {
   ResolvedAddition,
   TargetRef,
 } from './model.js';
+export { kindForScopeKey } from './normalize.js';
 export { formatDiff } from './report.js';
 export {
   kinds,

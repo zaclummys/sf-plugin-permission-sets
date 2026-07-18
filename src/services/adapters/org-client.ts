@@ -1,5 +1,6 @@
 import {
     ActualAssignment,
+    AssignmentFilter,
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
@@ -19,8 +20,8 @@ export interface OrgClient {
     findUsers(usernames: string[]): Promise<OrgUser[]>;
     /** The targets (with ids) that exist in the org, among the given names of one kind. */
     findTargets(kind: Kind, names: string[]): Promise<OrgTarget[]>;
-    /** Every assignable permission set, group, and license assignment held by active users. */
-    listAssignments(): Promise<DesiredAssignment[]>;
+    /** Every assignable permission set, group, and license assignment held by active users, narrowed by the filter. */
+    listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]>;
     /** The current assignments of the given managed targets, with their record ids. */
     currentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]>;
     /** Insert the given assignments, reporting per-record success or failure. */

@@ -327,14 +327,28 @@ Read-only. Snapshots the org's current assignments into a single YAML file you c
 
 ```
 USAGE
-  $ sf ps export -o <org> --output-file <file> [--json]
+  $ sf ps export -o <org> --output-file <file> [--user <username>...]
+                 [--kind <scope>...] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required) Org to read assignments from.
   --output-file=<file>     (required) Path of the YAML file to write. Parent directories are created; an existing file is overwritten.
+  --user=<username>...      Only export these users. Repeatable, matched on exact username.
+  --kind=<scope>...         Only export these scopes: permissionSets | permissionSetGroups | permissionSetLicenses. Repeatable.
 ```
 
 It exports every assignable permission set, group, and license assignment held by active users, keyed by username, so the result is immediately valid input for `check`, `validate`, `plan`, and `apply`. Profile-owned permission sets and inactive users are skipped.
+
+By default the whole org is exported. `--user` and `--kind` narrow the snapshot: pass either to scope it down, and pass both to intersect (the named users, restricted to the named scopes). Values within a flag are a union, so `--user jdoe@acme.com --user asmith@acme.com` exports both. The `--kind` values are the same scope keys the file uses, so `--kind permissionSetLicenses` reads back exactly the `permissionSetLicenses:` block.
+
+```bash
+# Snapshot one team's permission sets and groups only
+sf ps export -o prod --output-file team.yml \
+  --user jdoe@acme.com --user asmith@acme.com \
+  --kind permissionSets --kind permissionSetGroups
+```
+
+A requested `--user` that has no matching assignments (a typo, or a user who genuinely holds nothing in scope) is reported as a warning and the export continues with whoever matched, so a mistyped username never masquerades as a clean empty file.
 
 ## Inspiration & equivalents
 

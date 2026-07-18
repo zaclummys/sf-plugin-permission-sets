@@ -1,6 +1,7 @@
 import { Connection } from '@salesforce/core';
 import {
     ActualAssignment,
+    AssignmentFilter,
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
@@ -188,50 +189,74 @@ export class ConnectionOrgClient implements OrgClient {
         return records.map((record) => ({ id: record.Id, name: record[field] }));
     }
 
-    public async listAssignments(): Promise<DesiredAssignment[]> {
-        const [memberships, licenses] = await Promise.all([
-            this.query<MembershipRecord>(
-                'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
-                    'FROM PermissionSetAssignment ' +
-                    'WHERE Assignee.IsActive = true AND PermissionSet.IsOwnedByProfile = false'
-            ),
-            this.query<LicenseRecord>(
-                'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
-                    'FROM PermissionSetLicenseAssign ' +
-                    'WHERE Assignee.IsActive = true'
-            ),
-        ]);
+    public async listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]> {
+        const kinds = filter?.kinds;
+        const wantsPermissionSet = !kinds || kinds.includes('permissionSet');
+        const wantsGroup = !kinds || kinds.includes('permissionSetGroup');
+        const wantsLicense = !kinds || kinds.includes('permissionSetLicense');
 
-        const assignments: DesiredAssignment[] = [];
+        const tasks: Array<Promise<DesiredAssignment[]>> = [];
+        if (wantsPermissionSet || wantsGroup) {
+            tasks.push(this.listMemberships(filter?.usernames, wantsPermissionSet, wantsGroup));
+        }
+        if (wantsLicense) {
+            tasks.push(this.listLicenses(filter?.usernames));
+        }
 
-        for (const record of memberships) {
+        const results = await Promise.all(tasks);
+        return results.flat();
+    }
+
+    private async listMemberships(
+        usernames: string[] | undefined,
+        wantsPermissionSet: boolean,
+        wantsGroup: boolean
+    ): Promise<DesiredAssignment[]> {
+        const clauses = [
+            'Assignee.IsActive = true',
+            'PermissionSet.IsOwnedByProfile = false',
+        ];
+        if (usernames) clauses.push(`Assignee.Username IN (${inList(usernames)})`);
+        if (!wantsGroup) clauses.push('PermissionSetGroupId = null');
+        if (!wantsPermissionSet) clauses.push('PermissionSetGroupId != null');
+
+        const soql =
+            'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
+            `FROM PermissionSetAssignment WHERE ${clauses.join(' AND ')}`;
+        const records = await this.query<MembershipRecord>(soql);
+
+        return records.map((record) => {
             const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
-            if (record.PermissionSetGroupId && record.PermissionSetGroup) {
-                assignments.push({
-                    assignee: record.Assignee.Username,
-                    kind: 'permissionSetGroup',
-                    target: record.PermissionSetGroup.DeveloperName,
-                    ...expiration,
-                });
-            } else {
-                assignments.push({
-                    assignee: record.Assignee.Username,
-                    kind: 'permissionSet',
-                    target: record.PermissionSet.Name,
-                    ...expiration,
-                });
-            }
-        }
+            return record.PermissionSetGroupId && record.PermissionSetGroup
+                ? {
+                      assignee: record.Assignee.Username,
+                      kind: 'permissionSetGroup' as const,
+                      target: record.PermissionSetGroup.DeveloperName,
+                      ...expiration,
+                  }
+                : {
+                      assignee: record.Assignee.Username,
+                      kind: 'permissionSet' as const,
+                      target: record.PermissionSet.Name,
+                      ...expiration,
+                  };
+        });
+    }
 
-        for (const record of licenses) {
-            assignments.push({
-                assignee: record.Assignee.Username,
-                kind: 'permissionSetLicense',
-                target: record.PermissionSetLicense.DeveloperName,
-            });
-        }
+    private async listLicenses(usernames: string[] | undefined): Promise<DesiredAssignment[]> {
+        const clauses = ['Assignee.IsActive = true'];
+        if (usernames) clauses.push(`Assignee.Username IN (${inList(usernames)})`);
 
-        return assignments;
+        const soql =
+            'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
+            `FROM PermissionSetLicenseAssign WHERE ${clauses.join(' AND ')}`;
+        const records = await this.query<LicenseRecord>(soql);
+
+        return records.map((record) => ({
+            assignee: record.Assignee.Username,
+            kind: 'permissionSetLicense' as const,
+            target: record.PermissionSetLicense.DeveloperName,
+        }));
     }
 
     public async currentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]> {

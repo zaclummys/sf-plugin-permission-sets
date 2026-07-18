@@ -10,9 +10,21 @@ Query the target org for every assignable permission set, group, and license ass
 
 Path of the YAML file to write. Created (and its parent directories) if missing, overwritten if present.
 
+# flags.user.summary
+
+Only export these users, matched on exact username. Repeatable; multiple values are a union.
+
+# flags.kind.summary
+
+Only export these scopes: permissionSets, permissionSetGroups, or permissionSetLicenses. Repeatable; combined with --user as an intersection.
+
 # success
 
 Exported %s assignments across %s users to %s.
+
+# warnNoAssignments
+
+No assignments in scope for user %s, it was skipped.
 
 # examples
 
@@ -23,3 +35,7 @@ Exported %s assignments across %s users to %s.
 - Export a production org into an environment folder:
 
   <%= config.bin %> <%= command.id %> --target-org prod --output-file permissions/prod.yml
+
+- Export two users' permission sets and groups only:
+
+  <%= config.bin %> <%= command.id %> --target-org prod --output-file team.yml --user jdoe@acme.com --user asmith@acme.com --kind permissionSets --kind permissionSetGroups

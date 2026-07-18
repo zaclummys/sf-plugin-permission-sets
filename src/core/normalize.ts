@@ -11,6 +11,14 @@ export const kindKeys: Array<[Kind, ScopeKey]> = [
     ['permissionSetLicense', 'permissionSetLicenses'],
 ];
 
+/** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
+export function kindForScopeKey(key: ScopeKey): Kind {
+    const pair = kindKeys.find(([, scopeKey]) => scopeKey === key);
+    if (!pair) throw new Error(`Unknown scope key: ${key}`);
+
+    return pair[0];
+}
+
 type ScopeItem = string | { name: string; expiration: string };
 
 function normalizeScope(

@@ -5,6 +5,12 @@ export type Kind = 'permissionSet' | 'permissionSetGroup' | 'permissionSetLicens
 /** Which half of the reconcile a run acts on. Shared by plan, apply, and the report. */
 export type ReconcileMode = 'additive' | 'destructive' | 'sync';
 
+/** Narrows which assignments a read pulls from the org. An absent field means no limit on it. */
+export type AssignmentFilter = {
+    usernames?: string[];
+    kinds?: Kind[];
+};
+
 export type DesiredAssignment = {
     assignee: string;
     kind: Kind;
