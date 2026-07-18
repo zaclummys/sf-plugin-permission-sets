@@ -1,14 +1,15 @@
-import { loadFiles } from '../core/load.js';
-import { diffAssignments } from '../core/diff.js';
 import {
+    loadFiles,
+    diffAssignments,
     ActualAssignment,
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
     Diff,
     ResolvedAddition,
-} from '../core/model.js';
-import { Finding, countFindings } from '../core/finding.js';
+    Finding,
+    countFindings,
+} from '../core/index.js';
 import { OrgClient } from './adapters/org-client.js';
 import { Resolution, ResolutionService, managedTargets } from './resolution.js';
 

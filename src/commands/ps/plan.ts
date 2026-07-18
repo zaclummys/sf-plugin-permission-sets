@@ -1,10 +1,16 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
-import { PlanService } from '../../services/plan.js';
-import { formatDiff } from '../../core/report.js';
-import { formatFindings } from '../../core/finding.js';
-import { ActualAssignment, AssignmentUpdate, DesiredAssignment, Diff, ReconcileMode } from '../../core/model.js';
+import { PlanService } from '../../services/index.js';
+import {
+    formatDiff,
+    formatFindings,
+    ActualAssignment,
+    AssignmentUpdate,
+    DesiredAssignment,
+    Diff,
+    ReconcileMode,
+} from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.plan');

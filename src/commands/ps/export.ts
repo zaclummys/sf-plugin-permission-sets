@@ -1,7 +1,7 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
-import { ExportService } from '../../services/export.js';
+import { ExportService } from '../../services/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.export');

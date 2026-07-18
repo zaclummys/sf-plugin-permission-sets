@@ -1,6 +1,10 @@
-import { DesiredAssignment, Kind, OrgTarget, OrgUser, TargetRef } from '../core/model.js';
-import { Finding } from '../core/finding.js';
 import {
+    DesiredAssignment,
+    Kind,
+    OrgTarget,
+    OrgUser,
+    TargetRef,
+    Finding,
     kinds,
     distinctAssignees,
     distinctTargets,
@@ -8,7 +12,7 @@ import {
     evaluateTargets,
     indexUsersById,
     indexTargetsById,
-} from '../core/resolve.js';
+} from '../core/index.js';
 import { OrgClient } from './adapters/org-client.js';
 
 export type Resolution = {

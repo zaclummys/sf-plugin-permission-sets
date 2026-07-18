@@ -1,7 +1,4 @@
-import { loadFiles } from '../core/load.js';
-import { diffAssignments } from '../core/diff.js';
-import { Diff } from '../core/model.js';
-import { Finding, countFindings } from '../core/finding.js';
+import { loadFiles, diffAssignments, Diff, Finding, countFindings } from '../core/index.js';
 import { OrgClient } from './adapters/org-client.js';
 import { ResolutionService, managedTargets } from './resolution.js';
 

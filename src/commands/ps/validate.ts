@@ -1,8 +1,8 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
-import { ValidateService } from '../../services/validate.js';
-import { formatFindings, Finding } from '../../core/finding.js';
+import { ValidateService } from '../../services/index.js';
+import { formatFindings, Finding } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.validate');

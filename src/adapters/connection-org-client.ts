@@ -9,7 +9,7 @@ import {
     OrgUser,
     ResolvedAddition,
     TargetRef,
-} from '../core/model.js';
+} from '../core/index.js';
 import { OrgClient } from '../services/adapters/org-client.js';
 
 type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };

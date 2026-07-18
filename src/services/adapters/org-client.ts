@@ -8,7 +8,7 @@ import {
     OrgUser,
     ResolvedAddition,
     TargetRef,
-} from '../../core/model.js';
+} from '../../core/index.js';
 
 /**
  * Port: the org operations a service needs, in domain terms. Declared here, by the

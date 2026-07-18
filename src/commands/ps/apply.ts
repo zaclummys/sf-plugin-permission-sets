@@ -1,9 +1,8 @@
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 import { ConnectionOrgClient } from '../../adapters/connection-org-client.js';
-import { ApplyService } from '../../services/apply.js';
-import { formatDiff } from '../../core/report.js';
-import { formatFindings } from '../../core/finding.js';
+import { ApplyService } from '../../services/index.js';
+import { formatDiff, formatFindings } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
