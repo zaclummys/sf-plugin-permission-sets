@@ -46,15 +46,15 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         };
     }
 
-    const findings: Finding[] = [];
-    const collected: DesiredAssignment[] = [];
-    for (const file of files) {
-        // eslint-disable-next-line no-await-in-loop
-        const text = await readFile(file, 'utf8');
-        const res = checkContent(text, file);
-        findings.push(...res.findings);
-        collected.push(...res.assignments);
-    }
+    const checked = await Promise.all(
+        files.map(async (file) => {
+            const text = await readFile(file, 'utf8');
+            return checkContent(text, file);
+        })
+    );
+
+    const findings = checked.flatMap((entry) => entry.findings);
+    const collected = checked.flatMap((entry) => entry.assignments);
 
     const seen = new Set<string>();
     const assignments: DesiredAssignment[] = [];
