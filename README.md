@@ -425,10 +425,7 @@ gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 | dist-tag | Published by | Install |
 | --- | --- | --- |
 | `latest` | manual release with a normal tag like `v1.2.0` | `sf plugins install sf-plugin-permission-sets` |
-| `next` | manual release with a hyphenated tag like `v1.3.0-beta.1` | `sf plugins install sf-plugin-permission-sets@next` |
 | `dev` | automatic on every push to `main` | `sf plugins install sf-plugin-permission-sets@dev` |
-
-The `next` tag is selected whenever the version contains a hyphen, not by GitHub's prerelease checkbox.
 
 ## Architecture
 
