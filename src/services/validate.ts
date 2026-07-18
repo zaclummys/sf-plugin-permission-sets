@@ -9,6 +9,7 @@ import {
     Finding,
     Kind,
     countFindings,
+    OrgTarget,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 
@@ -23,7 +24,7 @@ export type ValidateResult = {
 
 /** Load the files, then resolve every reference against the org. */
 export class ValidateService {
-    public constructor(private readonly org: OrgClient) {}
+    public constructor(private readonly org: OrgClient) { }
 
     public async run(files: string[]): Promise<ValidateResult> {
         const loaded = await loadFiles(files);
@@ -71,11 +72,19 @@ export class ValidateService {
     }
 
     private async evaluateTargetRefs(kind: Kind, targets: string[]): Promise<Finding[]> {
-        const found = await this.org.findTargets(kind, targets);
+        const found = await this.findTargetsOfKind(kind, targets);
         return evaluateTargets(
             kind,
             targets,
             found.map((target) => target.name)
         );
+    }
+
+    findTargetsOfKind(kind: Kind, names: string[]): Promise<OrgTarget[]> {
+        if (kind === 'permissionSet') return this.org.findPermissionSets(names);
+        if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
+        if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);
+
+        throw new Error(`Unsupported kind: ${kind}`);
     }
 }

@@ -4,7 +4,6 @@ import {
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
-    Kind,
     OrgTarget,
     OrgUser,
     ResolvedAddition,
@@ -18,8 +17,12 @@ import {
 export interface OrgClient {
     /** The users that exist in the org, among the given usernames. */
     findUsers(usernames: string[]): Promise<OrgUser[]>;
-    /** The targets (with ids) that exist in the org, among the given names of one kind. */
-    findTargets(kind: Kind, names: string[]): Promise<OrgTarget[]>;
+    /** The permission sets (with ids) that exist in the org, among the given names. */
+    findPermissionSets(names: string[]): Promise<OrgTarget[]>;
+    /** The permission set groups (with ids) that exist in the org, among the given developer names. */
+    findPermissionSetGroups(names: string[]): Promise<OrgTarget[]>;
+    /** The permission set licenses (with ids) that exist in the org, among the given developer names. */
+    findPermissionSetLicenses(names: string[]): Promise<OrgTarget[]>;
     /** Every assignable permission set, group, and license assignment held by active users, narrowed by the filter. */
     listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]>;
     /** The current assignments of the given managed targets, with their record ids. */

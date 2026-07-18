@@ -13,8 +13,6 @@ import {
 } from '../core/index.js';
 import { OrgClient } from '../services/adapters/index.js';
 
-type TargetObject = { sobject: string; field: 'Name' | 'DeveloperName' };
-
 /** SObject + id field per kind, for inserting and deleting assignments. */
 type AssignmentObject = { sobject: string; idField: string };
 
@@ -36,13 +34,6 @@ type LicenseRecord = {
 
 /** The slice of a DML save/delete result we report on. Structurally a jsforce SaveResult. */
 type DmlResult = { success: boolean; errors: Array<{ message: string }> };
-
-/** SObject + naming field per kind. The Salesforce schema knowledge lives here, not in core. */
-const targetObjects: Record<Kind, TargetObject> = {
-    permissionSet: { sobject: 'PermissionSet', field: 'Name' },
-    permissionSetGroup: { sobject: 'PermissionSetGroup', field: 'DeveloperName' },
-    permissionSetLicense: { sobject: 'PermissionSetLicense', field: 'DeveloperName' },
-};
 
 /** SObject + foreign-key field to set per kind when assigning. */
 const assignmentObjects: Record<Kind, AssignmentObject> = {
@@ -145,18 +136,39 @@ function buildUserQuery(usernames: string[]): string {
     `;
 }
 
-/** Full SOQL for the targets of a kind with the given names. */
-function buildTargetQuery(kind: Kind, names: string[]): string {
-    const { sobject, field } = targetObjects[kind];
-
+/** Full SOQL for the permission sets with the given names. */
+function buildPermissionSetQuery(names: string[]): string {
     return `
         SELECT
             Id,
-            ${field}
-        FROM ${sobject}
-        WHERE ${field} IN(${buildInList(names)})
+            Name
+        FROM PermissionSet
+        WHERE Name IN(${buildInList(names)})
     `;
 }
+
+/** Full SOQL for the permission set groups with the given developer names. */
+function buildPermissionSetGroupQuery(names: string[]): string {
+    return `
+        SELECT
+            Id,
+            DeveloperName
+        FROM PermissionSetGroup
+        WHERE DeveloperName IN(${buildInList(names)})
+    `;
+}
+
+/** Full SOQL for the permission set licenses with the given developer names. */
+function buildPermissionSetLicenseQuery(names: string[]): string {
+    return `
+        SELECT
+            Id,
+            DeveloperName
+        FROM PermissionSetLicense
+        WHERE DeveloperName IN(${buildInList(names)})
+    `;
+}
+
 
 /** Split items into chunks of at most `size`. */
 function chunk<T>(items: T[], size: number): T[][] {
@@ -281,11 +293,22 @@ export class ConnectionOrgClient implements OrgClient {
         return records.map((record) => ({ id: record.Id, username: record.Username, isActive: record.IsActive }));
     }
 
-    public async findTargets(kind: Kind, names: string[]): Promise<OrgTarget[]> {
-        const { field } = targetObjects[kind];
-        const records = await this.query<Record<string, string>>(buildTargetQuery(kind, names));
+    public async findPermissionSets(names: string[]): Promise<OrgTarget[]> {
+        const records = await this.query<{ Id: string; Name: string }>(buildPermissionSetQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: record[field] }));
+        return records.map((record) => ({ id: record.Id, name: record.Name }));
+    }
+
+    public async findPermissionSetGroups(names: string[]): Promise<OrgTarget[]> {
+        const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetGroupQuery(names));
+
+        return records.map((record) => ({ id: record.Id, name: record.DeveloperName }));
+    }
+
+    public async findPermissionSetLicenses(names: string[]): Promise<OrgTarget[]> {
+        const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetLicenseQuery(names));
+
+        return records.map((record) => ({ id: record.Id, name: record.DeveloperName }));
     }
 
     public async listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]> {

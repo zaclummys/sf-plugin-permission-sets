@@ -43,7 +43,7 @@ export function resolveAdditions(additions: DesiredAssignment[], resolution: Res
 
 /** Look every declared reference up in the org, returning findings and the resolved id maps. */
 export class ResolutionService {
-    public constructor(private readonly org: OrgClient) {}
+    public constructor(private readonly org: OrgClient) { }
 
     public async run(assignments: DesiredAssignment[]): Promise<Resolution> {
         const usernames = distinctAssignees(assignments);
@@ -53,7 +53,9 @@ export class ResolutionService {
             usernames.length > 0 ? this.org.findUsers(usernames) : Promise.resolve([]);
         const targetsTask = Promise.all(
             targetsByKind.map(async ({ kind, targets }) => {
-                const found: OrgTarget[] = targets.length > 0 ? await this.org.findTargets(kind, targets) : [];
+                if (targets.length === 0) return { kind, targets, found: [] as OrgTarget[] };
+
+                const found = await this.findTargetsOfKind(kind, targets);
                 return { kind, targets, found };
             })
         );
@@ -80,5 +82,13 @@ export class ResolutionService {
         }
 
         return { findings, userIds: indexUsersById(foundUsers), targetIds };
+    }
+
+    findTargetsOfKind(kind: Kind, names: string[]): Promise<OrgTarget[]> {
+        if (kind === 'permissionSet') return this.org.findPermissionSets(names);
+        if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
+        if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);
+
+        throw new Error(`Unsupported kind: ${kind}`);
     }
 }
