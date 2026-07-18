@@ -17,6 +17,44 @@ async function tempDir() {
     return mkdtemp(path.join(tmpdir(), 'ps-apply-'));
 }
 
+const scopeKeys = ['permissionSets', 'permissionSetGroups', 'permissionSetLicenses'];
+
+/** The bare target name of a serialized entry (a string, or the object form's name). */
+function entryName(entry) {
+    return typeof entry === 'string' ? entry : entry.name;
+}
+
+/**
+ * Move one assignment from its holder to a different user in an exported doc, in place.
+ * The target stays referenced (still managed), so the holder's membership becomes a removal
+ * the sync diff acts on. Returns false when the org lacks two users or any assignment to move.
+ */
+function relocateOneTarget(doc) {
+    const usernames = Object.keys(doc.users ?? {});
+    if (usernames.length < 2) return false;
+
+    for (const holder of usernames) {
+        for (const scopeKey of scopeKeys) {
+            const list = doc.users[holder]?.[scopeKey];
+            if (!Array.isArray(list) || list.length === 0) continue;
+
+            const target = entryName(list[0]);
+            const recipient = usernames.find((username) => username !== holder);
+            const kept = list.filter((entry) => entryName(entry) !== target);
+            if (kept.length > 0) doc.users[holder][scopeKey] = kept;
+            else delete doc.users[holder][scopeKey];
+            doc.users[recipient] ??= {};
+            doc.users[recipient][scopeKey] = [
+                ...(doc.users[recipient][scopeKey] ?? []),
+                target,
+            ];
+            return true;
+        }
+    }
+
+    return false;
+}
+
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async () => {
         const { exitCode } = await runPs(['ps', 'apply', '-f', valid, '--target-org', noOrg, '--mode', 'bogus']);
@@ -98,8 +136,9 @@ describe('sf ps apply', () => {
     });
 
     // Removals require confirmation, and a non-interactive --json run cannot prompt: it must
-    // refuse instead. Drop a user from the org's own export so sync wants to remove that user's
-    // assignments, reaching the confirmation gate and erroring there, before any DML.
+    // refuse instead. Relocate one target from its holder to another user in the org's own export:
+    // the target stays referenced (still managed), so the original membership becomes a removal that
+    // sync acts on, reaching the confirmation gate and erroring there, before any DML.
     it('refuses to delete without --no-prompt when --json is enabled', async ({ expect }) => {
         const dir = await tempDir();
         const snapshot = path.join(dir, 'snap.yml');
@@ -108,9 +147,8 @@ describe('sf ps apply', () => {
         expect(exported.exitCode).toBe(0);
 
         const doc = parse(await readFile(snapshot, 'utf8'));
-        const users = Object.keys(doc.users ?? {});
-        expect(users.length).toBeGreaterThan(0);
-        delete doc.users[users[0]];
+        const relocated = relocateOneTarget(doc);
+        expect(relocated).toBe(true);
         await writeFile(snapshot, stringify(doc), 'utf8');
 
         const { exitCode, stdout } = await runPs([
