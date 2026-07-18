@@ -402,8 +402,8 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - name: Install Salesforce CLI
@@ -427,18 +427,16 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 20
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
       - name: Install the plugin
         run: sf plugins install sf-plugin-permission-sets
-      - name: Write the auth URL
-        run: echo '${{ secrets.SF_AUTH_URL }}' > auth.txt
       - name: Log in to the org
-        run: sf org login sfdx-url --sfdx-url-file auth.txt --alias prod
+        run: echo '${{ secrets.SF_AUTH_URL }}' | sf org login sfdx-url --sfdx-url-stdin --alias prod
       # --no-prompt so a deletion never blocks on a confirmation in CI.
       - name: Apply the assignments
         run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
