@@ -26,6 +26,12 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 - Bind the instance to a variable before calling `run()` — no inline `new X(...).run()`.
 - Injected callbacks get a named type alias so the port reads like the other dependencies (e.g. `ConfirmDeletions = (count: number) => Promise<boolean>`), rather than a bare inline function type.
 
+## Commands
+
+- Each user-facing message gets a named private log method (`logHeaderTitle`, `logHeaderOrg`, `logSummaryCounts`, ...) named `log` + the PascalCased message key, taking the raw token values and doing any `String()` conversion inside. Call sites use the method, never `this.log(messages.getMessage(...))` inline.
+- `this.error(...)` (exit-code paths), `this.confirm(...)`, and string-returning builders stay as-is.
+- Avoid clashing with `SfCommand` built-ins (e.g. `logSuccess` exists on the base class — name it `logExportSuccess` instead).
+
 ## Code style
 
 > Layering, barrel imports, cyclomatic complexity (max 10), no single-letter names, and no `=== undefined` are enforced by ESLint (`eslint.config.js`); the rest are by convention.

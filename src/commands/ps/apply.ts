@@ -126,38 +126,23 @@ export default class Apply extends SfCommand<PsApplyResult> {
         if (result.status === 'dry-run') {
             // Report what this mode would actually do, matching the mode-scoped body: the full
             // diff minus whatever the mode leaves as drift. Otherwise the counts contradict it.
-            this.log(
-                messages.getMessage('summary.dryRun', [
-                    String(summary.toAdd - result.drift.adds),
-                    String(summary.toUpdate - result.drift.updates),
-                    String(summary.toRemove - result.drift.removes),
-                ])
+            this.logSummaryDryRun(
+                summary.toAdd - result.drift.adds,
+                summary.toUpdate - result.drift.updates,
+                summary.toRemove - result.drift.removes
             );
             return;
         }
 
         if (result.status === 'declined') {
-            this.log(messages.getMessage('summary.declined'));
+            this.logSummaryDeclined();
             return;
         }
 
-        this.log(
-            messages.getMessage('summary.applied', [
-                String(summary.added),
-                String(summary.updated),
-                String(summary.removed),
-            ])
-        );
+        this.logSummaryApplied(summary.added, summary.updated, summary.removed);
         const failures = result.outcomes.filter((outcome) => !outcome.success);
         for (const failure of failures) {
-            this.log(
-                messages.getMessage('failure.line', [
-                    failure.operation,
-                    failure.assignee,
-                    failure.target,
-                    failure.message ?? '',
-                ])
-            );
+            this.logFailureLine(failure.operation, failure.assignee, failure.target, failure.message ?? '');
         }
 
         if (result.failed) {
@@ -167,26 +152,52 @@ export default class Apply extends SfCommand<PsApplyResult> {
     }
 
     private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
-        if (drift.adds > 0)
-            this.log(
-                messages.getMessage('drift.note', [
-                    String(drift.adds),
-                    mode,
-                ])
-            );
-        if (drift.updates > 0)
-            this.log(
-                messages.getMessage('drift.note', [
-                    String(drift.updates),
-                    mode,
-                ])
-            );
-        if (drift.removes > 0)
-            this.log(
-                messages.getMessage('drift.note', [
-                    String(drift.removes),
-                    mode,
-                ])
-            );
+        if (drift.adds > 0) this.logDriftNote(drift.adds, mode);
+        if (drift.updates > 0) this.logDriftNote(drift.updates, mode);
+        if (drift.removes > 0) this.logDriftNote(drift.removes, mode);
+    }
+
+    private logSummaryDryRun(toAdd: number, toUpdate: number, toRemove: number): void {
+        this.log(
+            messages.getMessage('summary.dryRun', [
+                String(toAdd),
+                String(toUpdate),
+                String(toRemove),
+            ])
+        );
+    }
+
+    private logSummaryDeclined(): void {
+        this.log(messages.getMessage('summary.declined'));
+    }
+
+    private logSummaryApplied(added: number, updated: number, removed: number): void {
+        this.log(
+            messages.getMessage('summary.applied', [
+                String(added),
+                String(updated),
+                String(removed),
+            ])
+        );
+    }
+
+    private logFailureLine(operation: string, assignee: string, target: string, message: string): void {
+        this.log(
+            messages.getMessage('failure.line', [
+                operation,
+                assignee,
+                target,
+                message,
+            ])
+        );
+    }
+
+    private logDriftNote(count: number, mode: string): void {
+        this.log(
+            messages.getMessage('drift.note', [
+                String(count),
+                mode,
+            ])
+        );
     }
 }

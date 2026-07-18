@@ -128,14 +128,8 @@ export default class Plan extends SfCommand<PsPlanResult> {
     }): void {
         const { diff, mode, orgName, orgId, files, showUnchanged, actionable, usersAffected } = args;
 
-        this.log(messages.getMessage('header.title'));
-        this.log(
-            messages.getMessage('header.org', [
-                orgName,
-                orgId,
-                mode,
-            ])
-        );
+        this.logHeaderTitle();
+        this.logHeaderOrg(orgName, orgId, mode);
 
         const totalChanges = diff.toAdd.length + diff.toUpdate.length + diff.toRemove.length;
         if (totalChanges === 0) {
@@ -144,14 +138,14 @@ export default class Plan extends SfCommand<PsPlanResult> {
             } else {
                 this.log('');
             }
-            this.log(messages.getMessage('empty.noChanges', [orgName]));
+            this.logEmptyNoChanges(orgName);
             return;
         }
 
         this.logBody(formatDiff(diff, { mode, showUnchanged }));
 
         if (actionable.length === 0) {
-            this.log(messages.getMessage('empty.nothingToApply', [mode]));
+            this.logEmptyNothingToApply(mode);
         } else {
             this.log(this.countsLine(diff, mode, usersAffected));
         }
@@ -160,7 +154,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         this.reportUnchanged(diff.unchanged.length, showUnchanged);
 
         if (actionable.length > 0) {
-            this.log(messages.getMessage('summary.next', [this.applyCommand(orgName, files, mode)]));
+            this.logSummaryNext(this.applyCommand(orgName, files, mode));
         }
     }
 
@@ -210,23 +204,65 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
     private reportDrift(diff: Diff, mode: ReconcileMode): void {
         if (mode === 'additive' && diff.toRemove.length > 0) {
-            this.log(messages.getMessage('drift.additive', [String(diff.toRemove.length)]));
+            this.logDriftAdditive(diff.toRemove.length);
         }
         if (mode === 'destructive') {
             const skipped = diff.toAdd.length + diff.toUpdate.length;
-            if (skipped > 0) this.log(messages.getMessage('drift.destructive', [String(skipped)]));
+            if (skipped > 0) this.logDriftDestructive(skipped);
         }
     }
 
     private reportUnchanged(count: number, showUnchanged: boolean): void {
         if (count === 0) return;
-        const key = showUnchanged ? 'summary.unchangedListed' : 'summary.unchanged';
-        this.log(messages.getMessage(key, [String(count)]));
+        if (showUnchanged) this.logSummaryUnchangedListed(count);
+        else this.logSummaryUnchanged(count);
     }
 
     private applyCommand(orgName: string, files: string[], mode: ReconcileMode): string {
         const fileArgs = files.map((file) => `-f "${file}"`).join(' ');
         const modeArg = mode === 'additive' ? '' : ` --mode ${mode}`;
         return `${this.config.bin} ps apply -o ${orgName} ${fileArgs}${modeArg}`;
+    }
+
+    private logHeaderTitle(): void {
+        this.log(messages.getMessage('header.title'));
+    }
+
+    private logHeaderOrg(orgName: string, orgId: string, mode: string): void {
+        this.log(
+            messages.getMessage('header.org', [
+                orgName,
+                orgId,
+                mode,
+            ])
+        );
+    }
+
+    private logEmptyNoChanges(orgName: string): void {
+        this.log(messages.getMessage('empty.noChanges', [orgName]));
+    }
+
+    private logEmptyNothingToApply(mode: string): void {
+        this.log(messages.getMessage('empty.nothingToApply', [mode]));
+    }
+
+    private logSummaryNext(applyCommand: string): void {
+        this.log(messages.getMessage('summary.next', [applyCommand]));
+    }
+
+    private logDriftAdditive(count: number): void {
+        this.log(messages.getMessage('drift.additive', [String(count)]));
+    }
+
+    private logDriftDestructive(count: number): void {
+        this.log(messages.getMessage('drift.destructive', [String(count)]));
+    }
+
+    private logSummaryUnchanged(count: number): void {
+        this.log(messages.getMessage('summary.unchanged', [String(count)]));
+    }
+
+    private logSummaryUnchangedListed(count: number): void {
+        this.log(messages.getMessage('summary.unchangedListed', [String(count)]));
     }
 }
