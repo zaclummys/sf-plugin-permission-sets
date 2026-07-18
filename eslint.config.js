@@ -4,114 +4,121 @@ import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,ts,mts,cts}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
-  tseslint.configs.recommended,
-
-  // Project conventions (see CLAUDE.md).
-  {
-    files: ["src/**/*.ts"],
-    rules: {
-      // Cap cyclomatic complexity; split branchy functions into helpers.
-      complexity: ["error", 10],
-      // Size/shape guards, set just above today's max to block future growth
-      // (see CLAUDE.md); tighten as functions get split into helpers.
-      "max-depth": ["error", 4],
-      "max-params": ["error", 5],
-      "max-nested-callbacks": ["error", 3],
-      "max-statements": ["error", 25],
-      "max-lines-per-function": ["error", 65],
-      // No single-letter identifiers.
-      "id-length": ["error", { min: 2, properties: "never" }],
-      // Prefer !x or == null over an explicit === undefined comparison.
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: "BinaryExpression[operator='==='][right.type='Identifier'][right.name='undefined']",
-          message: "Use !x or == null instead of === undefined.",
-        },
-        {
-          selector: "BinaryExpression[operator='!=='][right.type='Identifier'][right.name='undefined']",
-          message: "Use x or != null instead of !== undefined.",
-        },
-        {
-          selector: "CallExpression[callee.property.name='then']",
-          message: "Prefer async/await over .then().",
-        },
-      ],
+    {
+        files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
+        plugins: { js },
+        extends: ["js/recommended"],
+        languageOptions: { globals: globals.browser },
     },
-  },
+    tseslint.configs.recommended,
 
-  // Layering: core/ stays pure (no @salesforce, no outer layers).
-  {
-    files: ["src/core/**/*.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@salesforce/*", "@salesforce/**"],
-              message: "core/ must stay pure: no @salesforce imports.",
-            },
-            {
-              group: ["**/services/**", "**/commands/**", "**/adapters/**"],
-              message: "core/ must not import from outer layers (commands -> services -> core).",
-            },
-          ],
+    // Project conventions (see CLAUDE.md).
+    {
+        files: ["src/**/*.ts"],
+        rules: {
+            // Cap cyclomatic complexity; split branchy functions into helpers.
+            complexity: ["error", 10],
+            // Size/shape guards, set just above today's max to block future growth
+            // (see CLAUDE.md); tighten as functions get split into helpers.
+            "max-depth": ["error", 4],
+            "max-params": ["error", 5],
+            "max-nested-callbacks": ["error", 3],
+            "max-statements": ["error", 25],
+            "max-lines-per-function": ["error", 65],
+            // No single-letter identifiers.
+            "id-length": ["error", { min: 2, properties: "never" }],
+            // Prefer !x or == null over an explicit === undefined comparison.
+            "no-restricted-syntax": [
+                "error",
+                {
+                    selector:
+                        "BinaryExpression[operator='==='][right.type='Identifier'][right.name='undefined']",
+                    message: "Use !x or == null instead of === undefined.",
+                },
+                {
+                    selector:
+                        "BinaryExpression[operator='!=='][right.type='Identifier'][right.name='undefined']",
+                    message: "Use x or != null instead of !== undefined.",
+                },
+                {
+                    selector: "CallExpression[callee.property.name='then']",
+                    message: "Prefer async/await over .then().",
+                },
+            ],
         },
-      ],
     },
-  },
 
-  // Layering + barrels: services/ may not import commands, and reach core through its barrel.
-  {
-    files: ["src/services/**/*.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["**/commands/**"],
-              message: "services/ must not import commands (commands -> services -> core).",
-            },
-            {
-              group: ["**/core/*", "!**/core/index.js"],
-              message: "Import core through its index.js barrel.",
-            },
-            {
-              group: ["**/adapters/*", "!**/adapters/index.js"],
-              message: "Import adapters through its index.js barrel.",
-            },
-          ],
+    // Layering: core/ stays pure (no @salesforce, no outer layers).
+    {
+        files: ["src/core/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["@salesforce/*", "@salesforce/**"],
+                            message: "core/ must stay pure: no @salesforce imports.",
+                        },
+                        {
+                            group: ["**/services/**", "**/commands/**", "**/adapters/**"],
+                            message: "core/ must not import from outer layers (commands -> services -> core).",
+                        },
+                    ],
+                },
+            ],
         },
-      ],
     },
-  },
 
-  // Barrels: commands reach every inner layer through its index.js barrel.
-  {
-    files: ["src/commands/**/*.ts"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["**/core/*", "!**/core/index.js"],
-              message: "Import core through its index.js barrel.",
-            },
-            {
-              group: ["**/services/*", "!**/services/index.js"],
-              message: "Import services through its index.js barrel.",
-            },
-            {
-              group: ["**/adapters/*", "!**/adapters/index.js"],
-              message: "Import adapters through its index.js barrel.",
-            },
-          ],
+    // Layering + barrels: services/ may not import commands, and reach core through its barrel.
+    {
+        files: ["src/services/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["**/commands/**"],
+                            message: "services/ must not import commands (commands -> services -> core).",
+                        },
+                        {
+                            group: ["**/core/*", "!**/core/index.js"],
+                            message: "Import core through its index.js barrel.",
+                        },
+                        {
+                            group: ["**/adapters/*", "!**/adapters/index.js"],
+                            message: "Import adapters through its index.js barrel.",
+                        },
+                    ],
+                },
+            ],
         },
-      ],
     },
-  },
+
+    // Barrels: commands reach every inner layer through its index.js barrel.
+    {
+        files: ["src/commands/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: ["**/core/*", "!**/core/index.js"],
+                            message: "Import core through its index.js barrel.",
+                        },
+                        {
+                            group: ["**/services/*", "!**/services/index.js"],
+                            message: "Import services through its index.js barrel.",
+                        },
+                        {
+                            group: ["**/adapters/*", "!**/adapters/index.js"],
+                            message: "Import adapters through its index.js barrel.",
+                        },
+                    ],
+                },
+            ],
+        },
+    },
 ]);
