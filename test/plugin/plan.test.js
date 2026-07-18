@@ -6,6 +6,8 @@ import path from 'node:path';
 import { runPs, targetOrg } from '../helpers/run-plugin.js';
 
 const valid = 'test/fixtures/valid.yml';
+const schemaError = 'test/fixtures/schema-error.yml';
+const malformed = 'test/fixtures/malformed.yml';
 // A target org that resolves nowhere, so this fails identically on any machine
 // without touching the network or a developer's default org.
 const noOrg = 'no-such-org-alias-xyz';
@@ -50,5 +52,21 @@ describe('sf ps plan', () => {
         expect(typeof plan.org).toBe('string');
         expect(['additive', 'destructive', 'sync']).toContain(plan.mode);
         expect(Array.isArray(plan.add)).toBe(true);
+    });
+
+    // Load errors abort before any org call, so the org just needs to resolve; nothing
+    // is ever queried or changed.
+    it('fails a schema violation with exit 1', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'plan', '--target-org', targetOrg, '-f', schemaError]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('error:');
+    });
+
+    it('fails malformed YAML with exit 1', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'plan', '--target-org', targetOrg, '-f', malformed]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('error:');
     });
 });

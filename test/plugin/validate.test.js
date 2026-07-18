@@ -5,6 +5,8 @@ import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 
 const valid = 'test/fixtures/valid.yml';
+const schemaError = 'test/fixtures/schema-error.yml';
+const malformed = 'test/fixtures/malformed.yml';
 // A target org that resolves nowhere, so this fails identically on any machine
 // without touching the network or a developer's default org.
 const noOrg = 'no-such-org-alias-xyz';
@@ -81,5 +83,20 @@ describe('sf ps validate', () => {
 
         expect(exitCode).not.toBe(0);
         expect(stderr.toLowerCase()).toContain('file');
+    });
+
+    it('fails a schema violation with exit 1', async ({ expect }) => {
+        const { stdout, stderr, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', schemaError]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('error:');
+        expect(stderr).toContain('found problems');
+    });
+
+    it('fails malformed YAML with exit 1', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', malformed]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('error:');
     });
 });

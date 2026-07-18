@@ -5,6 +5,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 
+// A target org that resolves nowhere, so this fails identically on any machine
+// without touching the network or a developer's default org.
+const noOrg = 'no-such-org-alias-xyz';
+
 // A uniquely-named file under the OS temp dir per test, so the concurrent cases never write
 // over each other. The OS reclaims the temp dir, so there is nothing to clean up.
 async function tempOutputFile() {
@@ -111,6 +115,59 @@ describe('sf ps export', () => {
         expect(result.outputFile).toBe(null);
         expect(typeof result.content).toBe('string');
         expect(result.content).toContain('users:');
+    });
+
+    it('--help documents its flags', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'export', '--help']);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('--output-file');
+        expect(stdout).toContain('--kind');
+    });
+
+    it('rejects an unknown --kind value', async ({ expect }) => {
+        const { exitCode, stderr } = await runPs([
+            'ps',
+            'export',
+            '--target-org',
+            noOrg,
+            '--kind',
+            'bogusKind',
+        ]);
+
+        expect(exitCode).not.toBe(0);
+        expect(stderr).toContain('kind');
+    });
+
+    it('scopes the file to a requested --user that matches', async ({ expect }) => {
+        const full = await runPs(['ps', 'export', '--target-org', targetOrg]);
+        expect(full.exitCode).toBe(0);
+        const document = parse(full.stdout);
+        const usernames = Object.keys(document.users ?? {});
+        expect(usernames.length).toBeGreaterThan(0);
+        const [username] = usernames;
+
+        const file = await tempOutputFile();
+        const { stdout, exitCode } = await runPs([
+            'ps',
+            'export',
+            '--target-org',
+            targetOrg,
+            '--output-file',
+            file,
+            '--user',
+            username,
+            '--json',
+        ]);
+
+        expect(exitCode).toBe(0);
+        const result = parseJson(stdout);
+        expect(result.unmatchedUsers).toHaveLength(0);
+        expect(result.users).toBe(1);
+
+        const content = await readFile(file, 'utf8');
+        const scoped = parse(content);
+        expect(Object.keys(scoped.users ?? {})).toEqual([username]);
     });
 
     it('warns and continues when a requested --user matches nothing', async ({ expect }) => {
