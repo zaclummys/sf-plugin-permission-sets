@@ -249,14 +249,18 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged]
+               [--out <file>] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --show-unchanged         List assignments that already match, instead of only counting them.
+  --out=<file>             Write the computed change set to a plan file that `apply` can run verbatim.
 ```
+
+With `--out` the plan is also saved to a file: the resolved change set (adds, updates, removes with their record ids), the mode it was computed for, and the org it targets. Feed that file to `apply --plan` to execute exactly what you reviewed, with no recomputation. See [Saved plans](#saved-plans).
 
 The body shows only what the mode will do, and unchanged assignments are summarized as a count (pass `--show-unchanged` to list them). The default `additive` run previews only what it grants, and reports the undeclared assignment it won't remove as drift:
 
@@ -306,12 +310,13 @@ Next: sf ps apply -o prod -f "permissions/*.yml" --mode sync
 
 ```
 USAGE
-  $ sf ps apply -o <org> -f <glob>... [--mode <value>] [--max-deletes <n>]
-                [--dry-run] [--show-unchanged] [--no-prompt] [--json]
+  $ sf ps apply -o <org> (-f <glob>... | --plan <file>) [--mode <value>]
+                [--max-deletes <n>] [--dry-run] [--show-unchanged] [--no-prompt] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
-  -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
+  -f, --file=<glob>...     YAML file(s) to read. Repeatable, globs expanded by the plugin.
+  --plan=<file>            Apply a saved plan file from `plan --out` instead of re-reading YAML.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --max-deletes=<n>        Abort if a run would remove more than n assignments. [default: 50]
   --dry-run                Resolve and diff, print what would happen, change nothing.
@@ -319,7 +324,27 @@ FLAGS
   --no-prompt              Skip the deletion confirmation prompt (for CI).
 ```
 
+Provide exactly one source: `--file` (read and diff the YAML now) or `--plan` (run a saved plan). They cannot be combined, and `--mode` cannot accompany `--plan` (the plan already carries its mode). `--max-deletes`, `--dry-run`, and `--no-prompt` apply to both.
+
 Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org. DML is executed with the sObject Collections API and reports partial successes/failures per record.
+
+#### Saved plans
+
+`plan --out` and `apply --plan` split review from execution, so what you approve is exactly what runs:
+
+```bash
+sf ps plan  -o prod -f "permissions/*.yml" --mode sync --out prod.plan
+# ... review prod.plan, get sign-off ...
+sf ps apply -o prod --plan prod.plan
+```
+
+Without a saved plan, `apply` recomputes from the files: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state. Anything that changed since you ran `plan` (an edited file, a renamed permission set, another admin's assignment) silently changes what `apply` does. A saved plan freezes the resolved change set, so `apply --plan` executes those exact records with no recomputation.
+
+Guardrails:
+
+- `apply --plan` refuses a plan built for a different org (the plan records the org id).
+- It refuses a plan file it cannot parse or whose format version it does not recognize.
+- The plan is executed as recorded. If the org drifted after the plan was written, individual records may fail (a removed target, an already-deleted assignment); those surface as per-record failures in the outcome report rather than aborting the run. Re-run `plan` to get a fresh plan when in doubt.
 
 ### `sf ps export`
 

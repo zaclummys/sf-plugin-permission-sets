@@ -1,16 +1,22 @@
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname } from 'node:path';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
-import { PlanService } from '../../services/index.js';
+import { PlanService, Resolution, resolveAdditions } from '../../services/index.js';
 import {
     formatDiff,
     formatFindings,
+    scopeToMode,
+    serializePlan,
+    savedPlanVersion,
     ActualAssignment,
     AssignmentUpdate,
     DesiredAssignment,
     Diff,
     ReconcileMode,
+    SavedPlan,
 } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -29,6 +35,8 @@ export type PsPlanResult = {
         toRemove: ActualAssignment[];
         unchanged: ActualAssignment[];
     };
+    /** The plan file written, when --out was given. */
+    outFile?: string;
 };
 
 export default class Plan extends SfCommand<PsPlanResult> {
@@ -51,6 +59,9 @@ export default class Plan extends SfCommand<PsPlanResult> {
         })(),
         'show-unchanged': Flags.boolean({
             summary: messages.getMessage('flags.show-unchanged.summary'),
+        }),
+        out: Flags.string({
+            summary: messages.getMessage('flags.out.summary'),
         }),
     };
 
@@ -112,7 +123,46 @@ export default class Plan extends SfCommand<PsPlanResult> {
             usersAffected,
         });
 
+        if (flags.out) {
+            await this.writePlanFile(flags.out, { diff, mode, orgId, resolution: result.resolution });
+            summary.outFile = flags.out;
+        }
+
         return summary;
+    }
+
+    /** Freeze the resolved, mode-scoped change set to a plan file that `apply --plan` runs verbatim. */
+    private async writePlanFile(
+        outFile: string,
+        args: { diff: Diff; mode: ReconcileMode; orgId: string; resolution: Resolution }
+    ): Promise<void> {
+        const scoped = scopeToMode(args.diff, args.mode);
+        const add = resolveAdditions(scoped.additions, args.resolution);
+        const plan: SavedPlan = {
+            version: savedPlanVersion,
+            org: args.orgId,
+            mode: args.mode,
+            generatedAt: new Date().toISOString(),
+            add,
+            update: scoped.updates,
+            remove: scoped.removals,
+        };
+        const content = serializePlan(plan);
+        const total = add.length + scoped.updates.length + scoped.removals.length;
+
+        await mkdir(dirname(outFile), { recursive: true });
+        await writeFile(outFile, content, 'utf8');
+        this.logWrotePlan(total, outFile);
+    }
+
+    private logWrotePlan(changes: number, outFile: string): void {
+        this.log(
+            messages.getMessage('summary.wrotePlan', [
+                changes,
+                outFile,
+                outFile,
+            ])
+        );
     }
 
     /** Render the human-readable plan body once the run is known to be valid. */

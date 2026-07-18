@@ -3,6 +3,7 @@ import {
     Kind,
     OrgTarget,
     OrgUser,
+    ResolvedAddition,
     TargetRef,
     Finding,
     kinds,
@@ -29,6 +30,15 @@ export function managedTargets(resolution: Resolution): TargetRef[] {
         }
     }
     return refs;
+}
+
+/** Attach the resolved assignee and target ids to each addition, so it can be inserted. */
+export function resolveAdditions(additions: DesiredAssignment[], resolution: Resolution): ResolvedAddition[] {
+    return additions.map((addition) => ({
+        ...addition,
+        assigneeId: resolution.userIds.get(addition.assignee.toLowerCase()) ?? '',
+        targetId: resolution.targetIds[addition.kind].get(addition.target.toLowerCase()) ?? '',
+    }));
 }
 
 /** Look every declared reference up in the org, returning findings and the resolved id maps. */

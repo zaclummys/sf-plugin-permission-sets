@@ -15,7 +15,9 @@ export {
   ResolvedAddition,
   TargetRef,
 } from './model.js';
+export { scopeToMode, ScopedChange } from './mode.js';
 export { kindForScopeKey } from './normalize.js';
+export { savedPlanVersion, SavedPlan, serializePlan, parsePlan } from './plan-file.js';
 export { formatDiff } from './report.js';
 export {
   kinds,

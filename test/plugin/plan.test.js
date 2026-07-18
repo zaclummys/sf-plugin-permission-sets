@@ -19,5 +19,6 @@ describe('sf ps plan', () => {
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('--mode');
+        expect(stdout).toContain('--out');
     });
 });

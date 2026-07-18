@@ -1,17 +1,18 @@
 import {
     loadFiles,
     diffAssignments,
+    scopeToMode,
     ActualAssignment,
     AssignmentOutcome,
     AssignmentUpdate,
-    DesiredAssignment,
     Diff,
     ResolvedAddition,
+    SavedPlan,
     Finding,
     countFindings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { Resolution, ResolutionService, managedTargets } from './resolution.js';
+import { ResolutionService, managedTargets, resolveAdditions } from './resolution.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 
@@ -23,6 +24,14 @@ export type ApplyInput = {
     maxDeletes: number;
     dryRun: boolean;
 };
+
+/** The inputs a saved-plan apply needs. The mode is already baked into the plan. */
+export type ApplyPlanInput = {
+    maxDeletes: number;
+    dryRun: boolean;
+};
+
+const noDrift = { adds: 0, updates: 0, removes: 0 };
 
 /** How a run ended, so the command can report and set the exit code. */
 export type ApplyStatus = 'applied' | 'dry-run' | 'declined' | 'max-deletes-exceeded' | 'invalid';
@@ -51,26 +60,6 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
         status: 'invalid',
         failed: true,
     };
-}
-
-type ModePlan = {
-    additions: DesiredAssignment[];
-    updates: AssignmentUpdate[];
-    removals: ActualAssignment[];
-    drift: { adds: number; updates: number; removes: number };
-};
-
-/** Scope a diff to what the mode acts on, plus the drift (what it deliberately leaves alone). */
-function planForMode(diff: Diff, mode: ApplyMode): ModePlan {
-    const additions = mode === 'destructive' ? [] : diff.toAdd;
-    const updates = mode === 'destructive' ? [] : diff.toUpdate;
-    const removals = mode === 'additive' ? [] : diff.toRemove;
-    const drift = {
-        adds: mode === 'destructive' ? diff.toAdd.length : 0,
-        updates: mode === 'destructive' ? diff.toUpdate.length : 0,
-        removes: mode === 'additive' ? diff.toRemove.length : 0,
-    };
-    return { additions, updates, removals, drift };
 }
 
 /**
@@ -106,7 +95,7 @@ export class ApplyService {
         const diff = diffAssignments(loaded.assignments, actual);
 
         const { mode, maxDeletes, dryRun } = input;
-        const { additions, updates, removals, drift } = planForMode(diff, mode);
+        const { additions, updates, removals, drift } = scopeToMode(diff, mode);
 
         if (removals.length > maxDeletes) {
             return {
@@ -131,26 +120,50 @@ export class ApplyService {
             }
         }
 
-        const outcomes = await this.execute(additions, updates, removals, resolution);
+        const outcomes = await this.executeResolved(resolveAdditions(additions, resolution), updates, removals);
         const failed = outcomes.some((outcome) => !outcome.success);
 
         return { files: loaded.files, findings, diff, drift, outcomes, status: 'applied', failed };
     }
 
-    private async execute(
-        additions: DesiredAssignment[],
-        updates: AssignmentUpdate[],
-        removals: ActualAssignment[],
-        resolution: Resolution
-    ): Promise<AssignmentOutcome[]> {
-        const resolved: ResolvedAddition[] = additions.map((addition) => ({
-            ...addition,
-            assigneeId: resolution.userIds.get(addition.assignee.toLowerCase()) ?? '',
-            targetId: resolution.targetIds[addition.kind].get(addition.target.toLowerCase()) ?? '',
-        }));
+    /**
+     * Apply a saved plan verbatim: no load, resolve, or diff. The plan is already
+     * mode-scoped and resolved, so there is no drift and no findings. maxDeletes and
+     * the deletion confirmation still guard the run.
+     */
+    public async runPlan(plan: SavedPlan, input: ApplyPlanInput): Promise<ApplyResult> {
+        const diff: Diff = { toAdd: plan.add, toUpdate: plan.update, toRemove: plan.remove, unchanged: [] };
+        const { maxDeletes, dryRun } = input;
+        const base = { files: [] as string[], findings: [] as Finding[], diff, drift: noDrift, outcomes: [] };
 
+        if (plan.remove.length > maxDeletes) {
+            return { ...base, status: 'max-deletes-exceeded', failed: true };
+        }
+
+        if (dryRun) {
+            return { ...base, status: 'dry-run', failed: false };
+        }
+
+        if (plan.remove.length > 0) {
+            const confirmed = await this.confirmDeletions(plan.remove.length);
+            if (!confirmed) {
+                return { ...base, status: 'declined', failed: false };
+            }
+        }
+
+        const outcomes = await this.executeResolved(plan.add, plan.update, plan.remove);
+        const failed = outcomes.some((outcome) => !outcome.success);
+
+        return { ...base, outcomes, status: 'applied', failed };
+    }
+
+    private async executeResolved(
+        additions: ResolvedAddition[],
+        updates: AssignmentUpdate[],
+        removals: ActualAssignment[]
+    ): Promise<AssignmentOutcome[]> {
         const [added, updated, removed] = await Promise.all([
-            resolved.length > 0 ? this.org.addAssignments(resolved) : Promise.resolve<AssignmentOutcome[]>([]),
+            additions.length > 0 ? this.org.addAssignments(additions) : Promise.resolve<AssignmentOutcome[]>([]),
             updates.length > 0 ? this.org.updateAssignments(updates) : Promise.resolve<AssignmentOutcome[]>([]),
             removals.length > 0 ? this.org.removeAssignments(removals) : Promise.resolve<AssignmentOutcome[]>([]),
         ]);
