@@ -81,6 +81,38 @@ describe('sf ps export [online]', () => {
         }
     });
 
+    it('writes the document to stdout when --output-file is omitted', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'export', '--target-org', targetOrg]);
+
+        expect(exitCode).toBe(0);
+        // stdout is pure YAML: it parses, is user-keyed, and carries no summary line.
+        const document = parse(stdout);
+        expect(document).toHaveProperty('users');
+        expect(stdout).not.toContain('Exported');
+    });
+
+    it('emits the same document to stdout as it writes to a file', async ({ expect }) => {
+        const file = await tempOutputFile();
+        const toFile = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', file]);
+        const toStdout = await runPs(['ps', 'export', '--target-org', targetOrg]);
+
+        expect(toFile.exitCode).toBe(0);
+        expect(toStdout.exitCode).toBe(0);
+        const fileContent = await readFile(file, 'utf8');
+        // execa strips the trailing newline from stdout, so compare trimmed.
+        expect(toStdout.stdout).toBe(fileContent.trimEnd());
+    });
+
+    it('returns the document in the --json envelope with a null outputFile', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'export', '--target-org', targetOrg, '--json']);
+
+        expect(exitCode).toBe(0);
+        const result = parseJson(stdout);
+        expect(result.outputFile).toBe(null);
+        expect(typeof result.content).toBe('string');
+        expect(result.content).toContain('users:');
+    });
+
     it('warns and continues when a requested --user matches nothing', async ({ expect }) => {
         const file = await tempOutputFile();
         const missing = 'no-such-user@nowhere.invalid';

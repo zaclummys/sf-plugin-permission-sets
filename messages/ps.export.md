@@ -8,7 +8,7 @@ Query the target org for every assignable permission set, group, and license ass
 
 # flags.output-file.summary
 
-Path of the YAML file to write. Created (and its parent directories) if missing, overwritten if present.
+Path of the YAML file to write. Created (and its parent directories) if missing, overwritten if present. Omit to write the document to stdout.
 
 # flags.user.summary
 
@@ -35,6 +35,10 @@ No assignments in scope for user %s, it was skipped.
 - Export a production org into an environment folder:
 
   <%= config.bin %> <%= command.id %> --target-org prod --output-file permissions/prod.yml
+
+- Write to stdout and diff against a committed snapshot:
+
+  <%= config.bin %> <%= command.id %> --target-org prod | diff - permissions/prod.yml
 
 - Export two users' permission sets and groups only:
 

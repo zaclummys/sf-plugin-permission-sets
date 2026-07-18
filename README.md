@@ -323,21 +323,31 @@ Deletions always prompt for confirmation unless `--no-prompt` is set, and are ha
 
 ### `sf ps export`
 
-Read-only. Snapshots the org's current assignments into a single YAML file you can commit and then feed back into the other commands.
+Read-only. Snapshots the org's current assignments as YAML you can commit and then feed back into the other commands. Writes to a file with `--output-file`, or to stdout when that flag is omitted.
 
 ```
 USAGE
-  $ sf ps export -o <org> -f <file> [--user <username>...]
+  $ sf ps export -o <org> [-f <file>] [--user <username>...]
                  [--kind <scope>...] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required) Org to read assignments from.
-  -f, --output-file=<file> (required) Path of the YAML file to write. Parent directories are created; an existing file is overwritten.
+  -f, --output-file=<file> Path of the YAML file to write. Parent directories are created; an existing file is overwritten. Omit to write to stdout.
   --user=<username>...      Only export these users. Repeatable, matched on exact username.
   --kind=<scope>...         Only export these scopes: permissionSets | permissionSetGroups | permissionSetLicenses. Repeatable.
 ```
 
 It exports every assignable permission set, group, and license assignment held by active users, keyed by username, so the result is immediately valid input for `check`, `validate`, `plan`, and `apply`. Profile-owned permission sets and inactive users are skipped.
+
+With `--output-file` the command writes the file and prints a one-line summary. Omit the flag and the YAML goes to stdout instead, byte-for-byte identical to what the file would contain, so it pipes and diffs cleanly. Warnings and the summary stay on stderr, keeping stdout pure YAML. Under `--json` nothing is written to stdout as YAML; the document is returned in the `content` field of the envelope instead.
+
+```bash
+# Diff the org's live state against a committed snapshot
+sf ps export -o prod | diff - permissions/prod.yml
+
+# Redirect a scoped snapshot to a file of your choosing
+sf ps export -o prod --user jdoe@acme.com > jdoe.yml
+```
 
 By default the whole org is exported. `--user` and `--kind` narrow the snapshot: pass either to scope it down, and pass both to intersect (the named users, restricted to the named scopes). Values within a flag are a union, so `--user jdoe@acme.com --user asmith@acme.com` exports both. The `--kind` values are the same scope keys the file uses, so `--kind permissionSetLicenses` reads back exactly the `permissionSetLicenses:` block.
 

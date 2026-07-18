@@ -9,10 +9,12 @@ Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.export');
 
 export type PsExportResult = {
-    outputFile: string;
+    outputFile: string | null;
     users: number;
     assignments: number;
     unmatchedUsers: string[];
+    /** The YAML document, present only when it was written to stdout rather than a file. */
+    content?: string;
 };
 
 export default class Export extends SfCommand<PsExportResult> {
@@ -25,7 +27,6 @@ export default class Export extends SfCommand<PsExportResult> {
         'output-file': Flags.string({
             char: 'f',
             summary: messages.getMessage('flags.output-file.summary'),
-            required: true,
         }),
         user: Flags.string({
             summary: messages.getMessage('flags.user.summary'),
@@ -51,9 +52,26 @@ export default class Export extends SfCommand<PsExportResult> {
         const result = await service.run(flags['output-file'], filter);
 
         this.warnUnmatchedUsers(result.unmatchedUsers);
-        this.logExportSuccess(result.assignments, result.users, result.outputFile);
+        if (result.outputFile) {
+            this.logExportSuccess(result.assignments, result.users, result.outputFile);
 
-        return result;
+            return {
+                outputFile: result.outputFile,
+                users: result.users,
+                assignments: result.assignments,
+                unmatchedUsers: result.unmatchedUsers,
+            };
+        }
+
+        this.logDocument(result.content);
+
+        return {
+            outputFile: null,
+            users: result.users,
+            assignments: result.assignments,
+            unmatchedUsers: result.unmatchedUsers,
+            content: result.content,
+        };
     }
 
     private warnUnmatchedUsers(unmatchedUsers: string[]): void {
@@ -70,5 +88,10 @@ export default class Export extends SfCommand<PsExportResult> {
                 outputFile,
             ])
         );
+    }
+
+    /** Write the document to stdout with no extra trailing newline, so it is byte-identical to the file. */
+    private logDocument(content: string): void {
+        this.log(content.endsWith('\n') ? content.slice(0, -1) : content);
     }
 }
