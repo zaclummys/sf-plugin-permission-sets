@@ -339,7 +339,7 @@ FLAGS
 
 It exports every assignable permission set, group, and license assignment held by active users, keyed by username, so the result is immediately valid input for `check`, `validate`, `plan`, and `apply`. Profile-owned permission sets and inactive users are skipped.
 
-With `--output-file` the command writes the file and prints a one-line summary. Omit the flag and the YAML goes to stdout instead, byte-for-byte identical to what the file would contain, so it pipes and diffs cleanly. Warnings and the summary stay on stderr, keeping stdout pure YAML. Under `--json` nothing is written to stdout as YAML; the document is returned in the `content` field of the envelope instead.
+With `--output-file` the command writes the file and prints a one-line summary. Omit the flag and the YAML goes to stdout instead, byte-for-byte identical to what the file would contain, so it pipes and diffs cleanly: in that mode only the document reaches stdout and warnings go to stderr, so there is nothing to strip. Under `--json` the envelope is the only thing on stdout, and when `--output-file` is omitted the document comes back in its `content` field.
 
 ```bash
 # Diff the org's live state against a committed snapshot
