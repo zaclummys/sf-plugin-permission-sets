@@ -52,7 +52,6 @@ const savedPlanSchema = z.strictObject({
     version: z.literal(savedPlanVersion),
     org: z.string().min(1),
     mode,
-    generatedAt: z.string().min(1),
     add: z.array(resolvedAddition),
     update: z.array(assignmentUpdate),
     remove: z.array(actualAssignment),

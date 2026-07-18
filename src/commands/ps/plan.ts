@@ -142,7 +142,6 @@ export default class Plan extends SfCommand<PsPlanResult> {
             version: savedPlanVersion,
             org: args.orgId,
             mode: args.mode,
-            generatedAt: new Date().toISOString(),
             add,
             update: scoped.updates,
             remove: scoped.removals,

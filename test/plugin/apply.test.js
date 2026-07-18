@@ -92,7 +92,6 @@ describe('sf ps apply', () => {
             'version: 1',
             'org: 00D000000000000EAA',
             'mode: additive',
-            'generatedAt: 2026-01-01T00:00:00.000Z',
             'add: []',
             'update: []',
             'remove: []',

@@ -36,7 +36,7 @@ Skip the deletion confirmation prompt. Required to delete in JSON or other non-i
 
 # info.applyingPlan
 
-Applying saved plan generated %s (mode %s).
+Applying saved plan (mode %s).
 
 # confirm.delete
 

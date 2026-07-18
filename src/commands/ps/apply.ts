@@ -110,7 +110,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         const orgId = targetOrg.getOrgId();
         if (plan.org !== orgId) this.errorPlanOrg(plan.org, orgId);
 
-        this.logApplyingPlan(plan.generatedAt, plan.mode);
+        this.logApplyingPlan(plan.mode);
         const result = await service.runPlan(plan, {
             maxDeletes: flags['max-deletes'],
             dryRun: flags['dry-run'],
@@ -266,13 +266,8 @@ export default class Apply extends SfCommand<PsApplyResult> {
         return this.confirm({ message: messages.getMessage('confirm.delete', [count]) });
     }
 
-    private logApplyingPlan(generatedAt: string, mode: string): void {
-        this.log(
-            messages.getMessage('info.applyingPlan', [
-                generatedAt,
-                mode,
-            ])
-        );
+    private logApplyingPlan(mode: string): void {
+        this.log(messages.getMessage('info.applyingPlan', [mode]));
     }
 
     private errorSourceConflict(): never {
