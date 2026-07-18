@@ -17,7 +17,7 @@ async function tempOutputFile() {
 // caller always provides (a local logged-in org, or one a CI step authenticates). export is
 // read-only (it only queries the org), so this never changes org state. Tests run
 // concurrently (see vitest.config.js), so each uses its own temp file and context `expect`.
-describe('sf ps export [online]', () => {
+describe('sf ps export', () => {
     it('exports org assignments and returns a valid --json envelope', async ({ expect }) => {
         const file = await tempOutputFile();
         const { stdout, exitCode } = await runPs([
@@ -51,7 +51,7 @@ describe('sf ps export [online]', () => {
         expect(document).toHaveProperty('users');
 
         // The whole point of export is that its output is valid input to the plugin.
-        // Re-checking it offline proves the round-trip without asserting on org data.
+        // Re-checking it without an org proves the round-trip without asserting on org data.
         const checked = await runPs(['ps', 'check', '-f', file]);
         expect(checked.exitCode).toBe(0);
         expect(checked.stdout).toContain('0 errors');

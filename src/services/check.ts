@@ -9,7 +9,7 @@ export type CheckResult = {
     failed: boolean;
 };
 
-/** Offline check: load the files, validate them, and summarize the findings. */
+/** Load the files, validate them, and summarize the findings. No org needed. */
 export class CheckService {
     public async run(files: string[], strict: boolean): Promise<CheckResult> {
         const loaded = await loadFiles(files);

@@ -63,9 +63,9 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
 }
 
 /**
- * Online apply: load the files, resolve every reference to an org id, diff against
- * the org's current state, then add and/or remove per the mode. Deletions are
- * capped by maxDeletes and gated by an injected confirmation.
+ * Load the files, resolve every reference to an org id, diff against the org's
+ * current state, then add and/or remove per the mode. Deletions are capped by
+ * maxDeletes and gated by an injected confirmation.
  */
 export class ApplyService {
     public constructor(

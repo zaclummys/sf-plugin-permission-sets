@@ -35,7 +35,7 @@ function warning(code: FindingCode, message: string, where: Where = {}): Finding
     return { level: 'warning', code, message, ...where };
 }
 
-// Offline findings, raised while reading and structurally checking a file.
+// Findings raised while reading and structurally checking a file.
 
 /** Invalid YAML: the parser rejected the document. */
 export function yamlError(message: string, file: string, line?: number): Finding {

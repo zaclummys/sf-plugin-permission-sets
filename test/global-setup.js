@@ -34,7 +34,7 @@ if (!process.env.PS_TARGET_ORG) {
 /**
  * vitest globalSetup: make `sf ps` resolve to this repo before any spec runs. The lib is
  * already compiled (a wireit dependency of test), so we link the built plugin and
- * unlink it on teardown. Authentication is the caller's job: the online suites target
+ * unlink it on teardown. Authentication is the caller's job: the real-org suites target
  * whatever org PS_TARGET_ORG names, so nothing is logged in or out here.
  */
 export default async function setup() {

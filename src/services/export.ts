@@ -14,7 +14,7 @@ export type ExportResult = {
     unmatchedUsers: string[];
 };
 
-/** Online export: read the org's current assignments and serialize them as YAML. */
+/** Read the org's current assignments and serialize them as YAML. */
 export class ExportService {
     public constructor(private readonly org: OrgClient) {}
 

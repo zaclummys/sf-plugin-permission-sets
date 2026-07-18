@@ -4,7 +4,7 @@ Validate permission set assignment files against a target org.
 
 # description
 
-Run every offline check, then resolve each referenced user, permission set, group, and license against the org. Reports users that are missing or inactive and targets that are missing or not unique. Read-only: it queries the org but never changes it. Run it before plan or apply.
+Run the same file checks as check, then resolve each referenced user, permission set, group, and license against the org. Reports users that are missing or inactive and targets that are missing or not unique. Read-only: it queries the org but never changes it. Run it before plan or apply.
 
 # flags.file.summary
 

@@ -21,17 +21,17 @@ export type ValidateResult = {
     failed: boolean;
 };
 
-/** Online validate: run the offline load, then resolve every reference against the org. */
+/** Load the files, then resolve every reference against the org. */
 export class ValidateService {
     public constructor(private readonly org: OrgClient) {}
 
     public async run(files: string[]): Promise<ValidateResult> {
         const loaded = await loadFiles(files);
-        const online = await this.resolve(loaded.assignments);
+        const resolved = await this.resolve(loaded.assignments);
 
         const findings = [
             ...loaded.findings,
-            ...online,
+            ...resolved,
         ];
         const { errors, warnings } = countFindings(findings);
 

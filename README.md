@@ -36,7 +36,7 @@ This plugin makes the desired state **declarative and reviewable**:
 - ✅ **Single source of truth:** the YAML in git is authoritative, and the org is reconciled to it.
 - ✅ **Plan before apply:** see exactly what will be added/removed before anything changes.
 - ✅ **Safe by default:** deletions are opt-in and guarded by a delete threshold.
-- ✅ **CI-native:** fully offline `check`, exit codes for gating, and `--json` on every command.
+- ✅ **CI-native:** `check` needs no org, exit codes for gating, and `--json` on every command.
 - ✅ **Flexible at the edges:** pick your file layout (by permission set or by user) and your sync mode.
 - ✅ **GitOps for access, the SFDX way:** assignments live in source and ship through the same git and CI pipeline as your metadata, instead of being clicked into Setup by hand.
 - ✅ **Fewer hands in Setup for higher environments:** because access is applied from git through CI, fewer people need direct Setup access in UAT and production, and every change is a reviewed pull request with a git audit trail.
@@ -61,7 +61,7 @@ Requires Salesforce CLI (`sf`) and Node.js 18+.
 # 1. Bootstrap YAML from an existing org (so you don't start from scratch)
 sf ps export --target-org dev --output-file permissions.yml
 
-# 2. Edit the files, commit, open a PR. Validate offline, no org needed:
+# 2. Edit the files, commit, open a PR. Check them, no org needed:
 sf ps check --file "./permissions/*.yml"
 
 # 3. Validate against a real org (do the users/permission sets exist?)
@@ -191,15 +191,15 @@ A run performs three operations: **add** missing assignments, **update** changed
 
 ## Validations
 
-Every run checks the files first. `check` runs the offline checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
+Every run checks the files first. `check` runs the file checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
 
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
-| Same user in two files with different targets | `check` (offline) | ✅ ok | Merged into one model, the point of slicing |
-| Same target listed twice for a user | `check` (offline) | ⚠️ warning | Deduped |
-| A user with no scopes, or an empty list | `check` (offline) | ⚠️ warning | Ignored as a no-op |
-| Same username key appears twice in one file | `check` (offline) | ❌ error | Rejected, the intent is ambiguous |
-| Declared user, permission set, group, or license missing or not unique | `validate` (online) | ❌ error | Run fails before any change |
+| Same user in two files with different targets | `check` | ✅ ok | Merged into one model, the point of slicing |
+| Same target listed twice for a user | `check` | ⚠️ warning | Deduped |
+| A user with no scopes, or an empty list | `check` | ⚠️ warning | Ignored as a no-op |
+| Same username key appears twice in one file | `check` | ❌ error | Rejected, the intent is ambiguous |
+| Declared user, permission set, group, or license missing or not unique | `validate` | ❌ error | Run fails before any change |
 
 ## Commands
 
@@ -213,7 +213,7 @@ Every run checks the files first. `check` runs the offline checks with no org, a
 
 ### `sf ps check`
 
-Fully offline: runs in any CI job or pre-commit hook without org credentials.
+Needs no org: runs in any CI job or pre-commit hook without org credentials.
 
 ```
 USAGE
@@ -241,7 +241,7 @@ FLAGS
   -o, --target-org=<org>   (required) Org to resolve against.
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
 
-Runs all offline checks, then verifies that every user (active), permission set,
+Runs everything `check` does, then verifies that every user (active), permission set,
 group, and license referenced actually exists and resolves uniquely.
 ```
 
@@ -452,7 +452,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
 | `report` | Format a diff as a plan. |
 
-Commands are slices of one pipeline. `check` runs the offline **load** stage only. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
+Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
 
 ## License
 

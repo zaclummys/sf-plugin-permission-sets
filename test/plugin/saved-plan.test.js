@@ -13,7 +13,7 @@ async function tempDir() {
 // Real-org tests: they drive `sf ps` against PS_TARGET_ORG. The round-trip stays read-only
 // by planning an org's own export against it (an empty diff) and applying with --dry-run, so
 // the org is never mutated. The guard cases abort before any DML.
-describe('sf ps plan --out / apply --plan [online]', () => {
+describe('sf ps plan --out / apply --plan', () => {
     it('writes a saved plan file that apply can run as a no-op round-trip', async ({ expect }) => {
         const dir = await tempDir();
         const snapshot = path.join(dir, 'snap.yml');

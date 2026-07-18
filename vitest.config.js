@@ -9,7 +9,7 @@ export default defineConfig({
         testTimeout: 30_000,
         globalSetup: ['./test/global-setup.js'],
         // Run every test concurrently, not just files in parallel. Each test is an
-        // independent `sf` subprocess (the online one writes its own temp file), so there is
+        // independent `sf` subprocess (the real-org ones write their own temp files), so there is
         // no shared state to serialize. But every test spawns a heavy `sf` process, so the
         // total is bounded (maxWorkers parallel files x maxConcurrency per file) to keep the
         // machine from thrashing and tripping the 30s timeout.

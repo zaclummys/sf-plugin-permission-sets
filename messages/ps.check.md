@@ -4,7 +4,7 @@ Statically check permission set assignment files, with no org connection.
 
 # description
 
-Parse and validate the YAML files offline. Reports invalid YAML, schema violations, duplicate keys, duplicate targets, and empty entries. Run it in a pre-commit hook or in CI before validate, plan, or apply.
+Parse and validate the YAML files, no org needed. Reports invalid YAML, schema violations, duplicate keys, duplicate targets, and empty entries. Run it in a pre-commit hook or in CI before validate, plan, or apply.
 
 # flags.file.summary
 
