@@ -11,6 +11,8 @@ export default defineConfig([
   {
     files: ["src/**/*.ts"],
     rules: {
+      // Cap cyclomatic complexity; split branchy functions into helpers.
+      complexity: ["error", 10],
       // No single-letter identifiers.
       "id-length": ["error", { min: 2, properties: "never" }],
       // Prefer !x or == null over an explicit === undefined comparison.

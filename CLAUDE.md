@@ -28,7 +28,9 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Code style
 
-> Layering, barrel imports, no single-letter names, and no `=== undefined` are enforced by ESLint (`eslint.config.js`); the rest are by convention.
+> Layering, barrel imports, cyclomatic complexity (max 10), no single-letter names, and no `=== undefined` are enforced by ESLint (`eslint.config.js`); the rest are by convention.
+
+- Keep cyclomatic complexity at 10 or below; split a branchy function into cohesive helpers (e.g. a `collect*` phase and a `render*`/`report*` phase) rather than growing one method.
 
 
 - No single-letter variable names, including arrow-fn params and loop vars — use descriptive names.

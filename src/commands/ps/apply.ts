@@ -2,7 +2,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
-import { ApplyService, ConfirmDeletions } from '../../services/index.js';
+import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
 import { formatDiff, formatFindings } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -104,17 +104,24 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
         this.log('');
 
+        this.reportOutcome(result, summary, flags.mode, flags['max-deletes']);
+
+        return summary;
+    }
+
+    /** Report the outcome of a completed (non-invalid) apply, setting the exit code as needed. */
+    private reportOutcome(result: ApplyResult, summary: PsApplyResult, mode: string, maxDeletes: number): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
             const tokens = [
                 String(result.diff.toRemove.length),
-                String(flags['max-deletes']),
+                String(maxDeletes),
             ];
             if (!this.jsonEnabled()) this.error(messages.getMessage('error.maxDeletes', tokens), { exit: 1 });
-            return summary;
+            return;
         }
 
-        this.reportDrift(result.drift, flags.mode);
+        this.reportDrift(result.drift, mode);
 
         if (result.status === 'dry-run') {
             // Report what this mode would actually do, matching the mode-scoped body: the full
@@ -126,21 +133,22 @@ export default class Apply extends SfCommand<PsApplyResult> {
                     String(summary.toRemove - result.drift.removes),
                 ])
             );
-            return summary;
+            return;
         }
 
         if (result.status === 'declined') {
             this.log(messages.getMessage('summary.declined'));
-            return summary;
+            return;
         }
 
         this.log(
             messages.getMessage('summary.applied', [
-                String(added),
-                String(updated),
-                String(removed),
+                String(summary.added),
+                String(summary.updated),
+                String(summary.removed),
             ])
         );
+        const failures = result.outcomes.filter((outcome) => !outcome.success);
         for (const failure of failures) {
             this.log(
                 messages.getMessage('failure.line', [
@@ -156,8 +164,6 @@ export default class Apply extends SfCommand<PsApplyResult> {
             process.exitCode = 1;
             if (!this.jsonEnabled()) this.error(messages.getMessage('error.failed'), { exit: 1 });
         }
-
-        return summary;
     }
 
     private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {

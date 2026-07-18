@@ -101,6 +101,33 @@ export default class Plan extends SfCommand<PsPlanResult> {
             return summary;
         }
 
+        this.logPlan({
+            diff,
+            mode,
+            orgName,
+            orgId,
+            files: flags.file,
+            showUnchanged: flags['show-unchanged'],
+            actionable,
+            usersAffected,
+        });
+
+        return summary;
+    }
+
+    /** Render the human-readable plan body once the run is known to be valid. */
+    private logPlan(args: {
+        diff: Diff;
+        mode: ReconcileMode;
+        orgName: string;
+        orgId: string;
+        files: string[];
+        showUnchanged: boolean;
+        actionable: Array<{ assignee: string }>;
+        usersAffected: number;
+    }): void {
+        const { diff, mode, orgName, orgId, files, showUnchanged, actionable, usersAffected } = args;
+
         this.log(messages.getMessage('header.title'));
         this.log(
             messages.getMessage('header.org', [
@@ -111,8 +138,6 @@ export default class Plan extends SfCommand<PsPlanResult> {
         );
 
         const totalChanges = diff.toAdd.length + diff.toUpdate.length + diff.toRemove.length;
-        const showUnchanged = flags['show-unchanged'];
-
         if (totalChanges === 0) {
             if (showUnchanged && diff.unchanged.length > 0) {
                 this.logBody(formatDiff(diff, { mode, showUnchanged: true }));
@@ -120,7 +145,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
                 this.log('');
             }
             this.log(messages.getMessage('empty.noChanges', [orgName]));
-            return summary;
+            return;
         }
 
         this.logBody(formatDiff(diff, { mode, showUnchanged }));
@@ -135,10 +160,8 @@ export default class Plan extends SfCommand<PsPlanResult> {
         this.reportUnchanged(diff.unchanged.length, showUnchanged);
 
         if (actionable.length > 0) {
-            this.log(messages.getMessage('summary.next', [this.applyCommand(orgName, flags.file, mode)]));
+            this.log(messages.getMessage('summary.next', [this.applyCommand(orgName, files, mode)]));
         }
-
-        return summary;
     }
 
     /** The assignments the chosen mode would actually act on. */

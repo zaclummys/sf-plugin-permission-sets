@@ -53,6 +53,26 @@ function invalidResult(files: string[], findings: Finding[]): ApplyResult {
     };
 }
 
+type ModePlan = {
+    additions: DesiredAssignment[];
+    updates: AssignmentUpdate[];
+    removals: ActualAssignment[];
+    drift: { adds: number; updates: number; removes: number };
+};
+
+/** Scope a diff to what the mode acts on, plus the drift (what it deliberately leaves alone). */
+function planForMode(diff: Diff, mode: ApplyMode): ModePlan {
+    const additions = mode === 'destructive' ? [] : diff.toAdd;
+    const updates = mode === 'destructive' ? [] : diff.toUpdate;
+    const removals = mode === 'additive' ? [] : diff.toRemove;
+    const drift = {
+        adds: mode === 'destructive' ? diff.toAdd.length : 0,
+        updates: mode === 'destructive' ? diff.toUpdate.length : 0,
+        removes: mode === 'additive' ? diff.toRemove.length : 0,
+    };
+    return { additions, updates, removals, drift };
+}
+
 /**
  * Online apply: load the files, resolve every reference to an org id, diff against
  * the org's current state, then add and/or remove per the mode. Deletions are
@@ -86,14 +106,7 @@ export class ApplyService {
         const diff = diffAssignments(loaded.assignments, actual);
 
         const { mode, maxDeletes, dryRun } = input;
-        const additions = mode === 'destructive' ? [] : diff.toAdd;
-        const updates = mode === 'destructive' ? [] : diff.toUpdate;
-        const removals = mode === 'additive' ? [] : diff.toRemove;
-        const drift = {
-            adds: mode === 'destructive' ? diff.toAdd.length : 0,
-            updates: mode === 'destructive' ? diff.toUpdate.length : 0,
-            removes: mode === 'additive' ? diff.toRemove.length : 0,
-        };
+        const { additions, updates, removals, drift } = planForMode(diff, mode);
 
         if (removals.length > maxDeletes) {
             return {
