@@ -7,6 +7,7 @@ import {
     evaluateTargets,
     DesiredAssignment,
     Finding,
+    Kind,
     countFindings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
@@ -50,25 +51,31 @@ export class ValidateService {
 
         const usernames = distinctAssignees(assignments);
         if (usernames.length > 0) {
-            tasks.push(this.org.findUsers(usernames).then((found) => evaluateUsers(usernames, found)));
+            tasks.push(this.evaluateUserRefs(usernames));
         }
 
         for (const kind of kinds) {
             const targets = distinctTargets(assignments, kind);
             if (targets.length > 0) {
-                tasks.push(
-                    this.org.findTargets(kind, targets).then((found) =>
-                        evaluateTargets(
-                            kind,
-                            targets,
-                            found.map((target) => target.name)
-                        )
-                    )
-                );
+                tasks.push(this.evaluateTargetRefs(kind, targets));
             }
         }
 
         const results = await Promise.all(tasks);
         return results.flat();
+    }
+
+    private async evaluateUserRefs(usernames: string[]): Promise<Finding[]> {
+        const found = await this.org.findUsers(usernames);
+        return evaluateUsers(usernames, found);
+    }
+
+    private async evaluateTargetRefs(kind: Kind, targets: string[]): Promise<Finding[]> {
+        const found = await this.org.findTargets(kind, targets);
+        return evaluateTargets(
+            kind,
+            targets,
+            found.map((target) => target.name)
+        );
     }
 }

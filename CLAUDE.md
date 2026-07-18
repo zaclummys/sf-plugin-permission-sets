@@ -34,14 +34,16 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Code style
 
-> Layering, barrel imports, cyclomatic complexity (max 10), no single-letter names, and no `=== undefined` are enforced by ESLint (`eslint.config.js`); the rest are by convention.
+> Layering, barrel imports, cyclomatic complexity (max 10), function size/shape caps, no single-letter names, no `=== undefined`, and no `.then()` are enforced by ESLint (`eslint.config.js`); the rest are by convention.
 
 - Keep cyclomatic complexity at 10 or below; split a branchy function into cohesive helpers (e.g. a `collect*` phase and a `render*`/`report*` phase) rather than growing one method.
+- Function size/shape caps: max depth 4, max params 5, max nested callbacks 3, max statements 25, max lines per function 65. These are set just above today's largest functions to block future growth, not as targets: prefer smaller. When a function trips a cap, split it into cohesive helpers (or bundle params into an options object) rather than raising the cap. Tighten the cap once the outliers shrink.
 
 
 - No single-letter variable names, including arrow-fn params and loop vars — use descriptive names.
 - Module-level constants are `camelCase`, not `SCREAMING_SNAKE`.
 - Prefer `!x` (or `== null` for null-or-undefined) over `x === undefined`.
+- Prefer `async`/`await` over `.then()`. Keep parallelism by pushing promises from `async` helpers or `async` map callbacks into a `tasks`/`Promise.all` array, not by awaiting inline.
 - Blank line after a run of `const` declarations before the next statement.
 - Don't export a symbol unless another file imports it.
 - Prefer two loops each doing one thing over one loop doing two things.

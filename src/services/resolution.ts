@@ -42,11 +42,10 @@ export class ResolutionService {
         const usersTask: Promise<OrgUser[]> =
             usernames.length > 0 ? this.org.findUsers(usernames) : Promise.resolve([]);
         const targetsTask = Promise.all(
-            targetsByKind.map(({ kind, targets }) =>
-                (targets.length > 0 ? this.org.findTargets(kind, targets) : Promise.resolve<OrgTarget[]>([])).then(
-                    (found) => ({ kind, targets, found })
-                )
-            )
+            targetsByKind.map(async ({ kind, targets }) => {
+                const found: OrgTarget[] = targets.length > 0 ? await this.org.findTargets(kind, targets) : [];
+                return { kind, targets, found };
+            })
         );
 
         const [foundUsers, perKind] = await Promise.all([

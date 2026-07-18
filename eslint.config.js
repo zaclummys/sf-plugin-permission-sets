@@ -13,6 +13,13 @@ export default defineConfig([
     rules: {
       // Cap cyclomatic complexity; split branchy functions into helpers.
       complexity: ["error", 10],
+      // Size/shape guards, set just above today's max to block future growth
+      // (see CLAUDE.md); tighten as functions get split into helpers.
+      "max-depth": ["error", 4],
+      "max-params": ["error", 5],
+      "max-nested-callbacks": ["error", 3],
+      "max-statements": ["error", 25],
+      "max-lines-per-function": ["error", 65],
       // No single-letter identifiers.
       "id-length": ["error", { min: 2, properties: "never" }],
       // Prefer !x or == null over an explicit === undefined comparison.
@@ -25,6 +32,10 @@ export default defineConfig([
         {
           selector: "BinaryExpression[operator='!=='][right.type='Identifier'][right.name='undefined']",
           message: "Use x or != null instead of !== undefined.",
+        },
+        {
+          selector: "CallExpression[callee.property.name='then']",
+          message: "Prefer async/await over .then().",
         },
       ],
     },

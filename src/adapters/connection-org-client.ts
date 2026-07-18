@@ -248,59 +248,59 @@ export class ConnectionOrgClient implements OrgClient {
             const soql =
                 'SELECT Id, Assignee.Username, PermissionSet.Name, PermissionSetGroup.DeveloperName, PermissionSetGroupId, ExpirationDate ' +
                 `FROM PermissionSetAssignment WHERE ${memberClauses.join(' OR ')}`;
-            tasks.push(
-                this.query<MembershipRecord>(soql).then((records) =>
-                    records.map((record) => {
-                        const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
-                        return record.PermissionSetGroupId && record.PermissionSetGroup
-                            ? {
-                                  recordId: record.Id,
-                                  assignee: record.Assignee.Username,
-                                  kind: 'permissionSetGroup' as const,
-                                  target: record.PermissionSetGroup.DeveloperName,
-                                  ...expiration,
-                              }
-                            : {
-                                  recordId: record.Id,
-                                  assignee: record.Assignee.Username,
-                                  kind: 'permissionSet' as const,
-                                  target: record.PermissionSet.Name,
-                                  ...expiration,
-                              };
-                    })
-                )
-            );
+            tasks.push(this.membershipAssignments(soql));
         }
 
         if (licenseIds.length > 0) {
             const soql =
                 'SELECT Id, Assignee.Username, PermissionSetLicense.DeveloperName ' +
                 `FROM PermissionSetLicenseAssign WHERE PermissionSetLicenseId IN (${inList(licenseIds)})`;
-            tasks.push(
-                this.query<LicenseRecord>(soql).then((records) =>
-                    records.map((record) => ({
-                        recordId: record.Id,
-                        assignee: record.Assignee.Username,
-                        kind: 'permissionSetLicense' as const,
-                        target: record.PermissionSetLicense.DeveloperName,
-                    }))
-                )
-            );
+            tasks.push(this.licenseAssignments(soql));
         }
 
         const results = await Promise.all(tasks);
         return results.flat();
     }
 
+    private async membershipAssignments(soql: string): Promise<ActualAssignment[]> {
+        const records = await this.query<MembershipRecord>(soql);
+        return records.map((record) => {
+            const expiration = record.ExpirationDate ? { expiration: record.ExpirationDate } : {};
+            return record.PermissionSetGroupId && record.PermissionSetGroup
+                ? {
+                      recordId: record.Id,
+                      assignee: record.Assignee.Username,
+                      kind: 'permissionSetGroup' as const,
+                      target: record.PermissionSetGroup.DeveloperName,
+                      ...expiration,
+                  }
+                : {
+                      recordId: record.Id,
+                      assignee: record.Assignee.Username,
+                      kind: 'permissionSet' as const,
+                      target: record.PermissionSet.Name,
+                      ...expiration,
+                  };
+        });
+    }
+
+    private async licenseAssignments(soql: string): Promise<ActualAssignment[]> {
+        const records = await this.query<LicenseRecord>(soql);
+        return records.map((record) => ({
+            recordId: record.Id,
+            assignee: record.Assignee.Username,
+            kind: 'permissionSetLicense' as const,
+            target: record.PermissionSetLicense.DeveloperName,
+        }));
+    }
+
     public async addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]> {
         const batches = additionBatches(additions);
         const settled = await Promise.all(
-            batches.map((batch) =>
-                this.connection.create(batch.sobject, batch.records, { allOrNone: false }).then((results) => ({
-                    batch,
-                    results: results as DmlResult[],
-                }))
-            )
+            batches.map(async (batch) => {
+                const results = await this.connection.create(batch.sobject, batch.records, { allOrNone: false });
+                return { batch, results: results as DmlResult[] };
+            })
         );
 
         const outcomes: AssignmentOutcome[] = [];
@@ -315,12 +315,10 @@ export class ConnectionOrgClient implements OrgClient {
     public async updateAssignments(updates: AssignmentUpdate[]): Promise<AssignmentOutcome[]> {
         const batches = updateBatches(updates);
         const settled = await Promise.all(
-            batches.map((batch) =>
-                this.connection.update(batch.sobject, batch.records, { allOrNone: false }).then((results) => ({
-                    batch,
-                    results: results as DmlResult[],
-                }))
-            )
+            batches.map(async (batch) => {
+                const results = await this.connection.update(batch.sobject, batch.records, { allOrNone: false });
+                return { batch, results: results as DmlResult[] };
+            })
         );
 
         const outcomes: AssignmentOutcome[] = [];
@@ -335,15 +333,11 @@ export class ConnectionOrgClient implements OrgClient {
     public async removeAssignments(removals: ActualAssignment[]): Promise<AssignmentOutcome[]> {
         const batches = removalBatches(removals);
         const settled = await Promise.all(
-            batches.map((batch) =>
-                this.connection
-                    .destroy(
-                        batch.sobject,
-                        batch.removals.map((removal) => removal.recordId),
-                        { allOrNone: false }
-                    )
-                    .then((results) => ({ batch, results: results as DmlResult[] }))
-            )
+            batches.map(async (batch) => {
+                const recordIds = batch.removals.map((removal) => removal.recordId);
+                const results = await this.connection.destroy(batch.sobject, recordIds, { allOrNone: false });
+                return { batch, results: results as DmlResult[] };
+            })
         );
 
         const outcomes: AssignmentOutcome[] = [];
