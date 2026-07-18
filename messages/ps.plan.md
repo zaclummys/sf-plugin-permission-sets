@@ -18,14 +18,6 @@ Which half of the reconcile to preview: additive adds and updates expirations, d
 
 List assignments that already match, instead of only counting them.
 
-# flags.out.summary
-
-Write the computed change set to a plan file that apply can run verbatim with --plan.
-
-# summary.wrotePlan
-
-Wrote a plan with %s change(s) to %s. Apply it with: ps apply --plan %s
-
 # header.title
 
 Permission Set Assignments Plan

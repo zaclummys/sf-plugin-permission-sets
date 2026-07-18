@@ -1,10 +1,9 @@
-import { readFile } from 'node:fs/promises';
 import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { formatDiff, formatFindings, parsePlan, ReconcileMode, SavedPlan } from '../../core/index.js';
+import { formatDiff, formatFindings, ReconcileMode } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
@@ -30,10 +29,8 @@ export default class Apply extends SfCommand<PsApplyResult> {
         file: Flags.string({
             char: 'f',
             summary: messages.getMessage('flags.file.summary'),
+            required: true,
             multiple: true,
-        }),
-        plan: Flags.string({
-            summary: messages.getMessage('flags.plan.summary'),
         }),
         mode: Flags.option({
             summary: messages.getMessage('flags.mode.summary'),
@@ -58,8 +55,6 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
     public async run(): Promise<PsApplyResult> {
         const { flags } = await this.parse(Apply);
-        this.validateSource(flags);
-
         const targetOrg = flags['target-org'];
         const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
@@ -69,65 +64,13 @@ export default class Apply extends SfCommand<PsApplyResult> {
             return this.confirmDelete(count);
         };
         const service = new ApplyService(orgClient, confirmDeletions);
-
-        const outcome = flags.plan
-            ? await this.runFromPlan(service, flags, targetOrg)
-            : await this.runFromFiles(service, flags);
-
-        return this.report(outcome.result, outcome.mode, flags['max-deletes'], flags['show-unchanged']);
-    }
-
-    /** Enforce exactly one source (--file or --plan), and that --mode is not paired with a plan. */
-    private validateSource(flags: { file?: string[]; plan?: string }): void {
-        const hasFile = !!flags.file;
-        const hasPlan = !!flags.plan;
-        if (hasFile && hasPlan) this.errorSourceConflict();
-        if (!hasFile && !hasPlan) this.errorSourceMissing();
-
-        const modeProvided = this.argv.some((arg) => arg === '--mode' || arg.startsWith('--mode='));
-        if (hasPlan && modeProvided) this.errorModeWithPlan();
-    }
-
-    private async runFromFiles(
-        service: ApplyService,
-        flags: { file?: string[]; mode: ReconcileMode; 'max-deletes': number; 'dry-run': boolean }
-    ): Promise<{ result: ApplyResult; mode: ReconcileMode }> {
-        const result = await service.run(flags.file ?? [], {
+        const result = await service.run(flags.file, {
             mode: flags.mode,
             maxDeletes: flags['max-deletes'],
             dryRun: flags['dry-run'],
         });
 
-        return { result, mode: flags.mode };
-    }
-
-    private async runFromPlan(
-        service: ApplyService,
-        flags: { plan?: string; 'max-deletes': number; 'dry-run': boolean },
-        targetOrg: { getOrgId(): string }
-    ): Promise<{ result: ApplyResult; mode: ReconcileMode }> {
-        const plan = await this.readPlan(flags.plan ?? '');
-        const orgId = targetOrg.getOrgId();
-        if (plan.org !== orgId) this.errorPlanOrg(plan.org, orgId);
-
-        this.logApplyingPlan(plan.mode);
-        const result = await service.runPlan(plan, {
-            maxDeletes: flags['max-deletes'],
-            dryRun: flags['dry-run'],
-        });
-
-        return { result, mode: plan.mode };
-    }
-
-    /** Read and validate the plan file, erroring out (never returning) if it cannot be used. */
-    private async readPlan(planFile: string): Promise<SavedPlan> {
-        const text = await readFile(planFile, 'utf8').catch(() => undefined);
-        if (text == null) this.errorPlanRead(planFile);
-
-        const parsed = parsePlan(text);
-        if (!parsed.plan) this.errorPlanInvalid(planFile, parsed.error ?? 'unknown');
-
-        return parsed.plan;
+        return this.report(result, flags.mode, flags['max-deletes'], flags['show-unchanged']);
     }
 
     /** Log findings, print the diff body, and report the outcome. Shared by both sources. */
@@ -264,46 +207,6 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
     private confirmDelete(count: number): Promise<boolean> {
         return this.confirm({ message: messages.getMessage('confirm.delete', [count]) });
-    }
-
-    private logApplyingPlan(mode: string): void {
-        this.log(messages.getMessage('info.applyingPlan', [mode]));
-    }
-
-    private errorSourceConflict(): never {
-        this.error(messages.getMessage('error.sourceConflict'), { exit: 1 });
-    }
-
-    private errorSourceMissing(): never {
-        this.error(messages.getMessage('error.sourceMissing'), { exit: 1 });
-    }
-
-    private errorModeWithPlan(): never {
-        this.error(messages.getMessage('error.modeWithPlan'), { exit: 1 });
-    }
-
-    private errorPlanRead(planFile: string): never {
-        this.error(messages.getMessage('error.planRead', [planFile]), { exit: 1 });
-    }
-
-    private errorPlanInvalid(planFile: string, detail: string): never {
-        this.error(
-            messages.getMessage('error.planInvalid', [
-                planFile,
-                detail,
-            ]),
-            { exit: 1 }
-        );
-    }
-
-    private errorPlanOrg(planOrg: string, targetOrg: string): never {
-        this.error(
-            messages.getMessage('error.planOrg', [
-                planOrg,
-                targetOrg,
-            ]),
-            { exit: 1 }
-        );
     }
 
     private errorInvalid(): void {

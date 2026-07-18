@@ -1,6 +1,6 @@
-import { loadFiles, diffAssignments, Diff, Finding, Kind, countFindings } from '../core/index.js';
+import { loadFiles, diffAssignments, Diff, Finding, countFindings } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { Resolution, ResolutionService, managedTargets } from './resolution.js';
+import { ResolutionService, managedTargets } from './resolution.js';
 
 export type PlanMode = 'additive' | 'destructive' | 'sync';
 
@@ -13,18 +13,10 @@ export type PlanResult = {
     diff: Diff;
     /** What the chosen mode would not act on (surfaced as drift). */
     drift: { adds: number; updates: number; removes: number };
-    /** The resolved id maps, so callers can freeze a plan without re-resolving. */
-    resolution: Resolution;
     status: PlanStatus;
 };
 
 const emptyDiff: Diff = { toAdd: [], toUpdate: [], toRemove: [], unchanged: [] };
-
-const emptyResolution: Resolution = {
-    findings: [],
-    userIds: new Map(),
-    targetIds: {} as Record<Kind, Map<string, string>>,
-};
 
 /** An aborted-before-the-diff result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Finding[]): PlanResult {
@@ -33,7 +25,6 @@ function invalidResult(files: string[], findings: Finding[]): PlanResult {
         findings,
         diff: emptyDiff,
         drift: { adds: 0, updates: 0, removes: 0 },
-        resolution: emptyResolution,
         status: 'invalid',
     };
 }
@@ -73,6 +64,6 @@ export class PlanService {
             removes: mode === 'additive' ? diff.toRemove.length : 0,
         };
 
-        return { files: loaded.files, findings, diff, drift, resolution, status: 'planned' };
+        return { files: loaded.files, findings, diff, drift, status: 'planned' };
     }
 }
