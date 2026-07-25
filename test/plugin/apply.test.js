@@ -1,11 +1,11 @@
 import { describe, it } from 'vitest';
-import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
+import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
 import { validPath, schemaErrorPath, malformedPath, undeclaredPath, noOrg } from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'apply', '-f', validPath, '--target-org', noOrg, '--mode', 'bogus']);
+        const { stderr, exitCode } = await runPs(['ps', 'apply', '--file', validPath, '--target-org', noOrg, '--mode', 'bogus']);
 
         expect(exitCode).toBe(1);
         expect(stderr).toContain('additive, destructive, sync');
@@ -15,7 +15,7 @@ describe('sf ps apply', () => {
         const { stderr, exitCode } = await runPs([
             'ps',
             'apply',
-            '-f',
+            '--file',
             validPath,
             '--target-org',
             noOrg,
@@ -29,7 +29,7 @@ describe('sf ps apply', () => {
     // With the org resolvable, the missing-file failure is the command's own, not the org
     // resolver's (which runs first during flag parsing and would otherwise mask it).
     it('requires --file', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'apply', '--target-org', targetOrg]);
+        const { stderr, exitCode } = await runPsTargetOrg(['ps', 'apply']);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('Missing required flag file');
@@ -49,15 +49,13 @@ describe('sf ps apply', () => {
     // real apply both leave the org untouched.
     it('applies an org export as a no-op round-trip (dry-run)', async ({ expect }) => {
         const snapshot = await tempFile('ps-apply-', 'snap.yml');
-        const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
+        const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
         expect(exported.exitCode).toBe(0);
 
-        const applied = await runPs([
+        const applied = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             snapshot,
             '--mode',
             'sync',
@@ -72,15 +70,13 @@ describe('sf ps apply', () => {
 
     it('applies an org export as a no-op round-trip (real apply, no --dry-run)', async ({ expect }) => {
         const snapshot = await tempFile('ps-apply-', 'snap.yml');
-        const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
+        const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
         expect(exported.exitCode).toBe(0);
 
-        const applied = await runPs([
+        const applied = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             snapshot,
             '--mode',
             'sync',
@@ -96,12 +92,10 @@ describe('sf ps apply', () => {
     // The destructive guards. Both return before the service calls the org client's write
     // methods, so a tripped guard drives a real org without ever changing it.
     it('refuses a destructive run that would remove more than --max-deletes', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs([
+        const { stderr, exitCode } = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             undeclaredPath,
             '--mode',
             'destructive',
@@ -114,15 +108,13 @@ describe('sf ps apply', () => {
     });
 
     it('leaves the org unchanged when the --max-deletes guard trips', async ({ expect }) => {
-        const before = await runPs(['ps', 'export', '--target-org', targetOrg]);
+        const before = await runPsTargetOrg(['ps', 'export']);
         expect(before.exitCode).toBe(0);
 
-        const guarded = await runPs([
+        const guarded = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             undeclaredPath,
             '--mode',
             'destructive',
@@ -133,17 +125,15 @@ describe('sf ps apply', () => {
         // cannot make this pass for the wrong reason.
         expect(guarded.stderr).toContain('over the --max-deletes limit of 0');
 
-        const after = await runPs(['ps', 'export', '--target-org', targetOrg]);
+        const after = await runPsTargetOrg(['ps', 'export']);
         expect(after.stdout).toBe(before.stdout);
     });
 
     it('refuses to delete in a --json run without --no-prompt', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             undeclaredPath,
             '--mode',
             'destructive',
@@ -161,12 +151,10 @@ describe('sf ps apply', () => {
 
     // Load errors abort before any org call or DML, so the org just needs to resolve.
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs([
+        const { stdout, stderr, exitCode } = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             schemaErrorPath,
             '--dry-run',
         ]);
@@ -177,12 +165,10 @@ describe('sf ps apply', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'apply',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             malformedPath,
             '--dry-run',
         ]);

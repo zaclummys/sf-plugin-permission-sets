@@ -1,13 +1,9 @@
 import { execa } from 'execa';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { targetOrg } from '../env.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-
-// Real-org tests drive `sf ps ... --target-org <targetOrg>` against an already-authenticated
-// org that the caller always provides via PS_TARGET_ORG: a locally logged-in org you name, or
-// one a CI step logs in and points here.
-export const targetOrg = process.env.PS_TARGET_ORG;
 
 // NODE_ENV=production makes sf load the plugin's compiled ./lib. Vitest otherwise
 // sets NODE_ENV=test, which flips the linked plugin into dev mode and fails to load
@@ -37,6 +33,23 @@ export async function runPs(args) {
         stderr: result.stderr ?? '',
         exitCode: result.exitCode ?? 1,
     };
+}
+
+/**
+ * `runPs` against the org PS_TARGET_ORG names, for the specs that drive a real org. The
+ * flag is appended and nothing else is added, so `args` stays the command a user types
+ * minus the org. The specs that must fail to resolve an org pass their own `--target-org`
+ * through `runPs` instead.
+ *
+ * @param {string[]} args
+ * @returns {Promise<{ stdout: string; stderr: string; exitCode: number }>}
+ */
+export async function runPsTargetOrg(args) {
+    return runPs([
+        ...args,
+        '--target-org',
+        targetOrg,
+    ]);
 }
 
 /** Unwrap the `--json` envelope sf commands print: `{ status, result, warnings }`. */

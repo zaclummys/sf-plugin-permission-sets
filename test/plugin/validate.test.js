@@ -1,12 +1,12 @@
 import { describe, it } from 'vitest';
-import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
+import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
 import { validPath, schemaErrorPath, malformedPath, noOrg } from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the input every resolution case validates back. */
 async function writeOrgSnapshot(expect) {
     const snapshot = await tempFile('ps-validate-', 'snap.yml');
-    const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
+    const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
 
     expect(exported.exitCode).toBe(0);
 
@@ -15,7 +15,7 @@ async function writeOrgSnapshot(expect) {
 
 describe('sf ps validate', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'validate', '-f', validPath, '--target-org', noOrg]);
+        const { stderr, exitCode } = await runPs(['ps', 'validate', '--file', validPath, '--target-org', noOrg]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('No authorization information found');
@@ -36,7 +36,7 @@ describe('sf ps validate', () => {
     it('validates an org snapshot back against the same org with no findings', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs(['ps', 'validate', '-f', snapshot, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'validate', '--file', snapshot]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 0 warnings.');
@@ -45,13 +45,11 @@ describe('sf ps validate', () => {
     it('returns a valid --json envelope with resolved counts', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'validate',
-            '-f',
+            '--file',
             snapshot,
-            '--target-org',
-            targetOrg,
             '--json',
         ]);
 
@@ -64,13 +62,11 @@ describe('sf ps validate', () => {
     });
 
     it('reports an unknown user as an unresolved reference', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs([
+        const { stdout, stderr, exitCode } = await runPsTargetOrg([
             'ps',
             'validate',
-            '-f',
+            '--file',
             validPath,
-            '--target-org',
-            targetOrg,
         ]);
 
         expect(exitCode).toBe(1);
@@ -81,19 +77,17 @@ describe('sf ps validate', () => {
     // With the org resolvable, the missing-file failure is the command's own, not the org
     // resolver's (which runs first during flag parsing and would otherwise mask it).
     it('rejects a missing required --file flag', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg]);
+        const { stderr, exitCode } = await runPsTargetOrg(['ps', 'validate']);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('Missing required flag file');
     });
 
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs([
+        const { stdout, stderr, exitCode } = await runPsTargetOrg([
             'ps',
             'validate',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             schemaErrorPath,
         ]);
 
@@ -103,7 +97,7 @@ describe('sf ps validate', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', malformedPath]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'validate', '--file', malformedPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');

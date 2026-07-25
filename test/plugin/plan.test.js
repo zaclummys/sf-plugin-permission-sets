@@ -1,5 +1,5 @@
 import { describe, it } from 'vitest';
-import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
+import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
 import {
     validPath,
@@ -15,7 +15,7 @@ import {
 /** Snapshot the org into a temp file, the starting point for an empty-diff plan. */
 async function writeOrgSnapshot(expect) {
     const snapshot = await tempFile('ps-plan-', 'snap.yml');
-    const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
+    const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
 
     expect(exported.exitCode).toBe(0);
 
@@ -24,7 +24,7 @@ async function writeOrgSnapshot(expect) {
 
 describe('sf ps plan', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'plan', '-f', validPath, '--target-org', noOrg]);
+        const { stderr, exitCode } = await runPs(['ps', 'plan', '--file', validPath, '--target-org', noOrg]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('No authorization information found');
@@ -43,7 +43,7 @@ describe('sf ps plan', () => {
     it('reports no changes when planning an org snapshot back against the org', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', snapshot, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('No changes.');
@@ -52,13 +52,11 @@ describe('sf ps plan', () => {
     it('headers the plan with the org and the mode', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             snapshot,
-            '--target-org',
-            targetOrg,
             '--mode',
             'sync',
         ]);
@@ -71,13 +69,11 @@ describe('sf ps plan', () => {
     it('lists unchanged assignments under --show-unchanged', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             snapshot,
-            '--target-org',
-            targetOrg,
             '--show-unchanged',
         ]);
 
@@ -88,27 +84,25 @@ describe('sf ps plan', () => {
     it('leaves unchanged assignments out of the body by default', async ({ expect }) => {
         const snapshot = await writeOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', snapshot, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
 
         expect(exitCode).toBe(0);
         expect(stdout).not.toContain(declaredPermissionSet);
     });
 
     it('counts the assignments an additive run would add', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclaredPath, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', undeclaredPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Plan: 1 to add, 0 to update. 1 users affected.');
     });
 
     it('counts additions and removals together in sync mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             undeclaredPath,
-            '--target-org',
-            targetOrg,
             '--mode',
             'sync',
         ]);
@@ -118,13 +112,11 @@ describe('sf ps plan', () => {
     });
 
     it('marks the holder of an undeclared assignment for removal in sync mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             undeclaredPath,
-            '--target-org',
-            targetOrg,
             '--mode',
             'sync',
         ]);
@@ -135,20 +127,18 @@ describe('sf ps plan', () => {
     });
 
     it('reports undeclared assignments as drift in additive mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclaredPath, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', undeclaredPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Drift: 1 undeclared assignment(s) not removed in additive mode.');
     });
 
     it('suggests the apply command that would carry out the plan', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             undeclaredPath,
-            '--target-org',
-            targetOrg,
             '--mode',
             'sync',
         ]);
@@ -161,13 +151,11 @@ describe('sf ps plan', () => {
     });
 
     it('returns counts, drift and the full diff in the --json envelope', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             undeclaredPath,
-            '--target-org',
-            targetOrg,
             '--mode',
             'sync',
             '--json',
@@ -184,13 +172,11 @@ describe('sf ps plan', () => {
     });
 
     it('keeps stdout pure JSON when --json is passed', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs([
+        const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '-f',
+            '--file',
             undeclaredPath,
-            '--target-org',
-            targetOrg,
             '--json',
         ]);
 
@@ -201,12 +187,10 @@ describe('sf ps plan', () => {
     // Load errors abort before any org call, so the org just needs to resolve; nothing
     // is ever queried or changed.
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs([
+        const { stdout, stderr, exitCode } = await runPsTargetOrg([
             'ps',
             'plan',
-            '--target-org',
-            targetOrg,
-            '-f',
+            '--file',
             schemaErrorPath,
         ]);
 
@@ -216,7 +200,7 @@ describe('sf ps plan', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '--target-org', targetOrg, '-f', malformedPath]);
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', malformedPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
