@@ -14,6 +14,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 ## Table of contents
 
 - [Why](#why)
+- [Inspiration & equivalents](#inspiration--equivalents)
 - [Install](#install)
 - [Org permissions](#org-permissions)
 - [Quick start](#quick-start)
@@ -23,10 +24,10 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Validations](#validations)
 - [Commands](#commands)
 - [GitHub Actions](#github-actions)
-- [Inspiration & equivalents](#inspiration--equivalents)
 - [Versioning](#versioning)
 - [Architecture](#architecture)
 - [Development](#development)
+- [License](#license)
 
 ---
 
@@ -43,6 +44,15 @@ This plugin makes the desired state **declarative and reviewable**:
 - ✅ **Flexible at the edges:** pick your file layout (by permission set or by user) and your sync mode.
 - ✅ **GitOps for access, the SFDX way:** assignments live in source and ship through the same git and CI pipeline as your metadata, instead of being clicked into Setup by hand.
 - ✅ **Fewer hands in Setup for higher environments:** because access is applied from git through CI, fewer people need direct Setup access in UAT and production, and every change is a reviewed pull request with a git audit trail.
+
+## Inspiration & equivalents
+
+This plugin's command surface borrows ideas from tools you already know:
+
+- [Terraform](https://developer.hashicorp.com/terraform/docs)
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/)
+- [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/)
+- [Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
 
 ## Install
 
@@ -237,8 +247,8 @@ Every run checks the files first. `check` runs the file checks with no org, and 
 | `sf ps check`    | Static analysis of the files alone: schema, duplicates, conflicts, identifier shape. No org, no auth. |
 | `sf ps validate` | Everything `check` does, plus resolving every user/permission set against the org. |
 | `sf ps plan`     | Compute and display the change set: a read-only preview of what `apply` would do. |
-| `sf ps apply`    | Reconcile the org. Honors `--mode`, prompts before deletes, enforces guardrails. |
 | `sf ps export`   | Generate YAML from the current org state to bootstrap adoption.        |
+| `sf ps apply`    | Reconcile the org. Honors `--mode`, prompts before deletes, enforces guardrails. |
 
 ### `sf ps check`
 
@@ -331,27 +341,6 @@ Unchanged: 4 assignments (--show-unchanged to list).
 Next: sf ps apply -o prod -f "permissions/*.yml" --mode sync
 ```
 
-### `sf ps apply`
-
-```
-USAGE
-  $ sf ps apply -o <org> -f <glob>... [--mode <value>]
-                [--max-deletes <n>] [--dry-run] [--show-unchanged] [--no-prompt] [--json]
-
-FLAGS
-  -o, --target-org=<org>   (required)
-  -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
-  --mode=<value>           additive | destructive | sync   [default: additive]
-  --max-deletes=<n>        Abort if a run would remove more than n assignments. [default: 50]
-  --dry-run                Resolve and diff, print what would happen, change nothing.
-  --show-unchanged         List assignments that already match, instead of only counting them.
-  --no-prompt              Skip the deletion confirmation prompt (for CI).
-```
-
-`apply` recomputes from the files every run: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state, then acts per `--mode`. Run `plan` shortly before `apply` so the preview you review reflects what `apply` will do (an edited file, a renamed permission set, or another admin's change between the two shifts the outcome).
-
-Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org. DML is executed with the sObject Collections API and reports partial successes/failures per record.
-
 ### `sf ps export`
 
 Read-only. Snapshots the org's current assignments as YAML you can commit and then feed back into the other commands. Writes to a file with `--output-file`, or to stdout when that flag is omitted.
@@ -390,6 +379,27 @@ sf ps export -o prod --output-file team.yml \
 ```
 
 A requested `--user` that has no matching assignments (a typo, or a user who genuinely holds nothing in scope) is reported as a warning and the export continues with whoever matched, so a mistyped username never masquerades as a clean empty file.
+
+### `sf ps apply`
+
+```
+USAGE
+  $ sf ps apply -o <org> -f <glob>... [--mode <value>]
+                [--max-deletes <n>] [--dry-run] [--show-unchanged] [--no-prompt] [--json]
+
+FLAGS
+  -o, --target-org=<org>   (required)
+  -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
+  --mode=<value>           additive | destructive | sync   [default: additive]
+  --max-deletes=<n>        Abort if a run would remove more than n assignments. [default: 50]
+  --dry-run                Resolve and diff, print what would happen, change nothing.
+  --show-unchanged         List assignments that already match, instead of only counting them.
+  --no-prompt              Skip the deletion confirmation prompt (for CI).
+```
+
+`apply` recomputes from the files every run: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state, then acts per `--mode`. Run `plan` shortly before `apply` so the preview you review reflects what `apply` will do (an edited file, a renamed permission set, or another admin's change between the two shifts the outcome).
+
+Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org. DML is executed with the sObject Collections API and reports partial successes/failures per record.
 
 ## GitHub Actions
 
@@ -496,15 +506,6 @@ Workflows 2 and 3 share one secret. Get the auth URL once with `sf org display -
 
 Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.yml" --target-org prod` step to workflow 2, right after the login step, so reviewers see the change set that `apply` will carry out on merge.
 
-## Inspiration & equivalents
-
-This plugin's command surface borrows ideas from tools you already know:
-
-- [Terraform](https://developer.hashicorp.com/terraform/docs)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/)
-- [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/)
-- [Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
-
 ## Versioning
 
 Releases follow [semantic versioning](https://semver.org). Snapshots are automatic, real releases are a manual decision.
@@ -584,7 +585,6 @@ cp .env.example .env
 | Variable | Required | What it is |
 | --- | --- | --- |
 | `PS_TARGET_ORG` | yes | Username or alias of an already-authenticated org. The `plan`, `apply`, and `export` specs run against it. |
-
 
 ## License
 
