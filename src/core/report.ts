@@ -1,12 +1,21 @@
 import { Diff, Kind, ReconcileMode } from './model.js';
 import { kindKeys } from './normalize.js';
+import { TargetName } from './target-name.js';
 
+/**
+ * One target's lines, grouped by operation and keyed by the assignee as it is spelled.
+ * Each group has a single source (adds come from the files, the rest from the org), so
+ * within a group one user is spelled one way.
+ */
 type DiffBucket = {
     adds: Map<string, string | null>;
     updates: Map<string, { previous: string | null; next: string | null }>;
     removes: Set<string>;
     unchanged: Map<string, string | null>;
 };
+
+/** A target's bucket plus the name to print it under, since the map is keyed by comparison key. */
+type TargetBucket = { target: TargetName; bucket: DiffBucket };
 
 /** Human labels for the section headers, so the plan reads as prose, not YAML keys. */
 const kindLabels: Record<Kind, string> = {
@@ -21,19 +30,21 @@ type ReportOptions = {
     showUnchanged: boolean;
 };
 
-function bucketFor(byKind: Map<Kind, Map<string, DiffBucket>>, kind: Kind, target: string): DiffBucket {
+function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, target: TargetName): DiffBucket {
     let byTarget = byKind.get(kind);
     if (!byTarget) {
         byTarget = new Map();
         byKind.set(kind, byTarget);
     }
 
-    let bucket = byTarget.get(target);
-    if (!bucket) {
-        bucket = { adds: new Map(), updates: new Map(), removes: new Set(), unchanged: new Map() };
-        byTarget.set(target, bucket);
+    let entry = byTarget.get(target.key);
+    if (!entry) {
+        const bucket = { adds: new Map(), updates: new Map(), removes: new Set<string>(), unchanged: new Map() };
+
+        entry = { target, bucket };
+        byTarget.set(target.key, entry);
     }
-    return bucket;
+    return entry.bucket;
 }
 
 /**
@@ -71,17 +82,21 @@ function withTransition(assignee: string, previous: string | null, next: string 
 }
 
 /** Group a diff into per-kind, per-target buckets, keeping only the operations the mode shows. */
-function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<string, DiffBucket>> {
+function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<string, TargetBucket>> {
     const showAdditive = options.mode !== 'destructive';
     const showDestructive = options.mode !== 'additive';
 
-    const byKind = new Map<Kind, Map<string, DiffBucket>>();
+    const byKind = new Map<Kind, Map<string, TargetBucket>>();
     if (showAdditive) {
         for (const assignment of diff.toAdd) {
-            bucketFor(byKind, assignment.kind, assignment.target).adds.set(assignment.assignee, assignment.expiration);
+            const bucket = bucketFor(byKind, assignment.kind, assignment.target);
+
+            bucket.adds.set(assignment.assignee.toString(), assignment.expiration);
         }
         for (const update of diff.toUpdate) {
-            bucketFor(byKind, update.kind, update.target).updates.set(update.assignee, {
+            const bucket = bucketFor(byKind, update.kind, update.target);
+
+            bucket.updates.set(update.assignee.toString(), {
                 previous: update.previousExpiration,
                 next: update.expiration,
             });
@@ -89,15 +104,16 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
     }
     if (showDestructive) {
         for (const assignment of diff.toRemove) {
-            bucketFor(byKind, assignment.kind, assignment.target).removes.add(assignment.assignee);
+            const bucket = bucketFor(byKind, assignment.kind, assignment.target);
+
+            bucket.removes.add(assignment.assignee.toString());
         }
     }
     if (options.showUnchanged) {
         for (const assignment of diff.unchanged) {
-            bucketFor(byKind, assignment.kind, assignment.target).unchanged.set(
-                assignment.assignee,
-                assignment.expiration
-            );
+            const bucket = bucketFor(byKind, assignment.kind, assignment.target);
+
+            bucket.unchanged.set(assignment.assignee.toString(), assignment.expiration);
         }
     }
     return byKind;
@@ -134,12 +150,14 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
         const byTarget = byKind.get(kind);
         if (!byTarget) continue;
 
-        const sorted = [...byTarget].sort((left, right) => left[0].localeCompare(right[0]));
+        const sorted = [...byTarget.values()].sort((left, right) =>
+            left.target.toString().localeCompare(right.target.toString())
+        );
         const targetLines: string[] = [];
-        for (const [target, bucket] of sorted) {
+        for (const { target, bucket } of sorted) {
             const entries = renderBucket(bucket);
             if (entries.length === 0) continue;
-            targetLines.push(`  ${target}`, ...entries);
+            targetLines.push(`  ${target.toString()}`, ...entries);
         }
 
         if (targetLines.length === 0) continue;

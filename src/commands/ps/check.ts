@@ -2,7 +2,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { CheckService } from '../../services/index.js';
-import { formatFindings, Finding } from '../../core/index.js';
+import { distinctAssignees, formatFindings, Finding } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.check');
@@ -41,7 +41,7 @@ export default class Check extends SfCommand<PsCheckResult> {
             this.log(line);
         }
 
-        const assignees = new Set(result.assignments.map((assignment) => assignment.assignee));
+        const assignees = distinctAssignees(result.assignments);
 
         this.log('');
         this.logSummaryCounts(result.errors, result.warnings);
@@ -55,7 +55,7 @@ export default class Check extends SfCommand<PsCheckResult> {
 
         return {
             files: result.files.length,
-            users: assignees.size,
+            users: assignees.length,
             assignments: result.assignments.length,
             findings: result.findings,
         };

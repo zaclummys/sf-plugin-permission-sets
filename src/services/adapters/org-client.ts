@@ -7,7 +7,9 @@ import {
     OrgTarget,
     OrgUser,
     ResolvedAddition,
+    TargetName,
     TargetRef,
+    Username,
 } from '../../core/index.js';
 
 /**
@@ -16,13 +18,13 @@ import {
  */
 export interface OrgClient {
     /** The users that exist in the org, among the given usernames. */
-    findUsers(usernames: string[]): Promise<OrgUser[]>;
+    findUsers(usernames: Username[]): Promise<OrgUser[]>;
     /** The permission sets (with ids) that exist in the org, among the given names. */
-    findPermissionSets(names: string[]): Promise<OrgTarget[]>;
+    findPermissionSets(names: TargetName[]): Promise<OrgTarget[]>;
     /** The permission set groups (with ids) that exist in the org, among the given developer names. */
-    findPermissionSetGroups(names: string[]): Promise<OrgTarget[]>;
+    findPermissionSetGroups(names: TargetName[]): Promise<OrgTarget[]>;
     /** The permission set licenses (with ids) that exist in the org, among the given developer names. */
-    findPermissionSetLicenses(names: string[]): Promise<OrgTarget[]>;
+    findPermissionSetLicenses(names: TargetName[]): Promise<OrgTarget[]>;
     /** Every assignable permission set, group, and license assignment held by active users, narrowed by the filter. */
     listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]>;
     /** The current assignments of the given managed targets, with their record ids. */

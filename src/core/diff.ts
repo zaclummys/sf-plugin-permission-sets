@@ -1,8 +1,10 @@
 import { ActualAssignment, AssignmentUpdate, DesiredAssignment, Diff, Kind } from './model.js';
+import { TargetName } from './target-name.js';
+import { Username } from './username.js';
 
-/** Case-insensitive key for an (assignee, kind, target) tuple, matching how the org compares them. */
-function assignmentKey(assignee: string, kind: Kind, target: string): string {
-    return `${assignee.toLowerCase()} ${kind} ${target.toLowerCase()}`;
+/** Key for an (assignee, kind, target) tuple, off the identifiers' own comparison keys. */
+function assignmentKey(assignee: Username, kind: Kind, target: TargetName): string {
+    return `${assignee.key} ${kind} ${target.key}`;
 }
 
 /** Whether two expirations name the same instant. Both absent (null) counts as equal. */

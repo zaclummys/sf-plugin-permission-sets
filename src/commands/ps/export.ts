@@ -2,7 +2,7 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
-import { AssignmentFilter, kindForScopeKey } from '../../core/index.js';
+import { AssignmentFilter, kindForScopeKey, Username } from '../../core/index.js';
 import { ExportService } from '../../services/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -42,7 +42,7 @@ export default class Export extends SfCommand<PsExportResult> {
     public async run(): Promise<PsExportResult> {
         const { flags } = await this.parse(Export);
         const filter: AssignmentFilter = {
-            usernames: flags.user,
+            usernames: flags.user?.map((username) => Username.of(username)),
             kinds: flags.kind?.map(kindForScopeKey),
         };
 

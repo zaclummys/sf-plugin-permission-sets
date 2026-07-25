@@ -10,6 +10,8 @@ import {
     Kind,
     countFindings,
     OrgTarget,
+    TargetName,
+    Username,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 
@@ -66,12 +68,12 @@ export class ValidateService {
         return results.flat();
     }
 
-    private async evaluateUserRefs(usernames: string[]): Promise<Finding[]> {
+    private async evaluateUserRefs(usernames: Username[]): Promise<Finding[]> {
         const found = await this.org.findUsers(usernames);
         return evaluateUsers(usernames, found);
     }
 
-    private async evaluateTargetRefs(kind: Kind, targets: string[]): Promise<Finding[]> {
+    private async evaluateTargetRefs(kind: Kind, targets: TargetName[]): Promise<Finding[]> {
         const found = await this.findTargetsOfKind(kind, targets);
         return evaluateTargets(
             kind,
@@ -80,7 +82,7 @@ export class ValidateService {
         );
     }
 
-    findTargetsOfKind(kind: Kind, names: string[]): Promise<OrgTarget[]> {
+    findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {
         if (kind === 'permissionSet') return this.org.findPermissionSets(names);
         if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
         if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);

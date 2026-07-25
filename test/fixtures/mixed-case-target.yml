@@ -1,0 +1,7 @@
+# One user listing the same permission set twice, spelled differently. API names are
+# case-insensitive in an org, so this is the duplicate DUP_TARGET warns about and dedupes.
+users:
+  erin@example.com:
+    permissionSets:
+      - Field_Service
+      - field_service

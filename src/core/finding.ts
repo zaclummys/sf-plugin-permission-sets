@@ -1,3 +1,6 @@
+import { TargetName } from './target-name.js';
+import { Username } from './username.js';
+
 type FindingLevel = 'error' | 'warning';
 
 /** The closed vocabulary of finding codes. Adding one here is required to emit it. */
@@ -53,18 +56,22 @@ export function schemaError(path: string, message: string, file: string): Findin
 }
 
 /** A scope key is present but its list is empty. */
-export function emptyListWarning(username: string, scopeKey: string, file: string): Finding {
-    return warning('EMPTY_LIST', `${username}: ${scopeKey} is empty`, { file });
+export function emptyListWarning(username: Username, scopeKey: string, file: string): Finding {
+    return warning('EMPTY_LIST', `${username.toString()}: ${scopeKey} is empty`, { file });
 }
 
 /** A target appears more than once under one scope for one user. */
-export function dupTargetWarning(username: string, target: string, scopeKey: string, file: string): Finding {
-    return warning('DUP_TARGET', `${username}: ${target} is listed twice under ${scopeKey}`, { file });
+export function dupTargetWarning(username: Username, target: TargetName, scopeKey: string, file: string): Finding {
+    return warning(
+        'DUP_TARGET',
+        `${username.toString()}: ${target.toString()} is listed twice under ${scopeKey}`,
+        { file }
+    );
 }
 
 /** A user declares no scopes at all. */
-export function emptyUserWarning(username: string, file: string): Finding {
-    return warning('EMPTY_USER', `${username}: no scopes declared`, { file });
+export function emptyUserWarning(username: Username, file: string): Finding {
+    return warning('EMPTY_USER', `${username.toString()}: no scopes declared`, { file });
 }
 
 /** No file on disk matched the given glob patterns. */
@@ -75,23 +82,23 @@ export function noFilesError(patterns: string[]): Finding {
 // Org-side findings, raised while resolving declarations against the org. No file or line.
 
 /** A declared user does not exist in the org. */
-export function userNotFoundError(username: string): Finding {
-    return error('USER_NOT_FOUND', `${username}: user not found in org`);
+export function userNotFoundError(username: Username): Finding {
+    return error('USER_NOT_FOUND', `${username.toString()}: user not found in org`);
 }
 
 /** A declared user exists but is inactive. */
-export function userInactiveError(username: string): Finding {
-    return error('USER_INACTIVE', `${username}: user is inactive`);
+export function userInactiveError(username: Username): Finding {
+    return error('USER_INACTIVE', `${username.toString()}: user is inactive`);
 }
 
 /** A declared target does not exist in the org. `label` is the kind's human name. */
-export function targetNotFoundError(target: string, label: string): Finding {
-    return error('TARGET_NOT_FOUND', `${target}: ${label} not found in org`);
+export function targetNotFoundError(target: TargetName, label: string): Finding {
+    return error('TARGET_NOT_FOUND', `${target.toString()}: ${label} not found in org`);
 }
 
 /** A declared target resolves to more than one record in the org. */
-export function targetAmbiguousError(target: string, label: string): Finding {
-    return error('TARGET_AMBIGUOUS', `${target}: ${label} is not unique in org`);
+export function targetAmbiguousError(target: TargetName, label: string): Finding {
+    return error('TARGET_AMBIGUOUS', `${target.toString()}: ${label} is not unique in org`);
 }
 
 /** The trailing-space location prefix for a finding: `file:line `, `file `, or empty. */

@@ -5,6 +5,9 @@
 
 /** A user the org holds an assignment for, and the permission set it is assigned. */
 export const declaredUser = 'zaclummys@gmail.com.cicd';
+
+/** declaredUser spelled in a case the org does not store it in, for the case-insensitive matching. */
+export const declaredUserOtherCase = 'ZACLUMMYS@GMAIL.COM.CICD';
 export const declaredPermissionSet = 'Experience_Profile_Manager';
 
 /** The permission set undeclared-assignment.yml re-declares, and the user that really holds it. */

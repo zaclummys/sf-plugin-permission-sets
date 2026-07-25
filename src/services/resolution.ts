@@ -4,6 +4,7 @@ import {
     OrgTarget,
     OrgUser,
     ResolvedAddition,
+    TargetName,
     TargetRef,
     Finding,
     kinds,
@@ -36,8 +37,8 @@ export function managedTargets(resolution: Resolution): TargetRef[] {
 export function resolveAdditions(additions: DesiredAssignment[], resolution: Resolution): ResolvedAddition[] {
     return additions.map((addition) => ({
         ...addition,
-        assigneeId: resolution.userIds.get(addition.assignee.toLowerCase()) ?? '',
-        targetId: resolution.targetIds[addition.kind].get(addition.target.toLowerCase()) ?? '',
+        assigneeId: resolution.userIds.get(addition.assignee.key) ?? '',
+        targetId: resolution.targetIds[addition.kind].get(addition.target.key) ?? '',
     }));
 }
 
@@ -84,7 +85,7 @@ export class ResolutionService {
         return { findings, userIds: indexUsersById(foundUsers), targetIds };
     }
 
-    findTargetsOfKind(kind: Kind, names: string[]): Promise<OrgTarget[]> {
+    findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {
         if (kind === 'permissionSet') return this.org.findPermissionSets(names);
         if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
         if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);

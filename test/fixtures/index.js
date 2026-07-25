@@ -17,6 +17,12 @@ export const schemaErrorPath = 'test/fixtures/schema-error.yml';
 /** Invalid YAML: an unclosed flow sequence the parser rejects. */
 export const malformedPath = 'test/fixtures/malformed.yml';
 
+/** One user declared under two spellings that differ only in case, holding the same target. */
+export const mixedCaseUserPath = 'test/fixtures/mixed-case-user.yml';
+
+/** One target listed twice under one user, under two spellings that differ only in case. */
+export const mixedCaseTargetPath = 'test/fixtures/mixed-case-target.yml';
+
 /** Leaves one of the org's own assignments undeclared: one addition and one removal. */
 export const undeclaredPath = 'test/fixtures/undeclared-assignment.yml';
 

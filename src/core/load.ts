@@ -60,7 +60,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
     const assignments: DesiredAssignment[] = [];
 
     for (const assignment of collected) {
-        const dedupeKey = `${assignment.assignee} ${assignment.kind} ${assignment.target}`;
+        const dedupeKey = `${assignment.assignee.key} ${assignment.kind} ${assignment.target.key}`;
         if (seen.has(dedupeKey)) continue;
         seen.add(dedupeKey);
         assignments.push(assignment);

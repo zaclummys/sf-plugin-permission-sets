@@ -1,0 +1,10 @@
+# The same user under two spellings that differ only in case, each declaring the same
+# target. Usernames and API names are case-insensitive in an org, so this describes one
+# user holding one assignment, and the two blocks merge into it.
+users:
+  Dana@Example.com:
+    permissionSets:
+      - Sales_Ops
+  dana@example.com:
+    permissionSets:
+      - sales_ops

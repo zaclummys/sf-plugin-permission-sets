@@ -28,3 +28,5 @@ export {
   indexTargetsById,
 } from './resolve.js';
 export { serializeAssignments } from './serialize.js';
+export { TargetName } from './target-name.js';
+export { Username } from './username.js';

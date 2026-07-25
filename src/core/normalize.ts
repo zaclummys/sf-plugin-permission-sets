@@ -1,5 +1,7 @@
 import { FileShape } from './schema.js';
 import { DesiredAssignment, Kind } from './model.js';
+import { TargetName } from './target-name.js';
+import { Username } from './username.js';
 import { Finding, emptyListWarning, dupTargetWarning, emptyUserWarning } from './finding.js';
 
 export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
@@ -22,14 +24,14 @@ export function kindForScopeKey(key: ScopeKey): Kind {
 type ScopeItem = string | { name: string; expiration: string };
 
 /** A scope item in canonical form: the bare string is a target with no expiration. */
-function scopeItemFields(item: ScopeItem): { target: string; expiration: string | null } {
-    if (typeof item === 'string') return { target: item, expiration: null };
+function scopeItemFields(item: ScopeItem): { target: TargetName; expiration: string | null } {
+    if (typeof item === 'string') return { target: TargetName.of(item), expiration: null };
 
-    return { target: item.name, expiration: item.expiration };
+    return { target: TargetName.of(item.name), expiration: item.expiration };
 }
 
 function normalizeScope(
-    username: string,
+    username: Username,
     kind: Kind,
     key: ScopeKey,
     list: ScopeItem[],
@@ -42,11 +44,11 @@ function normalizeScope(
     const seen = new Set<string>();
 
     for (const { target, expiration } of items) {
-        if (seen.has(target)) {
+        if (seen.has(target.key)) {
             findings.push(dupTargetWarning(username, target, key, file));
             continue;
         }
-        seen.add(target);
+        seen.add(target.key);
         assignments.push({ assignee: username, kind, target, expiration });
     }
 
@@ -54,7 +56,7 @@ function normalizeScope(
 }
 
 function normalizeUser(
-    username: string,
+    username: Username,
     entry: FileShape['users'][string],
     file: string,
 ): { assignments: DesiredAssignment[]; findings: Finding[] } {
@@ -92,7 +94,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
     const findings: Finding[] = [];
 
     for (const [username, entry] of Object.entries(data.users)) {
-        const user = normalizeUser(username, entry, file);
+        const user = normalizeUser(Username.of(username), entry, file);
         assignments.push(...user.assignments);
         findings.push(...user.findings);
     }

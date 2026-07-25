@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ValidateService } from '../../services/index.js';
-import { formatFindings, Finding } from '../../core/index.js';
+import { distinctAssignees, formatFindings, Finding } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.validate');
@@ -42,7 +42,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
             this.log(line);
         }
 
-        const assignees = new Set(result.assignments.map((assignment) => assignment.assignee));
+        const assignees = distinctAssignees(result.assignments);
 
         this.log('');
         this.logSummaryCounts(result.errors, result.warnings);
@@ -56,7 +56,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
 
         return {
             files: result.files.length,
-            users: assignees.size,
+            users: assignees.length,
             assignments: result.assignments.length,
             findings: result.findings,
         };

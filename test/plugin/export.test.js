@@ -3,7 +3,7 @@ import { parse } from 'yaml';
 import { readFile } from 'node:fs/promises';
 import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
-import { declaredUser, noOrg } from '../fixtures/index.js';
+import { declaredUser, declaredUserOtherCase, noOrg } from '../fixtures/index.js';
 
 // Real-org tests: drive `sf ps export` against the org named by PS_TARGET_ORG, which the
 // caller always provides (a local logged-in org, or one a CI step authenticates). export is
@@ -151,6 +151,23 @@ describe('sf ps export', () => {
         const content = await readFile(file, 'utf8');
         const scoped = parse(content);
         expect(Object.keys(scoped.users)).toEqual([declaredUser]);
+    });
+
+    it('matches a requested --user whose case differs from the org', async ({ expect }) => {
+        const file = await tempFile('ps-export-', 'export.yml');
+        const { stdout, exitCode } = await runPsTargetOrg([
+            'ps',
+            'export',
+            '--output-file',
+            file,
+            '--user',
+            declaredUserOtherCase,
+            '--json',
+        ]);
+
+        expect(exitCode).toBe(0);
+        const result = parseJson(stdout);
+        expect(result.unmatchedUsers).toEqual([]);
     });
 
     it('warns and continues when a requested --user matches nothing', async ({ expect }) => {

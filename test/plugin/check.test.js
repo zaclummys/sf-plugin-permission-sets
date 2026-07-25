@@ -1,6 +1,13 @@
 import { describe, it } from 'vitest';
 import { runPs, parseJson } from '../helpers/run-plugin.js';
-import { validPath, warningsPath, schemaErrorPath, malformedPath } from '../fixtures/index.js';
+import {
+    validPath,
+    warningsPath,
+    schemaErrorPath,
+    malformedPath,
+    mixedCaseUserPath,
+    mixedCaseTargetPath,
+} from '../fixtures/index.js';
 
 describe('sf ps check', () => {
     it('passes a valid file with exit 0', async ({ expect }) => {
@@ -30,6 +37,29 @@ describe('sf ps check', () => {
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('permissionSetGroups is empty');
+    });
+
+    it('merges a user declared under two spellings that differ only in case', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'check', '--file', mixedCaseUserPath, '--json']);
+
+        expect(exitCode).toBe(0);
+        const result = parseJson(stdout);
+        expect(result.users).toBe(1);
+    });
+
+    it('dedupes an assignment declared under two spellings that differ only in case', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'check', '--file', mixedCaseUserPath, '--json']);
+
+        expect(exitCode).toBe(0);
+        const result = parseJson(stdout);
+        expect(result.assignments).toBe(1);
+    });
+
+    it('warns about a target listed twice under spellings that differ only in case', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs(['ps', 'check', '--file', mixedCaseTargetPath]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('listed twice under permissionSets');
     });
 
     it('turns warnings into a failure under --strict', async ({ expect }) => {

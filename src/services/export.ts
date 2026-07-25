@@ -27,9 +27,10 @@ export class ExportService {
             await writeFile(outputFile, content, 'utf8');
         }
 
-        const assignees = new Set(assignments.map((assignment) => assignment.assignee));
+        const assignees = new Set(assignments.map((assignment) => assignment.assignee.key));
         const requested = filter?.usernames ?? [];
-        const unmatchedUsers = requested.filter((username) => !assignees.has(username));
+        const unmatched = requested.filter((username) => !assignees.has(username.key));
+        const unmatchedUsers = unmatched.map((username) => username.toString());
 
         return {
             outputFile: outputFile ?? null,

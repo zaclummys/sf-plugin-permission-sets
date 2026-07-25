@@ -55,7 +55,7 @@ Or pin a version:
 sf plugins install sf-plugin-permission-sets@x.y.z
 ```
 
-Requires Salesforce CLI (`sf`) and Node.js 20+.
+Requires Salesforce CLI (`sf`) and Node.js 22.13+.
 
 ## Quick start
 
@@ -115,6 +115,12 @@ users:
     permissionSets:
       - Sales_Manager
 ```
+
+### Names are matched case-insensitively
+
+Salesforce compares usernames and API names without regard to case, and so does this plugin. `JDoe@acme.com` and `jdoe@acme.com` are the same user, `Sales_Manager` and `sales_manager` are the same permission set, and every comparison the plugin makes (merging files, de-duplicating, diffing against the org, filtering an export) follows that rule. The spelling you write is the spelling that gets displayed and written back, so a file is never rewritten just to normalize case.
+
+The practical consequence is that declaring the same user twice under different spellings merges the two blocks rather than creating two users, and listing a target twice under different spellings is the same duplicate `check` already warns about.
 
 ### Timed access (expiration)
 
@@ -198,7 +204,8 @@ Every run checks the files first. `check` runs the file checks with no org, and 
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
 | Same user in two files with different targets | `check` | ✅ ok | Merged into one model, the point of slicing |
-| Same target listed twice for a user | `check` | ⚠️ warning | Deduped |
+| Same user under two spellings that differ only in case | `check` | ✅ ok | Merged into one user, matching how the org compares usernames |
+| Same target listed twice for a user (case-insensitively) | `check` | ⚠️ warning | Deduped |
 | A user with no scopes, or an empty list | `check` | ⚠️ warning | Ignored as a no-op |
 | Same username key appears twice in one file | `check` | ❌ error | Rejected, the intent is ambiguous |
 | Declared user, permission set, group, or license missing or not unique | `validate` | ❌ error | Run fails before any change |
@@ -337,7 +344,7 @@ USAGE
 FLAGS
   -o, --target-org=<org>   (required) Org to read assignments from.
   -f, --output-file=<file> Path of the YAML file to write. Parent directories are created; an existing file is overwritten. Omit to write to stdout.
-  --user=<username>...      Only export these users. Repeatable, matched on exact username.
+  --user=<username>...      Only export these users. Repeatable, matched case-insensitively.
   --kind=<scope>...         Only export these scopes: permissionSets | permissionSetGroups | permissionSetLicenses. Repeatable.
 ```
 
@@ -353,7 +360,7 @@ sf ps export -o prod | diff - permissions/prod.yml
 sf ps export -o prod --user jdoe@acme.com > jdoe.yml
 ```
 
-By default the whole org is exported. `--user` and `--kind` narrow the snapshot: pass either to scope it down, and pass both to intersect (the named users, restricted to the named scopes). Values within a flag are a union, so `--user jdoe@acme.com --user asmith@acme.com` exports both. The `--kind` values are the same scope keys the file uses, so `--kind permissionSetLicenses` reads back exactly the `permissionSetLicenses:` block.
+By default the whole org is exported. `--user` and `--kind` narrow the snapshot: pass either to scope it down, and pass both to intersect (the named users, restricted to the named scopes). Values within a flag are a union, so `--user jdoe@acme.com --user asmith@acme.com` exports both. A `--user` value is matched case-insensitively, so only a user the org really does not hold assignments for is reported as unmatched. The `--kind` values are the same scope keys the file uses, so `--kind permissionSetLicenses` reads back exactly the `permissionSetLicenses:` block.
 
 ```bash
 # Snapshot one team's permission sets and groups only
@@ -385,7 +392,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
@@ -416,7 +423,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
@@ -448,7 +455,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli

@@ -9,7 +9,9 @@ import {
     OrgTarget,
     OrgUser,
     ResolvedAddition,
+    TargetName,
     TargetRef,
+    Username,
 } from '../core/index.js';
 import { OrgClient } from '../services/adapters/index.js';
 
@@ -55,13 +57,22 @@ function buildInList(values: string[]): string {
     return values.map((value) => `'${escapeSoqlLiteral(value)}'`).join(', ');
 }
 
+/** The same, for the identifiers the port speaks in. The org compares them case-insensitively. */
+function buildNameList(values: Array<{ toString(): string }>): string {
+    return buildInList(values.map((value) => value.toString()));
+}
+
 /** Full membership SOQL for the active, non-profile-owned assignments matching the filter. */
-function buildMembershipQuery(usernames: string[] | undefined, wantsPermissionSet: boolean, wantsGroup: boolean): string {
+function buildMembershipQuery(
+    usernames: Username[] | undefined,
+    wantsPermissionSet: boolean,
+    wantsGroup: boolean
+): string {
     const clauses = [
         'Assignee.IsActive = true',
         'PermissionSet.IsOwnedByProfile = false',
     ];
-    if (usernames) clauses.push(`Assignee.Username IN(${buildInList(usernames)})`);
+    if (usernames) clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
     if (!wantsGroup) clauses.push('PermissionSetGroupId = null');
     if (!wantsPermissionSet) clauses.push('PermissionSetGroupId != null');
 
@@ -98,9 +109,9 @@ function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds: strin
 }
 
 /** Full license SOQL for the active assignments matching the filter. */
-function buildLicenseQuery(usernames: string[] | undefined): string {
+function buildLicenseQuery(usernames: Username[] | undefined): string {
     const clauses = ['Assignee.IsActive = true'];
-    if (usernames) clauses.push(`Assignee.Username IN(${buildInList(usernames)})`);
+    if (usernames) clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
 
     return `
         SELECT
@@ -125,47 +136,47 @@ function buildCurrentLicenseQuery(licenseIds: string[]): string {
 }
 
 /** Full SOQL for the users with the given usernames. */
-function buildUserQuery(usernames: string[]): string {
+function buildUserQuery(usernames: Username[]): string {
     return `
         SELECT
             Id,
             Username,
             IsActive
         FROM User
-        WHERE Username IN(${buildInList(usernames)})
+        WHERE Username IN(${buildNameList(usernames)})
     `;
 }
 
 /** Full SOQL for the permission sets with the given names. */
-function buildPermissionSetQuery(names: string[]): string {
+function buildPermissionSetQuery(names: TargetName[]): string {
     return `
         SELECT
             Id,
             Name
         FROM PermissionSet
-        WHERE Name IN(${buildInList(names)})
+        WHERE Name IN(${buildNameList(names)})
     `;
 }
 
 /** Full SOQL for the permission set groups with the given developer names. */
-function buildPermissionSetGroupQuery(names: string[]): string {
+function buildPermissionSetGroupQuery(names: TargetName[]): string {
     return `
         SELECT
             Id,
             DeveloperName
         FROM PermissionSetGroup
-        WHERE DeveloperName IN(${buildInList(names)})
+        WHERE DeveloperName IN(${buildNameList(names)})
     `;
 }
 
 /** Full SOQL for the permission set licenses with the given developer names. */
-function buildPermissionSetLicenseQuery(names: string[]): string {
+function buildPermissionSetLicenseQuery(names: TargetName[]): string {
     return `
         SELECT
             Id,
             DeveloperName
         FROM PermissionSetLicense
-        WHERE DeveloperName IN(${buildInList(names)})
+        WHERE DeveloperName IN(${buildNameList(names)})
     `;
 }
 
@@ -181,7 +192,7 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 /** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
 function deriveOutcome(
-    assignment: { assignee: string; kind: Kind; target: string },
+    assignment: { assignee: Username; kind: Kind; target: TargetName },
     operation: 'add' | 'update' | 'remove',
     result: DmlResult | undefined
 ): AssignmentOutcome {
@@ -189,9 +200,9 @@ function deriveOutcome(
     const message = result && !result.success ? result.errors.map((error) => error.message).join('; ') : undefined;
 
     return {
-        assignee: assignment.assignee,
+        assignee: assignment.assignee.toString(),
         kind: assignment.kind,
-        target: assignment.target,
+        target: assignment.target.toString(),
         operation,
         success,
         message,
@@ -275,40 +286,47 @@ function buildRemovalBatches(removals: ActualAssignment[]): Array<{ sobject: str
 }
 
 /** Classify a membership row: a group grant when it carries a group id, otherwise a plain permission set. */
-function classifyMembership(record: MembershipRecord): { kind: 'permissionSet' | 'permissionSetGroup'; target: string } {
+function classifyMembership(record: MembershipRecord): {
+    kind: 'permissionSet' | 'permissionSetGroup';
+    target: TargetName;
+} {
     if (record.PermissionSetGroupId && record.PermissionSetGroup) {
-        return { kind: 'permissionSetGroup', target: record.PermissionSetGroup.DeveloperName };
+        return { kind: 'permissionSetGroup', target: TargetName.of(record.PermissionSetGroup.DeveloperName) };
     }
 
-    return { kind: 'permissionSet', target: record.PermissionSet.Name };
+    return { kind: 'permissionSet', target: TargetName.of(record.PermissionSet.Name) };
 }
 
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
 export class ConnectionOrgClient implements OrgClient {
     public constructor(private readonly connection: Connection) { }
 
-    public async findUsers(usernames: string[]): Promise<OrgUser[]> {
+    public async findUsers(usernames: Username[]): Promise<OrgUser[]> {
         const records = await this.query<{ Id: string; Username: string; IsActive: boolean }>(buildUserQuery(usernames));
 
-        return records.map((record) => ({ id: record.Id, username: record.Username, isActive: record.IsActive }));
+        return records.map((record) => ({
+            id: record.Id,
+            username: Username.of(record.Username),
+            isActive: record.IsActive,
+        }));
     }
 
-    public async findPermissionSets(names: string[]): Promise<OrgTarget[]> {
+    public async findPermissionSets(names: TargetName[]): Promise<OrgTarget[]> {
         const records = await this.query<{ Id: string; Name: string }>(buildPermissionSetQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: record.Name }));
+        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.Name) }));
     }
 
-    public async findPermissionSetGroups(names: string[]): Promise<OrgTarget[]> {
+    public async findPermissionSetGroups(names: TargetName[]): Promise<OrgTarget[]> {
         const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetGroupQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: record.DeveloperName }));
+        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.DeveloperName) }));
     }
 
-    public async findPermissionSetLicenses(names: string[]): Promise<OrgTarget[]> {
+    public async findPermissionSetLicenses(names: TargetName[]): Promise<OrgTarget[]> {
         const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetLicenseQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: record.DeveloperName }));
+        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.DeveloperName) }));
     }
 
     public async listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]> {
@@ -330,7 +348,7 @@ export class ConnectionOrgClient implements OrgClient {
     }
 
     private async listMemberships(
-        usernames: string[] | undefined,
+        usernames: Username[] | undefined,
         wantsPermissionSet: boolean,
         wantsGroup: boolean
     ): Promise<DesiredAssignment[]> {
@@ -343,20 +361,20 @@ export class ConnectionOrgClient implements OrgClient {
             return {
                 kind,
                 target,
-                assignee: record.Assignee.Username,
+                assignee: Username.of(record.Assignee.Username),
                 expiration: record.ExpirationDate,
             };
         });
     }
 
-    private async listLicenses(usernames: string[] | undefined): Promise<DesiredAssignment[]> {
+    private async listLicenses(usernames: Username[] | undefined): Promise<DesiredAssignment[]> {
         const soql = buildLicenseQuery(usernames);
         const records = await this.query<LicenseRecord>(soql);
 
         return records.map((record) => ({
-            assignee: record.Assignee.Username,
+            assignee: Username.of(record.Assignee.Username),
             kind: 'permissionSetLicense' as const,
-            target: record.PermissionSetLicense.DeveloperName,
+            target: TargetName.of(record.PermissionSetLicense.DeveloperName),
             expiration: null,
         }));
     }
@@ -391,7 +409,7 @@ export class ConnectionOrgClient implements OrgClient {
                 kind,
                 target,
                 recordId: record.Id,
-                assignee: record.Assignee.Username,
+                assignee: Username.of(record.Assignee.Username),
                 expiration: record.ExpirationDate,
             };
         });
@@ -401,9 +419,9 @@ export class ConnectionOrgClient implements OrgClient {
         const records = await this.query<LicenseRecord>(soql);
         return records.map((record) => ({
             recordId: record.Id,
-            assignee: record.Assignee.Username,
+            assignee: Username.of(record.Assignee.Username),
             kind: 'permissionSetLicense' as const,
-            target: record.PermissionSetLicense.DeveloperName,
+            target: TargetName.of(record.PermissionSetLicense.DeveloperName),
             expiration: null,
         }));
     }

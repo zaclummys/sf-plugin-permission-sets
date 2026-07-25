@@ -11,6 +11,7 @@ import {
     DesiredAssignment,
     Diff,
     ReconcileMode,
+    Username,
 } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -74,7 +75,8 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const orgName = username || orgId;
 
         const actionable = this.actionable(diff, mode);
-        const usersAffected = new Set(actionable.map((assignment) => assignment.assignee.toLowerCase())).size;
+        const affected = new Set(actionable.map((assignment) => assignment.assignee.key));
+        const usersAffected = affected.size;
 
         const summary: PsPlanResult = {
             org: { username, id: orgId },
@@ -123,7 +125,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         orgId: string;
         files: string[];
         showUnchanged: boolean;
-        actionable: Array<{ assignee: string }>;
+        actionable: Array<{ assignee: Username }>;
         usersAffected: number;
     }): void {
         const { diff, mode, orgName, orgId, files, showUnchanged, actionable, usersAffected } = args;
@@ -159,7 +161,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
     }
 
     /** The assignments the chosen mode would actually act on. */
-    private actionable(diff: Diff, mode: ReconcileMode): Array<{ assignee: string }> {
+    private actionable(diff: Diff, mode: ReconcileMode): Array<{ assignee: Username }> {
         if (mode === 'destructive') return diff.toRemove;
         if (mode === 'additive')
             return [
