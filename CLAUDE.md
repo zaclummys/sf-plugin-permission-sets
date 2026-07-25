@@ -58,8 +58,36 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 
 ## Testing
 
-- Black-box the plugin: drive `sf ps ...` and assert only on observable output.
-- Real-org tests target the org in `$PS_TARGET_ORG`.
+> Vitest, `test/**/*.test.js`. Every spec spawns the real `sf ps ...` binary through `runPs` (`test/helpers/run-plugin.js`), so there are no module mocks, no fake timers, and no in-process imports of `src/`.
+
+Scope and shape
+
+- Black-box the plugin: drive `sf ps ...` and assert only on observable output (stdout, stderr, exit code, files written). Never import `src/` into a test or assert on internal structure: tests coupled to internals fail on every refactor, and those false alarms train us to ignore red builds.
+- One behavior per test, written as arrange, act, assert. A failure should point at exactly one cause; when a test asserts five things the first failure masks the rest.
+- Name the test after the behavior it asserts (`fails cleanly when the org cannot be resolved`), not after the function or flag it touches. CI shows the name, not the body.
+- No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs use `it.each` so each case is named and reported on its own, and keep known gaps visible with `it.todo` instead of a comment.
+- Spell out the state a test depends on instead of growing a shared fixture. Fixtures under `test/fixtures/` stay minimal and single-purpose (one valid file, one schema error, one malformed file), and anything a test needs to be specific about it builds itself.
+- Prefer static data, files, and values in a fixture over state derived at run time. Naming the users and targets literally (`test/fixtures/undeclared-assignment.yml`, with the org values it leans on in `test/fixtures/org.js`) makes the expected diff known up front, which is what turns a loose assertion (`/Plan: [1-9]\d* to add/`) into an exact one (`Plan: 1 to add, 0 to update. 1 users affected.`). Building the same file from a live export costs that precision and passes vacuously when the org holds nothing of that shape. Derive from the org only where the derivation is the behavior under test, as in the export round-trips, and keep org-specific values in one file so pointing the suite at another org stays a single edit.
+- Fix bugs test-first: write the failing spec that reproduces the report, then the fix. Otherwise there is no proof the test detects the bug.
+- Don't test the framework. oclif flag parsing, `yaml`, and `zod` are already tested; our validation rules, resolution logic, and messages are where our bugs are.
+- Coverage is a diagnostic, not a target. Add a test because a behavior is unverified, never to move a number: executing code without asserting on it changes the metric and not the risk.
+
+CLI contract
+
+- Assert the exit code explicitly on every path, success and failure. Exit codes are the only thing `&&`, `set -e`, and CI can branch on, so an accidental `exit 0` on failure is invisible without an assertion.
+- Assert stdout and stderr separately. Diagnostics belong on stderr so `sf ps ... --json | jq` keeps working: a warning leaking into stdout breaks every pipe.
+- Cover `--json` and human output as distinct paths, unwrapping the envelope through `parseJson`.
+- Treat `--help` text and error messages as interface, and assert the flags and phrasing users depend on. A silent rewording is the CLI equivalent of a breaking API change; the assertion turns it into a reviewed diff.
+- Exercise error paths as thoroughly as happy paths: missing file, malformed YAML, schema violation, unresolvable org, guard tripped on a destructive apply. Happy paths get exercised by hand, error paths ship untested.
+
+Determinism and isolation
+
+- Every test must pass alone, in any order, and in parallel (`sequence.concurrent` is on). No shared mutable state, no ordering assumptions between tests.
+- Write into a fresh `mkdtemp` dir per test, never a fixed path under `test/`. Real temp dirs keep permissions and atomicity honest, and they let concurrent tests coexist.
+- Real-org tests target the org in `$PS_TARGET_ORG`. Offline tests use an alias that resolves nowhere (`no-such-org-alias-xyz`) so they fail identically on any machine, without the network or a developer's default org.
+- Read ambient state through the helper's `env` (`NODE_ENV`, `NO_COLOR`, `SF_AUTOUPDATE_DISABLE`), never from the machine the suite happens to run on.
+- Always `await` a `runPs` call before asserting on it. A floated promise settles after the test ends, so the test passes regardless of the outcome and the rejection surfaces inside an unrelated later test.
+- Don't assert incidental ordering of rows, keys, or findings unless the command guarantees it: sort before comparing, or assert on membership.
 
 ## Workflow
 
