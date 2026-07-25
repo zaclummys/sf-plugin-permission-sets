@@ -1,7 +1,10 @@
 import { execa } from 'execa';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+// Imported for its side effect: it loads .env and rejects a missing PS_TARGET_ORG here,
+// before the plugin is linked and any spec runs, rather than once per spec.
+import './env.js';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -16,19 +19,6 @@ function sf(args) {
     };
 
     return execa('sf', args, { cwd: projectRoot, reject: false, env });
-}
-
-// The real-org suites target an already-authenticated org named by PS_TARGET_ORG.
-// Locally that can live in a gitignored .env, so load it to fill the gap; an env var
-// already set (CI) always wins. Runs before workers spawn, so they inherit the value.
-const envFile = path.join(projectRoot, '.env');
-
-if (existsSync(envFile)) {
-    process.loadEnvFile(envFile);
-}
-
-if (!process.env.PS_TARGET_ORG) {
-    throw new Error('PS_TARGET_ORG must be set: name an already-authenticated org. Run `cp .env.example .env` and fill it in.');
 }
 
 /**
