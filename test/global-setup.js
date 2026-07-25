@@ -28,7 +28,7 @@ if (existsSync(envFile)) {
 }
 
 if (!process.env.PS_TARGET_ORG) {
-    throw new Error(`PS_TARGET_ORG must be set in the environment`);
+    throw new Error('PS_TARGET_ORG must be set: name an already-authenticated org. Run `cp .env.example .env` and fill it in.');
 }
 
 /**

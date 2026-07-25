@@ -1,13 +1,11 @@
 import { describe, it } from 'vitest';
-import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
-import { tempDir } from '../helpers/temp-dir.js';
+import { tempFile } from '../helpers/temp-file.js';
 import { validPath, schemaErrorPath, malformedPath, noOrg } from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the input every resolution case validates back. */
 async function writeOrgSnapshot(expect) {
-    const dir = await tempDir('ps-validate-');
-    const snapshot = path.join(dir, 'snap.yml');
+    const snapshot = await tempFile('ps-validate-', 'snap.yml');
     const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
 
     expect(exported.exitCode).toBe(0);

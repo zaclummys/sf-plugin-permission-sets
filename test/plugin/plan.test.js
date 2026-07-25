@@ -1,7 +1,6 @@
 import { describe, it } from 'vitest';
-import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
-import { tempDir } from '../helpers/temp-dir.js';
+import { tempFile } from '../helpers/temp-file.js';
 import {
     validPath,
     schemaErrorPath,
@@ -15,8 +14,7 @@ import {
 
 /** Snapshot the org into a temp file, the starting point for an empty-diff plan. */
 async function writeOrgSnapshot(expect) {
-    const dir = await tempDir('ps-plan-');
-    const snapshot = path.join(dir, 'snap.yml');
+    const snapshot = await tempFile('ps-plan-', 'snap.yml');
     const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
 
     expect(exported.exitCode).toBe(0);

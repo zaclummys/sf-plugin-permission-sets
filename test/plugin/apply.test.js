@@ -1,7 +1,6 @@
 import { describe, it } from 'vitest';
-import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
-import { tempDir } from '../helpers/temp-dir.js';
+import { tempFile } from '../helpers/temp-file.js';
 import { validPath, schemaErrorPath, malformedPath, undeclaredPath, noOrg } from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
@@ -49,9 +48,7 @@ describe('sf ps apply', () => {
     // Real-org round-trips. Applying an org's own export is an empty diff, so --dry-run and a
     // real apply both leave the org untouched.
     it('applies an org export as a no-op round-trip (dry-run)', async ({ expect }) => {
-        const dir = await tempDir('ps-apply-');
-        const snapshot = path.join(dir, 'snap.yml');
-
+        const snapshot = await tempFile('ps-apply-', 'snap.yml');
         const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
         expect(exported.exitCode).toBe(0);
 
@@ -74,9 +71,7 @@ describe('sf ps apply', () => {
     });
 
     it('applies an org export as a no-op round-trip (real apply, no --dry-run)', async ({ expect }) => {
-        const dir = await tempDir('ps-apply-');
-        const snapshot = path.join(dir, 'snap.yml');
-
+        const snapshot = await tempFile('ps-apply-', 'snap.yml');
         const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
         expect(exported.exitCode).toBe(0);
 

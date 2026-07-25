@@ -1,17 +1,12 @@
 import { describe, it } from 'vitest';
 import { parse } from 'yaml';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
-import { tempDir } from '../helpers/temp-dir.js';
+import { tempFile } from '../helpers/temp-file.js';
 import { declaredUser, noOrg } from '../fixtures/index.js';
 
-/** A uniquely-named output file per test, so the concurrent cases never write over each other. */
-async function tempOutputFile() {
-    const dir = await tempDir('ps-export-');
-
-    return path.join(dir, 'export.yml');
-}
+/** Where a test points `--output-file`, fresh per call. */
+const tempOutputFile = () => tempFile('ps-export-', 'export.yml');
 
 // Real-org tests: drive `sf ps export` against the org named by PS_TARGET_ORG, which the
 // caller always provides (a local logged-in org, or one a CI step authenticates). export is
