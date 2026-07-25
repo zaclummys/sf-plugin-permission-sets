@@ -24,8 +24,8 @@ function byText(left: { toString(): string }, right: { toString(): string }): nu
 function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
     const byTarget = new Map<string, { target: TargetName; expiration: string | null }>();
     for (const assignment of assignments) {
-        if (!byTarget.has(assignment.target.key)) {
-            byTarget.set(assignment.target.key, { target: assignment.target, expiration: assignment.expiration });
+        if (!byTarget.has(assignment.target.asKey())) {
+            byTarget.set(assignment.target.asKey(), { target: assignment.target, expiration: assignment.expiration });
         }
     }
 

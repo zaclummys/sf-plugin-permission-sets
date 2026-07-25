@@ -37,8 +37,8 @@ export function managedTargets(resolution: Resolution): TargetRef[] {
 export function resolveAdditions(additions: DesiredAssignment[], resolution: Resolution): ResolvedAddition[] {
     return additions.map((addition) => ({
         ...addition,
-        assigneeId: resolution.userIds.get(addition.assignee.key) ?? '',
-        targetId: resolution.targetIds[addition.kind].get(addition.target.key) ?? '',
+        assigneeId: resolution.userIds.get(addition.assignee.asKey()) ?? '',
+        targetId: resolution.targetIds[addition.kind].get(addition.target.asKey()) ?? '',
     }));
 }
 

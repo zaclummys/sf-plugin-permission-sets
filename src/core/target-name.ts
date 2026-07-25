@@ -13,12 +13,12 @@ export class TargetName {
     }
 
     /** The value to compare, index, and de-duplicate by. */
-    public get key(): string {
+    public asKey(): string {
         return this.raw.toLowerCase();
     }
 
     public equals(other: TargetName): boolean {
-        return this.key === other.key;
+        return this.asKey() === other.asKey();
     }
 
     /** The name as written, for display and for messages. */

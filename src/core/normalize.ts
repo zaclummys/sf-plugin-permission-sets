@@ -44,11 +44,11 @@ function normalizeScope(
     const seen = new Set<string>();
 
     for (const { target, expiration } of items) {
-        if (seen.has(target.key)) {
+        if (seen.has(target.asKey())) {
             findings.push(dupTargetWarning(username, target, key, file));
             continue;
         }
-        seen.add(target.key);
+        seen.add(target.asKey());
         assignments.push({ assignee: username, kind, target, expiration });
     }
 

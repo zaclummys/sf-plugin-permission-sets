@@ -26,7 +26,7 @@ export class ScopedChange {
             ...this.updates,
             ...this.removals,
         ];
-        const assignees = new Set(acted.map((assignment) => assignment.assignee.key));
+        const assignees = new Set(acted.map((assignment) => assignment.assignee.asKey()));
 
         return assignees.size;
     }
@@ -72,7 +72,7 @@ export class Diff {
 
 /** Key for an (assignee, kind, target) tuple, off the identifiers' own comparison keys. */
 function assignmentKey(assignee: Username, kind: Kind, target: TargetName): string {
-    return `${assignee.key} ${kind} ${target.key}`;
+    return `${assignee.asKey()} ${kind} ${target.asKey()}`;
 }
 
 /** Whether two expirations name the same instant. Both absent (null) counts as equal. */

@@ -38,12 +38,12 @@ function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, tar
         byKind.set(kind, byTarget);
     }
 
-    let entry = byTarget.get(target.key);
+    let entry = byTarget.get(target.asKey());
     if (!entry) {
         const bucket = { adds: new Map(), updates: new Map(), removes: new Set<string>(), unchanged: new Map() };
 
         entry = { target, bucket };
-        byTarget.set(target.key, entry);
+        byTarget.set(target.asKey(), entry);
     }
     return entry.bucket;
 }
