@@ -1,53 +1,64 @@
-import { describe, it, expect } from 'vitest';
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { describe, it } from 'vitest';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
+import { tempDir } from '../helpers/temp-dir.js';
 
 const valid = 'test/fixtures/valid.yml';
 const schemaError = 'test/fixtures/schema-error.yml';
 const malformed = 'test/fixtures/malformed.yml';
+// Declares one of the org's own assignments under a different user, so a destructive
+// run has exactly one row to remove. See the file for what the org must hold.
+const undeclared = 'test/fixtures/undeclared-assignment.yml';
 // A target org that resolves nowhere, so these fail identically on any machine
 // without touching the network or a developer's default org.
 const noOrg = 'no-such-org-alias-xyz';
 
-// A fresh temp dir per test, so the concurrent cases never collide. The OS reclaims it.
-async function tempDir() {
-    return mkdtemp(path.join(tmpdir(), 'ps-apply-'));
-}
-
 describe('sf ps apply', () => {
-    it('rejects an invalid --mode value', async () => {
-        const { exitCode } = await runPs(['ps', 'apply', '-f', valid, '--target-org', noOrg, '--mode', 'bogus']);
+    it('rejects an invalid --mode value', async ({ expect }) => {
+        const { stderr, exitCode } = await runPs(['ps', 'apply', '-f', valid, '--target-org', noOrg, '--mode', 'bogus']);
 
-        expect(exitCode).not.toBe(0);
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain('additive, destructive, sync');
     });
 
-    it('rejects a negative --max-deletes', async () => {
-        const { exitCode } = await runPs(['ps', 'apply', '-f', valid, '--target-org', noOrg, '--max-deletes=-1']);
+    it('rejects a negative --max-deletes', async ({ expect }) => {
+        const { stderr, exitCode } = await runPs([
+            'ps',
+            'apply',
+            '-f',
+            valid,
+            '--target-org',
+            noOrg,
+            '--max-deletes=-1',
+        ]);
 
-        expect(exitCode).not.toBe(0);
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain('greater than or equal to 0');
     });
 
-    it('requires --file', async () => {
-        const { exitCode } = await runPs(['ps', 'apply', '--target-org', noOrg]);
+    // With the org resolvable, the missing-file failure is the command's own, not the org
+    // resolver's (which runs first during flag parsing and would otherwise mask it).
+    it('requires --file', async ({ expect }) => {
+        const { stderr, exitCode } = await runPs(['ps', 'apply', '--target-org', targetOrg]);
 
-        expect(exitCode).not.toBe(0);
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain('Missing required flag file');
     });
 
-    it('--help documents its flags', async () => {
+    it('--help documents its flags', async ({ expect }) => {
         const { stdout, exitCode } = await runPs(['ps', 'apply', '--help']);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('--mode');
         expect(stdout).toContain('--file');
+        expect(stdout).toContain('--max-deletes');
+        expect(stdout).toContain('--no-prompt');
     });
 
     // Real-org round-trips. Applying an org's own export is an empty diff, so --dry-run and a
-    // real apply both leave the org untouched. The guard cases abort before any DML, so they too
-    // leave the org untouched.
+    // real apply both leave the org untouched.
     it('applies an org export as a no-op round-trip (dry-run)', async ({ expect }) => {
-        const dir = await tempDir();
+        const dir = await tempDir('ps-apply-');
         const snapshot = path.join(dir, 'snap.yml');
 
         const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
@@ -72,7 +83,7 @@ describe('sf ps apply', () => {
     });
 
     it('applies an org export as a no-op round-trip (real apply, no --dry-run)', async ({ expect }) => {
-        const dir = await tempDir();
+        const dir = await tempDir('ps-apply-');
         const snapshot = path.join(dir, 'snap.yml');
 
         const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
@@ -96,16 +107,99 @@ describe('sf ps apply', () => {
         expect(result.failures).toBe(0);
     });
 
+    // The destructive guards. Both return before the service calls the org client's write
+    // methods, so a tripped guard drives a real org without ever changing it.
+    it('refuses a destructive run that would remove more than --max-deletes', async ({ expect }) => {
+        const { stderr, exitCode } = await runPs([
+            'ps',
+            'apply',
+            '--target-org',
+            targetOrg,
+            '-f',
+            undeclared,
+            '--mode',
+            'destructive',
+            '--max-deletes',
+            '0',
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain('Refusing to remove 1 assignment(s): over the --max-deletes limit of 0.');
+    });
+
+    it('leaves the org unchanged when the --max-deletes guard trips', async ({ expect }) => {
+        const before = await runPs(['ps', 'export', '--target-org', targetOrg]);
+        expect(before.exitCode).toBe(0);
+
+        const guarded = await runPs([
+            'ps',
+            'apply',
+            '--target-org',
+            targetOrg,
+            '-f',
+            undeclared,
+            '--mode',
+            'destructive',
+            '--max-deletes',
+            '0',
+        ]);
+        // Assert the guard is what stopped the run, so a file that failed to load earlier
+        // cannot make this pass for the wrong reason.
+        expect(guarded.stderr).toContain('over the --max-deletes limit of 0');
+
+        const after = await runPs(['ps', 'export', '--target-org', targetOrg]);
+        expect(after.stdout).toBe(before.stdout);
+    });
+
+    it('refuses to delete in a --json run without --no-prompt', async ({ expect }) => {
+        const { stdout, exitCode } = await runPs([
+            'ps',
+            'apply',
+            '--target-org',
+            targetOrg,
+            '-f',
+            undeclared,
+            '--mode',
+            'destructive',
+            '--json',
+        ]);
+
+        expect(exitCode).toBe(1);
+        const error = JSON.parse(stdout);
+        expect(error.name).toBe('PromptInJsonError');
+    });
+
+    // Answering "no" needs an interactive TTY, which a spawned `sf` in this suite never gets.
+    // Left visible rather than silently uncovered.
+    it.todo('reports a declined confirmation without changing the org');
+
     // Load errors abort before any org call or DML, so the org just needs to resolve.
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'apply', '--target-org', targetOrg, '-f', schemaError, '--dry-run']);
+        const { stdout, stderr, exitCode } = await runPs([
+            'ps',
+            'apply',
+            '--target-org',
+            targetOrg,
+            '-f',
+            schemaError,
+            '--dry-run',
+        ]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
+        expect(stderr).toContain('do not resolve cleanly against the org');
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'apply', '--target-org', targetOrg, '-f', malformed, '--dry-run']);
+        const { stdout, exitCode } = await runPs([
+            'ps',
+            'apply',
+            '--target-org',
+            targetOrg,
+            '-f',
+            malformed,
+            '--dry-run',
+        ]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');

@@ -1,8 +1,7 @@
-import { describe, it, expect } from 'vitest';
-import { mkdtemp } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { describe, it } from 'vitest';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
+import { tempDir } from '../helpers/temp-dir.js';
 
 const valid = 'test/fixtures/valid.yml';
 const schemaError = 'test/fixtures/schema-error.yml';
@@ -11,23 +10,26 @@ const malformed = 'test/fixtures/malformed.yml';
 // without touching the network or a developer's default org.
 const noOrg = 'no-such-org-alias-xyz';
 
-// A uniquely-named file per test, so the concurrent cases never collide. The OS
-// reclaims the temp dir, so there is nothing to clean up.
-async function tempFile() {
-    const dir = await mkdtemp(path.join(tmpdir(), 'ps-validate-'));
+/** Snapshot the org into a temp file, the input every resolution case validates back. */
+async function writeOrgSnapshot(expect) {
+    const dir = await tempDir('ps-validate-');
+    const snapshot = path.join(dir, 'snap.yml');
+    const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', snapshot]);
 
-    return path.join(dir, 'export.yml');
+    expect(exported.exitCode).toBe(0);
+
+    return snapshot;
 }
 
 describe('sf ps validate', () => {
-    it('fails cleanly when the org cannot be resolved', async () => {
+    it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
         const { stderr, exitCode } = await runPs(['ps', 'validate', '-f', valid, '--target-org', noOrg]);
 
-        expect(exitCode).not.toBe(0);
-        expect(stderr).not.toBe('');
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain('No authorization information found');
     });
 
-    it('--help documents its flags', async () => {
+    it('--help documents its flags', async ({ expect }) => {
         const { stdout, exitCode } = await runPs(['ps', 'validate', '--help']);
 
         expect(exitCode).toBe(0);
@@ -40,28 +42,22 @@ describe('sf ps validate', () => {
     // and validating that snapshot back against the same org is the round-trip: every reference
     // resolves because it came from the org, so the resolution path reports no problems.
     it('validates an org snapshot back against the same org with no findings', async ({ expect }) => {
-        const file = await tempFile();
-        const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', file]);
+        const snapshot = await writeOrgSnapshot(expect);
 
-        expect(exported.exitCode).toBe(0);
-
-        const { stdout, exitCode } = await runPs(['ps', 'validate', '-f', file, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPs(['ps', 'validate', '-f', snapshot, '--target-org', targetOrg]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 0 warnings.');
     });
 
     it('returns a valid --json envelope with resolved counts', async ({ expect }) => {
-        const file = await tempFile();
-        const exported = await runPs(['ps', 'export', '--target-org', targetOrg, '--output-file', file]);
-
-        expect(exported.exitCode).toBe(0);
+        const snapshot = await writeOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPs([
             'ps',
             'validate',
             '-f',
-            file,
+            snapshot,
             '--target-org',
             targetOrg,
             '--json',
@@ -72,8 +68,22 @@ describe('sf ps validate', () => {
         expect(Number.isInteger(result.files)).toBe(true);
         expect(Number.isInteger(result.users)).toBe(true);
         expect(Number.isInteger(result.assignments)).toBe(true);
-        expect(Array.isArray(result.findings)).toBe(true);
         expect(result.findings).toHaveLength(0);
+    });
+
+    it('reports an unknown user as an unresolved reference', async ({ expect }) => {
+        const { stdout, stderr, exitCode } = await runPs([
+            'ps',
+            'validate',
+            '-f',
+            valid,
+            '--target-org',
+            targetOrg,
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('alice@example.com');
+        expect(stderr).toContain('found problems');
     });
 
     // With the org resolvable, the missing-file failure is the command's own, not the org
@@ -81,12 +91,19 @@ describe('sf ps validate', () => {
     it('rejects a missing required --file flag', async ({ expect }) => {
         const { stderr, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg]);
 
-        expect(exitCode).not.toBe(0);
-        expect(stderr.toLowerCase()).toContain('file');
+        expect(exitCode).toBe(2);
+        expect(stderr).toContain('Missing required flag file');
     });
 
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', schemaError]);
+        const { stdout, stderr, exitCode } = await runPs([
+            'ps',
+            'validate',
+            '--target-org',
+            targetOrg,
+            '-f',
+            schemaError,
+        ]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');

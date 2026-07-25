@@ -1,0 +1,8 @@
+# Leaves one of the org's own assignments undeclared, so a reconcile has something to
+# remove. sfdc_scrt2 belongs to the org's integration user, so declaring it under a
+# different user keeps the target in the managed set while no longer declaring it for
+# its holder: that row is what plan and apply report as a removal.
+users:
+  zaclummys@gmail.com.cicd:
+    permissionSets:
+      - sfdc_scrt2
