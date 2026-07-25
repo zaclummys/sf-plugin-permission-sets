@@ -6,12 +6,22 @@ import { defineConfig } from "eslint/config";
 export default defineConfig([
     {
         files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
-        plugins: { js },
-        extends: ["js/recommended"],
-        languageOptions: { globals: globals.browser },
+        extends: [js.configs.recommended],
+        languageOptions: { globals: globals.node },
     },
 
-    tseslint.configs.recommended,
+    // Typed linting: rules that need the type checker (no-floating-promises,
+    // no-misused-promises) catch the async mistakes that matter in org calls.
+    {
+        files: ["**/*.{ts,mts,cts}"],
+        extends: [tseslint.configs.recommendedTypeChecked],
+        languageOptions: {
+            parserOptions: {
+                projectService: true,
+                tsconfigRootDir: import.meta.dirname,
+            },
+        },
+    },
 
     // Project conventions (see CLAUDE.md).
     {

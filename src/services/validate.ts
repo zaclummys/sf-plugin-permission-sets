@@ -85,6 +85,6 @@ export class ValidateService {
         if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
         if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);
 
-        throw new Error(`Unsupported kind: ${kind}`);
+        throw new Error(`Unsupported kind: ${String(kind)}`);
     }
 }

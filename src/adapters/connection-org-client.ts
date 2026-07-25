@@ -413,7 +413,7 @@ export class ConnectionOrgClient implements OrgClient {
         const settled = await Promise.all(
             batches.map(async (batch) => {
                 const results = await this.connection.create(batch.sobject, batch.records, { allOrNone: false });
-                return { batch, results: results as DmlResult[] };
+                return { batch, results };
             })
         );
 
@@ -431,7 +431,7 @@ export class ConnectionOrgClient implements OrgClient {
         const settled = await Promise.all(
             batches.map(async (batch) => {
                 const results = await this.connection.update(batch.sobject, batch.records, { allOrNone: false });
-                return { batch, results: results as DmlResult[] };
+                return { batch, results };
             })
         );
 
@@ -450,7 +450,7 @@ export class ConnectionOrgClient implements OrgClient {
             batches.map(async (batch) => {
                 const recordIds = batch.removals.map((removal) => removal.recordId);
                 const results = await this.connection.destroy(batch.sobject, recordIds, { allOrNone: false });
-                return { batch, results: results as DmlResult[] };
+                return { batch, results };
             })
         );
 

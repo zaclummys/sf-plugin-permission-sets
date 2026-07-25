@@ -99,7 +99,7 @@
             "files": [
                 "src/**/*.ts",
                 "messages/**",
-                "**/.eslint*",
+                "eslint.config.js",
                 "**/tsconfig.json"
             ],
             "output": []
@@ -110,11 +110,15 @@
                 "compile"
             ],
             "env": {
-                "FORCE_COLOR": "2"
+                "FORCE_COLOR": "2",
+                "PS_TARGET_ORG": {
+                    "external": true
+                }
             },
             "files": [
                 "test/**",
-                "vitest.config.js"
+                "vitest.config.js",
+                ".env"
             ],
             "output": []
         }
