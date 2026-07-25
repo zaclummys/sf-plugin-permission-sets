@@ -15,6 +15,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 
 - [Why](#why)
 - [Install](#install)
+- [Org permissions](#org-permissions)
 - [Quick start](#quick-start)
 - [Permission files](#permission-files)
 - [Organizing files](#organizing-files)
@@ -56,6 +57,25 @@ sf plugins install sf-plugin-permission-sets@x.y.z
 ```
 
 Requires Salesforce CLI (`sf`) and Node.js 22.13+.
+
+## Org permissions
+
+What the user behind `--target-org` needs:
+
+| Command | API Enabled | View Setup and Configuration | View Roles and Role Hierarchy | Assign Permission Sets |
+| --- | :---: | :---: | :---: | :---: |
+| `sf ps check` | - | - | - | - |
+| `sf ps validate` | ✓ | ✓ | ✓ | - |
+| `sf ps plan` | ✓ | ✓ | ✓ | - |
+| `sf ps export` | ✓ | ✓ | ✓ | - |
+| `sf ps apply` | ✓ | ✓ | ✓ | ✓ |
+
+✓ Required, - Not required.
+
+Two permission sets, so a pull request job cannot change the org:
+
+- [PS_Plugin_Read](setup/permissionsets/PS_Plugin_Read.permissionset-meta.xml): reads permission set assignments.
+- [PS_Plugin_Write](setup/permissionsets/PS_Plugin_Write.permissionset-meta.xml): reads and modifies permission set assignments.
 
 ## Quick start
 
@@ -374,6 +394,8 @@ A requested `--user` that has no matching assignments (a typo, or a user who gen
 ## GitHub Actions
 
 Three small workflows that build on each other: check pull requests with no org at all, validate the same files against the real org, then apply on merge.
+
+Point the pull request workflows at a `PS_Plugin_Read` user and only the merge workflow at `PS_Plugin_Write` (see [Org permissions](#org-permissions)).
 
 **1. Check pull requests to main** (no org, no secrets):
 
