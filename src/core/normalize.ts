@@ -7,7 +7,7 @@ import { Finding, emptyListWarning, dupTargetWarning, emptyUserWarning } from '.
 export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
 
 /** The (kind, file scope key) pairing, in canonical order. Shared with serialize. */
-export const kindKeys: Array<[Kind, ScopeKey]> = [
+export const kindKeys: [Kind, ScopeKey][] = [
     ['permissionSet', 'permissionSets'],
     ['permissionSetGroup', 'permissionSetGroups'],
     ['permissionSetLicense', 'permissionSetLicenses'],

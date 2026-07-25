@@ -124,7 +124,7 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
  * A group's entries ordered by assignee. Comparing the keys directly matches how `.sort()`
  * with no comparator orders the removes, so every group keeps the one ordering.
  */
-function sortedByAssignee<Value>(group: Map<string, Value>): Array<[string, Value]> {
+function sortedByAssignee<Value>(group: Map<string, Value>): [string, Value][] {
     const rows = [...group];
 
     return rows.sort(([leftAssignee], [rightAssignee]) => {

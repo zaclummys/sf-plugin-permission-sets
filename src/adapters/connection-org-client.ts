@@ -35,7 +35,7 @@ type LicenseRecord = {
 };
 
 /** The slice of a DML save/delete result we report on. Structurally a jsforce SaveResult. */
-type DmlResult = { success: boolean; errors: Array<{ message: string }> };
+type DmlResult = { success: boolean; errors: { message: string }[] };
 
 /** SObject + foreign-key field to set per kind when assigning. */
 const assignmentObjects: Record<Kind, AssignmentObject> = {
@@ -58,7 +58,7 @@ function buildInList(values: string[]): string {
 }
 
 /** The same, for the identifiers the port speaks in. The org compares them case-insensitively. */
-function buildNameList(values: Array<{ toString(): string }>): string {
+function buildNameList(values: { toString(): string }[]): string {
     return buildInList(values.map((value) => value.toString()));
 }
 
@@ -218,7 +218,7 @@ type UpdateRecord = { Id: string; ExpirationDate: string | null };
 /** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */
 function buildAdditionBatches(
     additions: ResolvedAddition[]
-): Array<{ sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }> {
+): { sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }[] {
     const bySobject = new Map<string, ResolvedAddition[]>();
     for (const addition of additions) {
         const { sobject } = assignmentObjects[addition.kind];
@@ -227,7 +227,7 @@ function buildAdditionBatches(
         bySobject.set(sobject, grouped);
     }
 
-    const batches: Array<{ sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }> = [];
+    const batches: { sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }[] = [];
     for (const [sobject, grouped] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records = batch.map((addition) => ({
@@ -244,7 +244,7 @@ function buildAdditionBatches(
 /** Group expiration updates by sObject and chunk them, building the Id + ExpirationDate records. */
 function buildUpdateBatches(
     updates: AssignmentUpdate[]
-): Array<{ sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }> {
+): { sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }[] {
     const bySobject = new Map<string, AssignmentUpdate[]>();
     for (const update of updates) {
         const { sobject } = assignmentObjects[update.kind];
@@ -253,7 +253,7 @@ function buildUpdateBatches(
         bySobject.set(sobject, grouped);
     }
 
-    const batches: Array<{ sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }> = [];
+    const batches: { sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }[] = [];
     for (const [sobject, grouped] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records: UpdateRecord[] = batch.map((update) => ({
@@ -267,7 +267,7 @@ function buildUpdateBatches(
 }
 
 /** Group removals by sObject and chunk them for the Collections API. */
-function buildRemovalBatches(removals: ActualAssignment[]): Array<{ sobject: string; removals: ActualAssignment[] }> {
+function buildRemovalBatches(removals: ActualAssignment[]): { sobject: string; removals: ActualAssignment[] }[] {
     const bySobject = new Map<string, ActualAssignment[]>();
     for (const removal of removals) {
         const { sobject } = assignmentObjects[removal.kind];
@@ -276,7 +276,7 @@ function buildRemovalBatches(removals: ActualAssignment[]): Array<{ sobject: str
         bySobject.set(sobject, grouped);
     }
 
-    const batches: Array<{ sobject: string; removals: ActualAssignment[] }> = [];
+    const batches: { sobject: string; removals: ActualAssignment[] }[] = [];
     for (const [sobject, grouped] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             batches.push({ sobject, removals: batch });
@@ -335,7 +335,7 @@ export class ConnectionOrgClient implements OrgClient {
         const wantsGroup = !kinds || kinds.includes('permissionSetGroup');
         const wantsLicense = !kinds || kinds.includes('permissionSetLicense');
 
-        const tasks: Array<Promise<DesiredAssignment[]>> = [];
+        const tasks: Promise<DesiredAssignment[]>[] = [];
         if (wantsPermissionSet || wantsGroup) {
             tasks.push(this.listMemberships(filter?.usernames, wantsPermissionSet, wantsGroup));
         }
@@ -384,7 +384,7 @@ export class ConnectionOrgClient implements OrgClient {
         const groupIds = targets.filter((ref) => ref.kind === 'permissionSetGroup').map((ref) => ref.id);
         const licenseIds = targets.filter((ref) => ref.kind === 'permissionSetLicense').map((ref) => ref.id);
 
-        const tasks: Array<Promise<ActualAssignment[]>> = [];
+        const tasks: Promise<ActualAssignment[]>[] = [];
 
         if (permissionSetIds.length > 0 || groupIds.length > 0) {
             const soql = buildCurrentMembershipQuery(permissionSetIds, groupIds);

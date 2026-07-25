@@ -50,7 +50,7 @@ export class ValidateService {
 
     /** Look every reference up in the org (in parallel) and evaluate the results. */
     private async resolve(assignments: DesiredAssignment[]): Promise<Finding[]> {
-        const tasks: Array<Promise<Finding[]>> = [];
+        const tasks: Promise<Finding[]>[] = [];
 
         const usernames = distinctAssignees(assignments);
         if (usernames.length > 0) {

@@ -16,7 +16,10 @@ export default defineConfig([
     // unchecked assumptions (no-non-null-assertion).
     {
         files: ["**/*.{ts,mts,cts}"],
-        extends: [tseslint.configs.strictTypeChecked],
+        extends: [
+            tseslint.configs.strictTypeChecked,
+            tseslint.configs.stylisticTypeChecked,
+        ],
         languageOptions: {
             parserOptions: {
                 projectService: true,
@@ -27,6 +30,9 @@ export default defineConfig([
             // A number in a template literal needs no formatting decision (`file:line`),
             // so keep the recommended allowance rather than wrap it in String().
             "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
+            // Both type and interface are allowed: the two differ in declaration merging
+            // and in what they can express, so the choice is the declaration's to make.
+            "@typescript-eslint/consistent-type-definitions": "off",
         },
     },
 
