@@ -22,7 +22,7 @@ Validation found problems. See the output above.
 
 -   Validate every file under permissions against the dev org:
 
-    <%= config.bin %> <%= command.id %> --file "permissions/\*.yml" --target-org dev
+    <%= config.bin %> <%= command.id %> --file "permissions/*.yml" --target-org dev
 
 -   Validate specific files against a named org:
 
