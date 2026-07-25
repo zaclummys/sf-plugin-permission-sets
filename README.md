@@ -70,7 +70,7 @@ What the user behind `--target-org` needs:
 | `sf ps export` | ✓ | ✓ | ✓ | - |
 | `sf ps apply` | ✓ | ✓ | ✓ | ✓ |
 
-✓ Required, - Not required.
+✓ Required, - Not required. `Manage Users` is not required, not even for permission set licenses.
 
 Two permission sets, so a pull request job cannot change the org:
 
