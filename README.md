@@ -527,7 +527,8 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 
 | Core module | Responsibility |
 | --- | --- |
-| `model` | Shared domain types (assignment, org, diff). |
+| `model` | Shared domain types (assignment, org). |
+| `username`, `target-name` | The identifiers, owning the org's case-insensitive comparison so no caller has to remember it. |
 | `finding` | The finding type and code vocabulary, plus constructors, formatting, and counting. |
 | `schema` | The zod contract for a file, plus validation. |
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
@@ -535,8 +536,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `serialize` | Canonical tuples back to a user-keyed YAML document (the inverse of `normalize`). |
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
 | `resolve` | Pure rules that turn declared references and the org's answers into findings, plus id lookups for assigning. No SOQL: the adapter owns that. |
-| `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. |
-| `mode` | Scope a diff to what a reconcile mode acts on, plus the drift it leaves alone. |
+| `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. The `Diff` it returns also scopes itself to a reconcile mode, reporting what that mode acts on and the drift it leaves alone. |
 | `report` | Format a diff as a plan. |
 
 Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.

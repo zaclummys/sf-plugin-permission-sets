@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { formatDiff, formatFindings, ReconcileMode } from '../../core/index.js';
+import { formatDiff, formatFindings, ReconcileMode, ScopedChange } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
@@ -112,29 +112,33 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
         this.log('');
 
-        this.reportOutcome(result, summary, mode, maxDeletes);
+        const scoped = result.diff.scopeTo(mode);
+
+        this.reportOutcome(result, summary, scoped, mode, maxDeletes);
 
         return summary;
     }
 
     /** Report the outcome of a completed (non-invalid) apply, setting the exit code as needed. */
-    private reportOutcome(result: ApplyResult, summary: PsApplyResult, mode: string, maxDeletes: number): void {
+    private reportOutcome(
+        result: ApplyResult,
+        summary: PsApplyResult,
+        scoped: ScopedChange,
+        mode: string,
+        maxDeletes: number
+    ): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
             if (!this.jsonEnabled()) this.errorMaxDeletes(result.diff.toRemove.length, maxDeletes);
             return;
         }
 
-        this.reportDrift(result.drift, mode);
+        this.reportDrift(scoped.drift, mode);
 
         if (result.status === 'dry-run') {
-            // Report what this mode would actually do, matching the mode-scoped body: the full
-            // diff minus whatever the mode leaves as drift. Otherwise the counts contradict it.
-            this.logSummaryDryRun(
-                summary.toAdd - result.drift.adds,
-                summary.toUpdate - result.drift.updates,
-                summary.toRemove - result.drift.removes
-            );
+            // Report what this mode would actually do, matching the mode-scoped body.
+            // Otherwise the counts contradict it.
+            this.logSummaryDryRun(scoped.additions.length, scoped.updates.length, scoped.removals.length);
             return;
         }
 

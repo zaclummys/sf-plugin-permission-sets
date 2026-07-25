@@ -1,4 +1,4 @@
-export { diffAssignments } from './diff.js';
+export { diffAssignments, Diff, Drift, ScopedChange } from './diff.js';
 export { Finding, formatFindings, countFindings } from './finding.js';
 export { loadFiles } from './load.js';
 export {
@@ -7,7 +7,6 @@ export {
   AssignmentOutcome,
   AssignmentUpdate,
   DesiredAssignment,
-  Diff,
   Kind,
   OrgTarget,
   OrgUser,
@@ -15,7 +14,6 @@ export {
   ResolvedAddition,
   TargetRef,
 } from './model.js';
-export { scopeToMode, ScopedChange } from './mode.js';
 export { kindForScopeKey } from './normalize.js';
 export { formatDiff } from './report.js';
 export {

@@ -1,4 +1,5 @@
-import { Diff, Kind, ReconcileMode } from './model.js';
+import { Diff } from './diff.js';
+import { Kind, ReconcileMode } from './model.js';
 import { kindKeys } from './normalize.js';
 import { TargetName } from './target-name.js';
 

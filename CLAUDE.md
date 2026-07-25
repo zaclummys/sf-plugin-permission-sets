@@ -11,10 +11,19 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 ## Architecture & layering
 
 - Strict dependency direction: **commands → services → core**. Never the reverse.
-- `src/core/` stays pure: no `@salesforce/*` imports, no I/O, no CLI concerns. It is plain data + functions.
+- `src/core/` stays pure: no `@salesforce/*` imports, no I/O, no CLI concerns. Plain data, functions, and the domain classes below.
 - `src/services/` may use `@salesforce/core` and talk to the org (through an injected client).
 - `src/commands/` is the thin `SfCommand` layer: parse flags, construct a service, call `run()`, format output.
 - Prefer official `@salesforce/*` libraries (especially types) over hand-rolled abstractions.
+
+## Domain classes in `core/`
+
+A rule that more than one call site has to remember belongs on an object, not in a comment. Two kinds live in `core/`, and both are data (unlike services, which are behavior with injected collaborators).
+
+- **Value objects** wrap an identifier whose comparison rule is not the default one: `Username` and `TargetName` compare, index, and de-duplicate through `key` (case-folded, matching the org), keep the text as written for display, and `toJSON()` back to a plain string so `--json` payloads stay unchanged. They are deliberately separate classes rather than one with a shared base: the `private` field is what makes them nominally distinct, so one cannot be passed where the other is expected. Convert at the boundary (adapter, flag parsing) and carry the object inward, so the compiler points at every site that compares a name.
+- **Aggregates** own the derived questions asked of a record so nobody recomputes them: `Diff` answers `changeCount` and `scopeTo(mode)`, and the `ScopedChange` that comes back answers `count`, `usersAffected`, and `drift`. A command that branches on a domain value (`mode === 'destructive'`) to derive data is a missing method here. Selecting a *message* for that value stays in the command.
+
+Report DTOs (`Finding`, `AssignmentOutcome`) are the exception: they are only ever displayed, so they carry plain strings.
 
 ## Barrels (`index.ts`)
 

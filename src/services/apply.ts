@@ -1,7 +1,6 @@
 import {
     loadFiles,
     diffAssignments,
-    scopeToMode,
     ActualAssignment,
     AssignmentOutcome,
     AssignmentUpdate,
@@ -31,22 +30,17 @@ export type ApplyResult = {
     files: string[];
     findings: Finding[];
     diff: Diff;
-    /** What the chosen mode did not act on (surfaced as drift). */
-    drift: { adds: number; updates: number; removes: number };
     outcomes: AssignmentOutcome[];
     status: ApplyStatus;
     failed: boolean;
 };
-
-const emptyDiff: Diff = { toAdd: [], toUpdate: [], toRemove: [], unchanged: [] };
 
 /** An aborted-before-any-change result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Finding[]): ApplyResult {
     return {
         files,
         findings,
-        diff: emptyDiff,
-        drift: { adds: 0, updates: 0, removes: 0 },
+        diff: Diff.empty(),
         outcomes: [],
         status: 'invalid',
         failed: true,
@@ -86,14 +80,13 @@ export class ApplyService {
         const diff = diffAssignments(loaded.assignments, actual);
 
         const { mode, maxDeletes, dryRun } = input;
-        const { additions, updates, removals, drift } = scopeToMode(diff, mode);
+        const { additions, updates, removals } = diff.scopeTo(mode);
 
         if (removals.length > maxDeletes) {
             return {
                 files: loaded.files,
                 findings,
                 diff,
-                drift,
                 outcomes: [],
                 status: 'max-deletes-exceeded',
                 failed: true,
@@ -101,20 +94,20 @@ export class ApplyService {
         }
 
         if (dryRun) {
-            return { files: loaded.files, findings, diff, drift, outcomes: [], status: 'dry-run', failed: false };
+            return { files: loaded.files, findings, diff, outcomes: [], status: 'dry-run', failed: false };
         }
 
         if (removals.length > 0) {
             const confirmed = await this.confirmDeletions(removals.length);
             if (!confirmed) {
-                return { files: loaded.files, findings, diff, drift, outcomes: [], status: 'declined', failed: false };
+                return { files: loaded.files, findings, diff, outcomes: [], status: 'declined', failed: false };
             }
         }
 
         const outcomes = await this.executeResolved(resolveAdditions(additions, resolution), updates, removals);
         const failed = outcomes.some((outcome) => !outcome.success);
 
-        return { files: loaded.files, findings, diff, drift, outcomes, status: 'applied', failed };
+        return { files: loaded.files, findings, diff, outcomes, status: 'applied', failed };
     }
 
     private async executeResolved(

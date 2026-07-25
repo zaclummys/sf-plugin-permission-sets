@@ -10,8 +10,9 @@ import {
     AssignmentUpdate,
     DesiredAssignment,
     Diff,
+    Drift,
     ReconcileMode,
-    Username,
+    ScopedChange,
 } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -63,20 +64,17 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const service = new PlanService(orgClient);
-        const result = await service.run(flags.file, mode);
+        const result = await service.run(flags.file);
 
         for (const line of formatFindings(result.findings)) {
             this.log(line);
         }
 
         const diff = result.diff;
+        const scoped = diff.scopeTo(mode);
         const orgId = targetOrg.getOrgId();
         const username = targetOrg.getUsername() ?? '';
         const orgName = username || orgId;
-
-        const actionable = this.actionable(diff, mode);
-        const affected = new Set(actionable.map((assignment) => assignment.assignee.key));
-        const usersAffected = affected.size;
 
         const summary: PsPlanResult = {
             org: { username, id: orgId },
@@ -86,9 +84,9 @@ export default class Plan extends SfCommand<PsPlanResult> {
                 toUpdate: diff.toUpdate.length,
                 toRemove: diff.toRemove.length,
                 unchanged: diff.unchanged.length,
-                usersAffected,
+                usersAffected: scoped.usersAffected,
             },
-            drift: result.drift,
+            drift: scoped.drift,
             changes: {
                 toAdd: diff.toAdd,
                 toUpdate: diff.toUpdate,
@@ -105,13 +103,12 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         this.logPlan({
             diff,
+            scoped,
             mode,
             orgName,
             orgId,
             files: flags.file,
             showUnchanged: flags['show-unchanged'],
-            actionable,
-            usersAffected,
         });
 
         return summary;
@@ -120,21 +117,19 @@ export default class Plan extends SfCommand<PsPlanResult> {
     /** Render the human-readable plan body once the run is known to be valid. */
     private logPlan(args: {
         diff: Diff;
+        scoped: ScopedChange;
         mode: ReconcileMode;
         orgName: string;
         orgId: string;
         files: string[];
         showUnchanged: boolean;
-        actionable: Array<{ assignee: Username }>;
-        usersAffected: number;
     }): void {
-        const { diff, mode, orgName, orgId, files, showUnchanged, actionable, usersAffected } = args;
+        const { diff, scoped, mode, orgName, orgId, files, showUnchanged } = args;
 
         this.logHeaderTitle();
         this.logHeaderOrg(orgName, orgId, mode);
 
-        const totalChanges = diff.toAdd.length + diff.toUpdate.length + diff.toRemove.length;
-        if (totalChanges === 0) {
+        if (diff.changeCount === 0) {
             if (showUnchanged && diff.unchanged.length > 0) {
                 this.logBody(formatDiff(diff, { mode, showUnchanged: true }));
             } else {
@@ -146,33 +141,18 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         this.logBody(formatDiff(diff, { mode, showUnchanged }));
 
-        if (actionable.length === 0) {
+        if (scoped.count === 0) {
             this.logEmptyNothingToApply(mode);
         } else {
-            this.log(this.countsLine(diff, mode, usersAffected));
+            this.log(this.countsLine(scoped, mode));
         }
 
-        this.reportDrift(diff, mode);
+        this.reportDrift(scoped.drift);
         this.reportUnchanged(diff.unchanged.length, showUnchanged);
 
-        if (actionable.length > 0) {
+        if (scoped.count > 0) {
             this.logSummaryNext(this.applyCommand(orgName, files, mode));
         }
-    }
-
-    /** The assignments the chosen mode would actually act on. */
-    private actionable(diff: Diff, mode: ReconcileMode): Array<{ assignee: Username }> {
-        if (mode === 'destructive') return diff.toRemove;
-        if (mode === 'additive')
-            return [
-                ...diff.toAdd,
-                ...diff.toUpdate,
-            ];
-        return [
-            ...diff.toAdd,
-            ...diff.toUpdate,
-            ...diff.toRemove,
-        ];
     }
 
     private logBody(body: string[]): void {
@@ -181,36 +161,35 @@ export default class Plan extends SfCommand<PsPlanResult> {
         if (body.length > 0) this.log('');
     }
 
-    private countsLine(diff: Diff, mode: ReconcileMode, usersAffected: number): string {
+    /** The counts line reports what the mode acts on, so it never contradicts the body above it. */
+    private countsLine(scoped: ScopedChange, mode: ReconcileMode): string {
         if (mode === 'destructive') {
             return messages.getMessage('summary.counts.destructive', [
-                diff.toRemove.length,
-                usersAffected,
+                scoped.removals.length,
+                scoped.usersAffected,
             ]);
         }
         if (mode === 'additive') {
             return messages.getMessage('summary.counts.additive', [
-                diff.toAdd.length,
-                diff.toUpdate.length,
-                usersAffected,
+                scoped.additions.length,
+                scoped.updates.length,
+                scoped.usersAffected,
             ]);
         }
         return messages.getMessage('summary.counts.sync', [
-            diff.toAdd.length,
-            diff.toUpdate.length,
-            diff.toRemove.length,
-            usersAffected,
+            scoped.additions.length,
+            scoped.updates.length,
+            scoped.removals.length,
+            scoped.usersAffected,
         ]);
     }
 
-    private reportDrift(diff: Diff, mode: ReconcileMode): void {
-        if (mode === 'additive' && diff.toRemove.length > 0) {
-            this.logDriftAdditive(diff.toRemove.length);
-        }
-        if (mode === 'destructive') {
-            const skipped = diff.toAdd.length + diff.toUpdate.length;
-            if (skipped > 0) this.logDriftDestructive(skipped);
-        }
+    /** Drift is already mode-scoped: only additive leaves removes, only destructive leaves adds. */
+    private reportDrift(drift: Drift): void {
+        if (drift.removes > 0) this.logDriftAdditive(drift.removes);
+
+        const skipped = drift.adds + drift.updates;
+        if (skipped > 0) this.logDriftDestructive(skipped);
     }
 
     private reportUnchanged(count: number, showUnchanged: boolean): void {

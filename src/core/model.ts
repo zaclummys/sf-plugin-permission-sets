@@ -67,14 +67,6 @@ export type ResolvedAddition = DesiredAssignment & {
     targetId: string;
 };
 
-/** The change set between the desired model and the org's current state. */
-export type Diff = {
-    toAdd: DesiredAssignment[];
-    toUpdate: AssignmentUpdate[];
-    toRemove: ActualAssignment[];
-    unchanged: ActualAssignment[];
-};
-
 /**
  * The per-record result of one add or remove, for partial-success reporting. A report
  * record rather than a model record: it is only ever displayed, so it carries the names
