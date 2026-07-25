@@ -89,6 +89,60 @@ Determinism and isolation
 - Always `await` a `runPs` call before asserting on it. A floated promise settles after the test ends, so the test passes regardless of the outcome and the rejection surfaces inside an unrelated later test.
 - Don't assert incidental ordering of rows, keys, or findings unless the command guarantees it: sort before comparing, or assert on membership.
 
+## Testing principles
+
+### General
+
+1. **Test behavior, not implementation** — Tests coupled to internals fail on every refactor even when nothing broke. Those false alarms train the team to ignore failures, which is worse than having no tests.
+2. **Arrange/Act/Assert, one behavior** — A failure should point at exactly one cause. When a test asserts five things, the first failure masks the rest and you debug in serial.
+3. **Behavioral names** — CI shows you a name, not a body. If the name states the expected behavior, a red build is diagnostic before you open any code — and writing the name forces you to know what you're actually testing.
+4. **Determinism** — A test that fails 1% of the time gets re-run instead of investigated, so it stops functioning as a signal. Non-determinism also hides real intermittent bugs in the noise.
+5. **Independence** — Order-dependent tests break the moment you parallelize, filter, or run one in isolation to debug it. That's precisely when you most need the suite.
+6. **No logic in tests** — Tests are unverified code; there's no test for your test. Conditionals mean a branch may silently skip all assertions and still report green.
+7. **Builders over shared fixtures** — A shared fixture accretes fields until no one knows which matter, so tests break when unrelated fields change. Spelling out only the relevant state makes the test self-documenting.
+8. **Error paths** — Happy paths get exercised by manual use and demos; error paths are what ship untested and surface in production. They're also where recovery logic and cleanup bugs hide.
+9. **Coverage as diagnostic** — Coverage measures execution, not verification. Mandate a number and you get tests that call code without asserting on it: the metric goes green and the risk is unchanged.
+10. **Failing test first** — It proves the test actually detects the bug. Write the fix first and you can easily end up with a test that would have passed before the change.
+
+### CLI
+
+1. **Shell separated from core** — `process.exit`, `process.argv`, and direct stdout writes are global state you can't cleanly reset. Isolating them lets 95% of tests be fast in-process function calls.
+2. **Parser tested separately** — Flag handling is combinatorial and full of surprises (negation, aliases, `--` passthrough, type coercion). Testing it end-to-end means one bug takes a full command run to find; testing it directly makes every case cheap.
+3. **Exit codes** — They're the only thing shell scripts and CI can branch on. If `&&`, `set -e`, or a pipeline behaves wrong, that's your bug, and only an explicit assertion catches an accidental `exit 0` on failure.
+4. **stdout vs stderr separately** — If a warning leaks into stdout, anyone doing `mytool | jq` gets a parse error. The separation is the contract with the entire Unix ecosystem, so the tests have to enforce it.
+5. **Snapshot help and errors** — Help text and error strings *are* the interface for humans; changing them silently is the CLI equivalent of a breaking API change. A snapshot diff turns that into a reviewed decision.
+6. **Inject ambient dependencies** — Anything read from the environment makes the test depend on the machine it runs on. Injection also lets you simulate conditions you can't easily produce for real, like `EACCES` or a full disk.
+7. **Real temp dirs** — A mocked fs encodes your beliefs about the filesystem, and those beliefs are wrong about permissions, symlinks, case-sensitivity, and atomicity. Real dirs are fast enough that the fidelity is nearly free.
+8. **TTY and non-TTY** — Interactive niceties become garbage in a log file or a pipe. Untested, you ship ANSI escapes into someone's CI output or a spinner that emits thousands of lines.
+9. **stdin coverage** — Piped, empty, and interactive stdin are three different code paths, and empty stdin is the classic hang: the tool waits forever for input that never arrives.
+10. **A few real spawns** — Packaging failures are invisible to in-process tests because they import source directly. A wrong `bin` path, a missing shebang, or a file excluded from the published tarball breaks 100% of users while every unit test stays green.
+
+### Vitest
+
+1. **Auto-restore config** — Mock state persists across tests by default, so a stub set in test 3 silently changes test 7. That produces failures that only reproduce in a specific order — the hardest kind to diagnose.
+2. **`vi.mock` hoisting** — Vitest lifts mock calls above imports so the mock exists before the module is loaded. The consequence is that variables in the factory aren't initialized yet; `vi.hoisted` is what lifts them alongside.
+3. **`spyOn` over module mocks** — Mocking a whole module replaces exports you didn't intend to touch, so real bugs in them go undetected. A spy also restores cleanly, whereas module mocks are registry-level and leak more easily.
+4. **`vi.mocked`** — TypeScript types the import as the real function, so `.mockResolvedValue` doesn't exist on it. `vi.mocked` is a pure type assertion that keeps the argument types checked, unlike `as any`, which discards them.
+5. **Fake timers + system time** — Real waits make tests slow and flaky under CI load. `setSystemTime` matters separately because `Date.now()` isn't controlled by fake timers alone, and the async advance variants exist because a resolved promise needs a microtask tick that the sync versions don't flush.
+6. **`stubEnv` / `stubGlobal`** — Manual mutation requires manual restoration, and the one time someone forgets, an unrelated test starts failing. Stubs are tracked and reverted automatically.
+7. **`.each` and `.todo`** — Table-driven cases keep every case individually named and reported, so you see *which* input failed rather than a single opaque failure. `todo`/`fails` keep known gaps visible in the report instead of buried in a comment.
+8. **`waitFor` / `expect.poll`** — A fixed sleep is either too short (flaky) or too long (slow), and it's both on different machines. Polling on the actual condition returns as soon as it's true and fails with the last observed value.
+9. **Inline snapshots for small output** — Reviewing a diff is much easier when the expected value sits in the test file rather than a file nobody opens. External files are still better for large payloads, which would drown the test in noise.
+10. **Projects + typecheck** — One global environment forces jsdom onto Node code, which fakes globals your CLI doesn't have in production and hides bugs. `--typecheck` covers types, which are otherwise entirely unverified by runtime tests despite being part of your public API.
+
+### JS in general
+
+1. **Mock at the network boundary** — Stubbing your API client skips serialization, headers, status handling, and error mapping — which is where the bugs live. Intercepting HTTP keeps all of that real, and the mocks survive swapping fetch libraries.
+2. **Never float a promise** — Without `await`, the assertion is scheduled after the test ends, so the test passes regardless of outcome. Worse, the rejection may surface during an unrelated later test.
+3. **Assert types, not messages** — Message strings are copy that changes for wording reasons; matching on them creates false failures and, worse, false passes when a substring coincidentally matches a different error. Types and `cause` are what your callers actually branch on.
+4. **Pin TZ and locale** — Date and number formatting are environment-dependent, so a suite that passes in São Paulo fails in a UTC CI container. Timezone bugs also cluster at DST boundaries, which only appear on certain machines.
+5. **Fail on unhandled rejections** — Node's default is a warning, so an async error in a background handler leaves the test green while the code is broken. Making it fatal converts silent breakage into a visible failure.
+6. **Clean up handles** — Node won't exit while a handle is open, so leaks manifest as a suite that hangs at 100% with no error message. Leaked listeners also fire in later tests and cause bewildering cross-talk.
+7. **Deep-equality gotchas** — `toEqual` treating `{a: undefined}` as `{}` means a bug that drops a field passes. Knowing the semantics is the difference between an assertion that checks something and one that merely looks like it does.
+8. **Floats and ordering** — `0.1 + 0.2 !== 0.3` in IEEE 754, so exact float equality fails for correct code. Asserting incidental array or key order likewise fails on correct changes, making the test worse than useless.
+9. **Don't test the framework** — Those tests always pass, so they add runtime and maintenance while catching nothing. Your validation *rules* are the part with your bugs in it.
+10. **Type-check tests** — Untyped tests keep compiling after you change a signature, so they go on asserting against a shape the code no longer has. Typed tests turn contract changes into compile errors, right where you want them.
+
 ## Workflow
 
 - README is the source of truth: update it first, then implement to match.
