@@ -1,6 +1,6 @@
 import { loadFiles, diffAssignments, Diff, Finding, countFindings } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { ResolutionService, managedTargets } from './resolution.js';
+import { ResolutionService } from './resolution.js';
 
 /** How a run ended, so the command can report and set the exit code. */
 export type PlanStatus = 'planned' | 'invalid';
@@ -49,7 +49,7 @@ export class PlanService {
             return invalidResult(loaded.files, findings);
         }
 
-        const actual = await this.org.listCurrentAssignments(managedTargets(resolution));
+        const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
         const diff = diffAssignments(loaded.assignments, actual);
 
         return { files: loaded.files, findings, diff, status: 'planned' };

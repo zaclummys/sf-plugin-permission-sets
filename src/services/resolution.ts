@@ -17,29 +17,37 @@ import {
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 
-export type Resolution = {
-    findings: Finding[];
-    userIds: Map<string, string>;
-    targetIds: Record<Kind, Map<string, string>>;
-};
+/**
+ * What the org answered for every declared reference: the findings, plus the org ids of
+ * the references that did resolve. The indexes stay private because they are keyed by the
+ * identifiers' comparison key, and that rule belongs here rather than at every lookup.
+ */
+export class Resolution {
+    public constructor(
+        public readonly findings: Finding[],
+        private readonly userIds: Map<string, string>,
+        private readonly targetIds: Record<Kind, Map<string, string>>
+    ) {}
 
-export function managedTargets(resolution: Resolution): TargetRef[] {
-    const refs: TargetRef[] = [];
-    for (const kind of kinds) {
-        for (const id of resolution.targetIds[kind].values()) {
-            refs.push({ kind, id });
+    /** Every target that resolved, as the managed set to compare the org's state against. */
+    public managedTargets(): TargetRef[] {
+        const refs: TargetRef[] = [];
+        for (const kind of kinds) {
+            for (const id of this.targetIds[kind].values()) {
+                refs.push({ kind, id });
+            }
         }
+        return refs;
     }
-    return refs;
-}
 
-/** Attach the resolved assignee and target ids to each addition, so it can be inserted. */
-export function resolveAdditions(additions: DesiredAssignment[], resolution: Resolution): ResolvedAddition[] {
-    return additions.map((addition) => ({
-        ...addition,
-        assigneeId: resolution.userIds.get(addition.assignee.asKey()) ?? '',
-        targetId: resolution.targetIds[addition.kind].get(addition.target.asKey()) ?? '',
-    }));
+    /** Attach the resolved assignee and target ids to each addition, so it can be inserted. */
+    public resolveAdditions(additions: DesiredAssignment[]): ResolvedAddition[] {
+        return additions.map((addition) => ({
+            ...addition,
+            assigneeId: this.userIds.get(addition.assignee.asKey()) ?? '',
+            targetId: this.targetIds[addition.kind].get(addition.target.asKey()) ?? '',
+        }));
+    }
 }
 
 /** Look every declared reference up in the org, returning findings and the resolved id maps. */
@@ -82,7 +90,7 @@ export class ResolutionService {
             targetIds[kind] = indexTargetsById(found);
         }
 
-        return { findings, userIds: indexUsersById(foundUsers), targetIds };
+        return new Resolution(findings, indexUsersById(foundUsers), targetIds);
     }
 
     findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {

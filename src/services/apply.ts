@@ -10,7 +10,7 @@ import {
     countFindings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { ResolutionService, managedTargets, resolveAdditions } from './resolution.js';
+import { ResolutionService } from './resolution.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 
@@ -76,7 +76,7 @@ export class ApplyService {
             return invalidResult(loaded.files, findings);
         }
 
-        const actual = await this.org.listCurrentAssignments(managedTargets(resolution));
+        const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
         const diff = diffAssignments(loaded.assignments, actual);
 
         const { mode, maxDeletes, dryRun } = input;
@@ -104,7 +104,7 @@ export class ApplyService {
             }
         }
 
-        const outcomes = await this.executeResolved(resolveAdditions(additions, resolution), updates, removals);
+        const outcomes = await this.executeResolved(resolution.resolveAdditions(additions), updates, removals);
         const failed = outcomes.some((outcome) => !outcome.success);
 
         return { files: loaded.files, findings, diff, outcomes, status: 'applied', failed };
