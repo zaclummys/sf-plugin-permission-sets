@@ -389,7 +389,10 @@ FLAGS
 
 `apply` recomputes from the files every run: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state, then acts per `--mode`. Run `plan` shortly before `apply` so the preview you review reflects what `apply` will do (an edited file, a renamed permission set, or another admin's change between the two shifts the outcome).
 
-Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org. DML is executed with the sObject Collections API and reports partial successes/failures per record.
+> [!CAUTION]
+> `--mode sync` and `--mode destructive` revoke access. Deletions always prompt for confirmation unless `--no-prompt` is set, and are hard-capped by `--max-deletes` so a bad merge can't unassign your whole org.
+
+DML is executed with the sObject Collections API and reports partial successes/failures per record.
 
 ## GitHub Actions
 
