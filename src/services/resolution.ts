@@ -93,11 +93,16 @@ export class ResolutionService {
         return new Resolution(findings, indexUsersById(foundUsers), targetIds);
     }
 
+    // No default case on purpose: a new Kind then fails to compile here, which is a
+    // better guard than a runtime throw the type system already proves unreachable.
     findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {
-        if (kind === 'permissionSet') return this.org.findPermissionSets(names);
-        if (kind === 'permissionSetGroup') return this.org.findPermissionSetGroups(names);
-        if (kind === 'permissionSetLicense') return this.org.findPermissionSetLicenses(names);
-
-        throw new Error(`Unsupported kind: ${String(kind)}`);
+        switch (kind) {
+            case 'permissionSet':
+                return this.org.findPermissionSets(names);
+            case 'permissionSetGroup':
+                return this.org.findPermissionSetGroups(names);
+            case 'permissionSetLicense':
+                return this.org.findPermissionSetLicenses(names);
+        }
     }
 }

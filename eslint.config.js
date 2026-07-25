@@ -10,16 +10,23 @@ export default defineConfig([
         languageOptions: { globals: globals.node },
     },
 
-    // Typed linting: rules that need the type checker (no-floating-promises,
-    // no-misused-promises) catch the async mistakes that matter in org calls.
+    // Typed linting: rules that need the type checker. no-floating-promises and
+    // no-misused-promises catch the async mistakes that matter in org calls, and the
+    // strict tier adds the ones that catch dead code (no-unnecessary-condition) and
+    // unchecked assumptions (no-non-null-assertion).
     {
         files: ["**/*.{ts,mts,cts}"],
-        extends: [tseslint.configs.recommendedTypeChecked],
+        extends: [tseslint.configs.strictTypeChecked],
         languageOptions: {
             parserOptions: {
                 projectService: true,
                 tsconfigRootDir: import.meta.dirname,
             },
+        },
+        rules: {
+            // A number in a template literal needs no formatting decision (`file:line`),
+            // so keep the recommended allowance rather than wrap it in String().
+            "@typescript-eslint/restrict-template-expressions": ["error", { allowNumber: true }],
         },
     },
 

@@ -120,19 +120,32 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
     return byKind;
 }
 
+/**
+ * A group's entries ordered by assignee. Comparing the keys directly matches how `.sort()`
+ * with no comparator orders the removes, so every group keeps the one ordering.
+ */
+function sortedByAssignee<Value>(group: Map<string, Value>): Array<[string, Value]> {
+    const rows = [...group];
+
+    return rows.sort(([leftAssignee], [rightAssignee]) => {
+        if (leftAssignee < rightAssignee) return -1;
+
+        return leftAssignee > rightAssignee ? 1 : 0;
+    });
+}
+
 /** The `+`/`~`/`-`/`=` lines for one target, each group sorted by assignee. Empty when nothing shows. */
 function renderBucket(bucket: DiffBucket): string[] {
     const entries: string[] = [];
-    for (const assignee of [...bucket.adds.keys()].sort()) {
-        entries.push(`    + ${withExpiry(assignee, bucket.adds.get(assignee) ?? null)}`);
+    for (const [assignee, expiration] of sortedByAssignee(bucket.adds)) {
+        entries.push(`    + ${withExpiry(assignee, expiration)}`);
     }
-    for (const assignee of [...bucket.updates.keys()].sort()) {
-        const change = bucket.updates.get(assignee)!;
+    for (const [assignee, change] of sortedByAssignee(bucket.updates)) {
         entries.push(`    ~ ${withTransition(assignee, change.previous, change.next)}`);
     }
     for (const assignee of [...bucket.removes].sort()) entries.push(`    - ${assignee}`);
-    for (const assignee of [...bucket.unchanged.keys()].sort()) {
-        entries.push(`    = ${withExpiry(assignee, bucket.unchanged.get(assignee) ?? null)}`);
+    for (const [assignee, expiration] of sortedByAssignee(bucket.unchanged)) {
+        entries.push(`    = ${withExpiry(assignee, expiration)}`);
     }
     return entries;
 }
