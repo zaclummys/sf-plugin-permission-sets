@@ -14,7 +14,6 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 ## Table of contents
 
 - [Why](#why)
-- [Inspiration & equivalents](#inspiration--equivalents)
 - [Install](#install)
 - [Org permissions](#org-permissions)
 - [Quick start](#quick-start)
@@ -44,15 +43,6 @@ This plugin makes the desired state **declarative and reviewable**:
 - ✅ **Flexible at the edges:** pick your file layout (by permission set or by user) and your sync mode.
 - ✅ **GitOps for access, the SFDX way:** assignments live in source and ship through the same git and CI pipeline as your metadata, instead of being clicked into Setup by hand.
 - ✅ **Fewer hands in Setup for higher environments:** because access is applied from git through CI, fewer people need direct Setup access in UAT and production, and every change is a reviewed pull request with a git audit trail.
-
-## Inspiration & equivalents
-
-This plugin's command surface borrows ideas from tools you already know:
-
-- [Terraform](https://developer.hashicorp.com/terraform/docs)
-- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/)
-- [AWS SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/)
-- [Salesforce CLI](https://developer.salesforce.com/docs/atlas.en-us.sfdx_cli_reference.meta/sfdx_cli_reference/cli_reference.htm)
 
 ## Install
 
