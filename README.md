@@ -25,6 +25,7 @@ Stop clicking through Setup to grant access. Commit a YAML file, open a PR, let 
 - [Inspiration & equivalents](#inspiration--equivalents)
 - [Versioning](#versioning)
 - [Architecture](#architecture)
+- [Development](#development)
 
 ---
 
@@ -532,6 +533,29 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `report` | Format a diff as a plan. |
 
 Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
+
+## Development
+
+```bash
+npm ci
+npm run build   # compile and lint
+npm test        # compile, then run the suite
+```
+
+The suite is black-box: every spec spawns the real `sf ps ...` binary. Install the Salesforce CLI first (`npm install -g @salesforce/cli`). The test run links this plugin into `sf` before the first spec and unlinks it at the end.
+
+### Test environment
+
+Tests take their parameters from the environment, never from a committed file. Copy the template and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Required | What it is |
+| --- | --- | --- |
+| `PS_TARGET_ORG` | yes | Username or alias of an already-authenticated org. The `plan`, `apply`, and `export` specs run against it. |
+
 
 ## License
 

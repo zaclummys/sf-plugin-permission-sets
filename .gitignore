@@ -53,5 +53,6 @@ scratchpad/
 /permissions/
 
 
-# all env files
+# all env files, except the committed template that documents them
 .env*
+!.env.example
