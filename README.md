@@ -365,7 +365,7 @@ A requested `--user` that has no matching assignments (a typo, or a user who gen
 
 ## GitHub Actions
 
-Two dead-simple workflows: check pull requests to main with no org, then apply on merge.
+Three small workflows that build on each other: check pull requests with no org at all, validate the same files against the real org, then apply on merge.
 
 **1. Check pull requests to main** (no org, no secrets):
 
@@ -396,7 +396,41 @@ jobs:
         run: sf ps check --file "permissions/*.yml"
 ```
 
-**2. Apply on merge to main** (needs org auth):
+**2. Validate pull requests against the org** (needs org auth):
+
+```yaml
+# .github/workflows/permissions-validate.yml
+name: permissions-validate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "permissions/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Install the plugin
+        run: sf plugins install sf-plugin-permission-sets
+
+      - name: Log in to the org
+        run: echo '${{ secrets.SFDX_AUTH_URL }}' | sf org login sfdx-url --sfdx-url-stdin --alias prod
+
+      - name: Validate the permission files
+        run: sf ps validate --file "permissions/*.yml" --target-org prod
+```
+
+**3. Apply on merge to main** (needs org auth):
 
 ```yaml
 # .github/workflows/permissions-apply.yml
@@ -428,9 +462,9 @@ jobs:
         run: sf ps apply --file "permissions/*.yml" --target-org prod --mode sync --no-prompt
 ```
 
-Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SFDX_AUTH_URL`.
+Workflows 2 and 3 share one secret. Get the auth URL once with `sf org display --verbose --target-org prod`, copy the `Sfdx Auth Url` value, and save it as a repository secret named `SFDX_AUTH_URL`.
 
-Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.yml" --target-org prod` step (it needs the same org auth) to the check workflow.
+Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.yml" --target-org prod` step to workflow 2, right after the login step, so reviewers see the change set that `apply` will carry out on merge.
 
 ## Inspiration & equivalents
 
