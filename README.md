@@ -1,6 +1,6 @@
 # sf-plugin-permission-sets
 
-[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.txt)
+[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.md)
 
 > Declarative, GitOps-style management of **permission set assignments** for Salesforce orgs.
 > Define who gets what in version-controlled YAML. The plugin reconciles your org to match it: `plan` then `apply`, just like Terraform.
@@ -61,22 +61,22 @@ Requires Salesforce CLI (`sf`) and Node.js 20+.
 
 ```bash
 # 1. Bootstrap YAML from an existing org (so you don't start from scratch)
-sf ps export --target-org dev --output-file permissions.yml
+sf ps export --target-org dev --output-file permissions/dev.yml
 
 # 2. Edit the files, commit, open a PR. Check them, no org needed:
-sf ps check --file "./permissions/*.yml"
+sf ps check --file "permissions/*.yml"
 
 # 3. Validate against a real org (do the users/permission sets exist?)
-sf ps validate --file "./permissions/*.yml" --target-org dev
+sf ps validate --file "permissions/*.yml" --target-org dev
 
 # 4. See what would change
-sf ps plan --file "./permissions/*.yml" --target-org dev
+sf ps plan --file "permissions/*.yml" --target-org dev
 
 # 5. Apply it (additive by default, only adds)
-sf ps apply --file "./permissions/*.yml" --target-org dev
+sf ps apply --file "permissions/*.yml" --target-org dev
 
 # 6. Full reconcile, including removals (opt-in)
-sf ps apply --file "./permissions/*.yml" --target-org prod --mode sync
+sf ps apply --file "permissions/*.yml" --target-org prod --mode sync
 ```
 
 ## Permission files
@@ -514,7 +514,7 @@ gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
-- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`). Each is a class built from its dependencies and inputs, with a parameterless `run()` that turns the core into a command's behavior. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
+- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`), plus `resolution`, which the org-facing ones share. Each is a class whose constructor takes only its dependencies (the org client, a confirmation callback), while the per-invocation inputs are `run()` parameters, so one instance serves any number of runs. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
