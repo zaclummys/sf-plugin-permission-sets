@@ -2,10 +2,6 @@ import { execa } from 'execa';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-// Imported for its side effect: it loads .env and rejects a missing PS_TARGET_ORG here,
-// before the plugin is linked and any spec runs, rather than once per spec.
-import './env.js';
-
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 function sf(args) {
