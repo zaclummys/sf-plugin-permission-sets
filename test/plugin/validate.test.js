@@ -2,13 +2,7 @@ import { describe, it } from 'vitest';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 import { tempDir } from '../helpers/temp-dir.js';
-
-const valid = 'test/fixtures/valid.yml';
-const schemaError = 'test/fixtures/schema-error.yml';
-const malformed = 'test/fixtures/malformed.yml';
-// A target org that resolves nowhere, so this fails identically on any machine
-// without touching the network or a developer's default org.
-const noOrg = 'no-such-org-alias-xyz';
+import { validPath, schemaErrorPath, malformedPath, noOrg } from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the input every resolution case validates back. */
 async function writeOrgSnapshot(expect) {
@@ -23,7 +17,7 @@ async function writeOrgSnapshot(expect) {
 
 describe('sf ps validate', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'validate', '-f', valid, '--target-org', noOrg]);
+        const { stderr, exitCode } = await runPs(['ps', 'validate', '-f', validPath, '--target-org', noOrg]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('No authorization information found');
@@ -76,7 +70,7 @@ describe('sf ps validate', () => {
             'ps',
             'validate',
             '-f',
-            valid,
+            validPath,
             '--target-org',
             targetOrg,
         ]);
@@ -102,7 +96,7 @@ describe('sf ps validate', () => {
             '--target-org',
             targetOrg,
             '-f',
-            schemaError,
+            schemaErrorPath,
         ]);
 
         expect(exitCode).toBe(1);
@@ -111,7 +105,7 @@ describe('sf ps validate', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', malformed]);
+        const { stdout, exitCode } = await runPs(['ps', 'validate', '--target-org', targetOrg, '-f', malformedPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');

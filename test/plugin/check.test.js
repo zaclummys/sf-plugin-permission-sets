@@ -1,28 +1,24 @@
 import { describe, it } from 'vitest';
 import { runPs, parseJson } from '../helpers/run-plugin.js';
-
-const valid = 'test/fixtures/valid.yml';
-const warnings = 'test/fixtures/warnings.yml';
-const schemaError = 'test/fixtures/schema-error.yml';
-const malformed = 'test/fixtures/malformed.yml';
+import { validPath, warningsPath, schemaErrorPath, malformedPath } from '../fixtures/index.js';
 
 describe('sf ps check', () => {
     it('passes a valid file with exit 0', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', valid]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', validPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 0 warnings.');
     });
 
     it('reports warnings but exits 0', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warningsPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 2 warnings.');
     });
 
     it('names the duplicate target it warns about', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warningsPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('warning:');
@@ -30,14 +26,14 @@ describe('sf ps check', () => {
     });
 
     it('names the empty scope list it warns about', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warningsPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('permissionSetGroups is empty');
     });
 
     it('turns warnings into a failure under --strict', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs(['ps', 'check', '-f', warnings, '--strict']);
+        const { stdout, stderr, exitCode } = await runPs(['ps', 'check', '-f', warningsPath, '--strict']);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('0 errors, 2 warnings.');
@@ -45,14 +41,14 @@ describe('sf ps check', () => {
     });
 
     it('leaves a clean file passing under --strict', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', valid, '--strict']);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', validPath, '--strict']);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 0 warnings.');
     });
 
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPs(['ps', 'check', '-f', schemaError]);
+        const { stdout, stderr, exitCode } = await runPs(['ps', 'check', '-f', schemaErrorPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
@@ -60,7 +56,7 @@ describe('sf ps check', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', malformed]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', malformedPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
@@ -74,14 +70,14 @@ describe('sf ps check', () => {
     });
 
     it('aggregates findings across multiple -f files', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', valid, '-f', warnings]);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', validPath, '-f', warningsPath]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('0 errors, 2 warnings.');
     });
 
     it('emits a valid --json envelope on success', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings, '--json']);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warningsPath, '--json']);
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
@@ -91,14 +87,14 @@ describe('sf ps check', () => {
     });
 
     it('keeps stdout pure JSON when --json is passed', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warnings, '--json']);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', warningsPath, '--json']);
 
         expect(exitCode).toBe(0);
         expect(stdout).not.toContain('warning:');
     });
 
     it('exits 1 but still emits valid --json on failure', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', schemaError, '--json']);
+        const { stdout, exitCode } = await runPs(['ps', 'check', '-f', schemaErrorPath, '--json']);
 
         expect(exitCode).toBe(1);
         const result = parseJson(stdout);

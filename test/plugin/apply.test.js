@@ -2,20 +2,11 @@ import { describe, it } from 'vitest';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 import { tempDir } from '../helpers/temp-dir.js';
-
-const valid = 'test/fixtures/valid.yml';
-const schemaError = 'test/fixtures/schema-error.yml';
-const malformed = 'test/fixtures/malformed.yml';
-// Declares one of the org's own assignments under a different user, so a destructive
-// run has exactly one row to remove. See the file for what the org must hold.
-const undeclared = 'test/fixtures/undeclared-assignment.yml';
-// A target org that resolves nowhere, so these fail identically on any machine
-// without touching the network or a developer's default org.
-const noOrg = 'no-such-org-alias-xyz';
+import { validPath, schemaErrorPath, malformedPath, undeclaredPath, noOrg } from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'apply', '-f', valid, '--target-org', noOrg, '--mode', 'bogus']);
+        const { stderr, exitCode } = await runPs(['ps', 'apply', '-f', validPath, '--target-org', noOrg, '--mode', 'bogus']);
 
         expect(exitCode).toBe(1);
         expect(stderr).toContain('additive, destructive, sync');
@@ -26,7 +17,7 @@ describe('sf ps apply', () => {
             'ps',
             'apply',
             '-f',
-            valid,
+            validPath,
             '--target-org',
             noOrg,
             '--max-deletes=-1',
@@ -116,7 +107,7 @@ describe('sf ps apply', () => {
             '--target-org',
             targetOrg,
             '-f',
-            undeclared,
+            undeclaredPath,
             '--mode',
             'destructive',
             '--max-deletes',
@@ -137,7 +128,7 @@ describe('sf ps apply', () => {
             '--target-org',
             targetOrg,
             '-f',
-            undeclared,
+            undeclaredPath,
             '--mode',
             'destructive',
             '--max-deletes',
@@ -158,7 +149,7 @@ describe('sf ps apply', () => {
             '--target-org',
             targetOrg,
             '-f',
-            undeclared,
+            undeclaredPath,
             '--mode',
             'destructive',
             '--json',
@@ -181,7 +172,7 @@ describe('sf ps apply', () => {
             '--target-org',
             targetOrg,
             '-f',
-            schemaError,
+            schemaErrorPath,
             '--dry-run',
         ]);
 
@@ -197,7 +188,7 @@ describe('sf ps apply', () => {
             '--target-org',
             targetOrg,
             '-f',
-            malformed,
+            malformedPath,
             '--dry-run',
         ]);
 

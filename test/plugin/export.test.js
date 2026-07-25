@@ -4,11 +4,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 import { tempDir } from '../helpers/temp-dir.js';
-import { declaredUser } from '../fixtures/org.js';
-
-// A target org that resolves nowhere, so this fails identically on any machine
-// without touching the network or a developer's default org.
-const noOrg = 'no-such-org-alias-xyz';
+import { declaredUser, noOrg } from '../fixtures/index.js';
 
 /** A uniquely-named output file per test, so the concurrent cases never write over each other. */
 async function tempOutputFile() {

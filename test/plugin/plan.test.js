@@ -2,17 +2,16 @@ import { describe, it } from 'vitest';
 import path from 'node:path';
 import { runPs, parseJson, targetOrg } from '../helpers/run-plugin.js';
 import { tempDir } from '../helpers/temp-dir.js';
-import { declaredPermissionSet, undeclaredHolder, undeclaredPermissionSet } from '../fixtures/org.js';
-
-const valid = 'test/fixtures/valid.yml';
-const schemaError = 'test/fixtures/schema-error.yml';
-const malformed = 'test/fixtures/malformed.yml';
-// Declares one of the org's own assignments under a different user: one addition for the
-// declared user, one removal for the user that really holds it.
-const undeclared = 'test/fixtures/undeclared-assignment.yml';
-// A target org that resolves nowhere, so this fails identically on any machine
-// without touching the network or a developer's default org.
-const noOrg = 'no-such-org-alias-xyz';
+import {
+    validPath,
+    schemaErrorPath,
+    malformedPath,
+    undeclaredPath,
+    noOrg,
+    declaredPermissionSet,
+    undeclaredHolder,
+    undeclaredPermissionSet,
+} from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the starting point for an empty-diff plan. */
 async function writeOrgSnapshot(expect) {
@@ -27,7 +26,7 @@ async function writeOrgSnapshot(expect) {
 
 describe('sf ps plan', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'plan', '-f', valid, '--target-org', noOrg]);
+        const { stderr, exitCode } = await runPs(['ps', 'plan', '-f', validPath, '--target-org', noOrg]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('No authorization information found');
@@ -98,7 +97,7 @@ describe('sf ps plan', () => {
     });
 
     it('counts the assignments an additive run would add', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclared, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclaredPath, '--target-org', targetOrg]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Plan: 1 to add, 0 to update. 1 users affected.');
@@ -109,7 +108,7 @@ describe('sf ps plan', () => {
             'ps',
             'plan',
             '-f',
-            undeclared,
+            undeclaredPath,
             '--target-org',
             targetOrg,
             '--mode',
@@ -125,7 +124,7 @@ describe('sf ps plan', () => {
             'ps',
             'plan',
             '-f',
-            undeclared,
+            undeclaredPath,
             '--target-org',
             targetOrg,
             '--mode',
@@ -138,7 +137,7 @@ describe('sf ps plan', () => {
     });
 
     it('reports undeclared assignments as drift in additive mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclared, '--target-org', targetOrg]);
+        const { stdout, exitCode } = await runPs(['ps', 'plan', '-f', undeclaredPath, '--target-org', targetOrg]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Drift: 1 undeclared assignment(s) not removed in additive mode.');
@@ -149,7 +148,7 @@ describe('sf ps plan', () => {
             'ps',
             'plan',
             '-f',
-            undeclared,
+            undeclaredPath,
             '--target-org',
             targetOrg,
             '--mode',
@@ -160,7 +159,7 @@ describe('sf ps plan', () => {
         // The org is named by whatever PS_TARGET_ORG resolves to, so assert the parts the
         // command builds itself.
         expect(stdout).toContain('ps apply');
-        expect(stdout).toContain(`-f "${undeclared}" --mode sync`);
+        expect(stdout).toContain(`-f "${undeclaredPath}" --mode sync`);
     });
 
     it('returns counts, drift and the full diff in the --json envelope', async ({ expect }) => {
@@ -168,7 +167,7 @@ describe('sf ps plan', () => {
             'ps',
             'plan',
             '-f',
-            undeclared,
+            undeclaredPath,
             '--target-org',
             targetOrg,
             '--mode',
@@ -191,7 +190,7 @@ describe('sf ps plan', () => {
             'ps',
             'plan',
             '-f',
-            undeclared,
+            undeclaredPath,
             '--target-org',
             targetOrg,
             '--json',
@@ -210,7 +209,7 @@ describe('sf ps plan', () => {
             '--target-org',
             targetOrg,
             '-f',
-            schemaError,
+            schemaErrorPath,
         ]);
 
         expect(exitCode).toBe(1);
@@ -219,7 +218,7 @@ describe('sf ps plan', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '--target-org', targetOrg, '-f', malformed]);
+        const { stdout, exitCode } = await runPs(['ps', 'plan', '--target-org', targetOrg, '-f', malformedPath]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
