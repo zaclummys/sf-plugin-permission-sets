@@ -5,15 +5,12 @@ import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
 import { declaredUser, noOrg } from '../fixtures/index.js';
 
-/** Where a test points `--output-file`, fresh per call. */
-const tempOutputFile = () => tempFile('ps-export-', 'export.yml');
-
 // Real-org tests: drive `sf ps export` against the org named by PS_TARGET_ORG, which the
 // caller always provides (a local logged-in org, or one a CI step authenticates). export is
 // read-only (it only queries the org), so this never changes org state.
 describe('sf ps export', () => {
     it('returns the exported counts in the --json envelope', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'export',
@@ -31,7 +28,7 @@ describe('sf ps export', () => {
     });
 
     it('writes a user-keyed document to --output-file', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
             'export',
@@ -49,7 +46,7 @@ describe('sf ps export', () => {
     // The whole point of export is that its output is valid input to the plugin.
     // Re-checking it without an org proves the round-trip without asserting on org data.
     it('writes a file that ps check accepts (round-trip)', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const exported = await runPsTargetOrg(['ps', 'export', '--output-file', file]);
         expect(exported.exitCode).toBe(0);
 
@@ -60,7 +57,7 @@ describe('sf ps export', () => {
     });
 
     it('scopes the file to the requested --kind only', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const { exitCode } = await runPsTargetOrg([
             'ps',
             'export',
@@ -96,7 +93,7 @@ describe('sf ps export', () => {
     });
 
     it('emits the same document to stdout as it writes to a file', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const toFile = await runPsTargetOrg(['ps', 'export', '--output-file', file]);
         const toStdout = await runPsTargetOrg(['ps', 'export']);
 
@@ -140,7 +137,7 @@ describe('sf ps export', () => {
     });
 
     it('scopes the file to a requested --user that matches', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const { exitCode } = await runPsTargetOrg([
             'ps',
             'export',
@@ -157,7 +154,7 @@ describe('sf ps export', () => {
     });
 
     it('warns and continues when a requested --user matches nothing', async ({ expect }) => {
-        const file = await tempOutputFile();
+        const file = await tempFile('ps-export-', 'export.yml');
         const missing = 'no-such-user@nowhere.invalid';
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
