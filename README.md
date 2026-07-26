@@ -555,6 +555,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | --- | --- |
 | `model` | Shared domain types (assignment, org). |
 | `username`, `target-name` | The identifiers, owning the org's case-insensitive comparison so no caller has to remember it. |
+| `expiration` | A grant's expiration as an instant, owning the comparison (to the second) and the one canonical UTC form everything written comes back in. |
 | `finding` | The finding type and code vocabulary, plus the constructors that raise each one. `Findings` is the collection, and it answers everything asked of a run's findings: the counts, the merge, the rendering, and whether they block the run under `--strict`. |
 | `outcome` | The per-record result of one add, update, or remove. `Outcomes` is the collection, answering what the org accepted per operation and what it rejected. |
 | `schema` | The zod contract for a file, plus validation. |
