@@ -56,7 +56,9 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Code style
 
-> Layering, barrel imports, cyclomatic complexity, function size and shape caps, braces on every block, four-space indentation, no single-letter names, no `=== undefined`, and no `.then()` are enforced by ESLint (`eslint.config.js`), over `src` and `test`. The rest are by convention.
+> Layering, barrel imports, cyclomatic complexity, function size and shape caps, braces on every block, four-space indentation, no single-letter names, no `=== undefined`, no `.then()`, no `console`, no `get` accessor, no member access on a fresh `new` or `await`, the trailing comma rule below, and the blank line after a run of `const` declarations are enforced by ESLint (`eslint.config.js`), over the whole repo. The rest are by convention.
+>
+> Formatting rules come from `@stylistic/eslint-plugin` rather than ESLint core, where they are deprecated and disappear in ESLint 11.
 
 - Every `if`, `else`, and loop body gets braces, and the body starts on the line after the opening brace: no `if (x) return`, no `if (x) { return }` folded onto one line. `} else {` stays on a single line.
 - Indentation is four spaces, matching `.editorconfig`.
@@ -70,6 +72,7 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 - Don't export a symbol unless another file imports it.
 - Prefer two loops each doing one thing over one loop doing two things.
 - An array literal built from more than one element (values or spreads) goes multiline, one element per line with a trailing comma: `[\n    ...a,\n    ...b,\n]` rather than `[...a, ...b]`. Exceptions that read as a single logical unit stay inline: enum-style literal lists (`options: ['additive', 'destructive', 'sync']`) and tuple rows of a lookup table.
+- The trailing comma belongs to a wrapped list of two or more, so a list of one is never wrapped in the first place: `f(oneArgument)` on a single line, not `f(\n    oneArgument,\n)`. ESLint gets there from the other side, by forbidding the line break rather than the comma: `comma-dangle` has no count threshold, so `array-bracket-newline` and `object-curly-newline` keep the wrap from existing. A parameter or argument list is the exception, because wrapping one long parameter is what keeps a signature readable: there the comma is allowed rather than required, and dropping it on a list of one is a review call.
 - Avoid member access on a fresh expression: bind `new X()`, `await f()`, or a plain call `f(...)` to a variable before reading a property or calling a method on it. Prefer `const counts = countFindings(x); if (counts.errors > 0)` over `if (countFindings(x).errors > 0)`. (Fluent library chains like `z.string().min(1)` are exempt.)
 
 ## Testing
@@ -81,7 +84,7 @@ Scope and shape
 - Black-box the plugin: drive `sf ps ...` and assert only on observable output (stdout, stderr, exit code, files written). Never import `src/` into a test or assert on internal structure: tests coupled to internals fail on every refactor, and those false alarms train us to ignore red builds.
 - One behavior per test, written as arrange, act, assert. A failure should point at exactly one cause; when a test asserts five things the first failure masks the rest.
 - Name the test after the behavior it asserts (`fails cleanly when the org cannot be resolved`), not after the function or flag it touches. CI shows the name, not the body.
-- No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs use `it.each` so each case is named and reported on its own, and keep known gaps visible with `it.todo` instead of a comment.
+- No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs use `it.each` so each case is named and reported on its own, and keep known gaps visible with `it.todo` instead of a comment. ESLint enforces this over `test/**/*.test.js`; helpers elsewhere under `test/` are ordinary code and exempt.
 - Spell out the state a test depends on instead of growing a shared fixture. Fixtures under `test/fixtures/` stay minimal and single-purpose (one valid file, one schema error, one malformed file), and anything a test needs to be specific about it builds itself.
 - Prefer static data, files, and values in a fixture over state derived at run time. Naming users and targets literally makes the expected diff known up front, which turns a loose assertion (`/Plan: [1-9]\d* to add/`) into an exact one (`Plan: 1 to add, 0 to update. 1 users affected.`). Derive from the org only where the derivation is the behavior under test, as in the export round-trips, and keep org-specific values in `test/fixtures/org.js` so pointing the suite at another org stays a single edit.
 - Fix bugs test-first: write the failing spec that reproduces the report, then the fix. Otherwise there is no proof the test detects the bug.

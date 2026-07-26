@@ -11,7 +11,7 @@ function sf(args) {
         ...process.env,
         NODE_ENV: 'production',
         SF_AUTOUPDATE_DISABLE: 'true',
-        NO_COLOR: '1'
+        NO_COLOR: '1',
     };
 
     return execa('sf', args, { cwd: projectRoot, reject: false, env });

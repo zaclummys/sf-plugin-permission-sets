@@ -27,21 +27,20 @@ const userEntrySchema = z.strictObject({
     permissionSetLicenses: plainList.optional(),
 });
 
-const fileSchema = z.strictObject({
-    users: z.record(z.string().min(1), userEntrySchema),
-});
+const fileSchema = z.strictObject({ users: z.record(z.string().min(1), userEntrySchema) });
 
 export type FileShape = z.infer<typeof fileSchema>;
 
 /** Validate a parsed object against the file contract, turning issues into findings. */
 export function validateFile(data: unknown, file: string): { data?: FileShape; findings: Finding[] } {
     const parsed = fileSchema.safeParse(data);
+
     if (parsed.success) {
         return { data: parsed.data, findings: [] };
     }
-    return {
-        findings: parsed.error.issues.map((issue) =>
-            schemaError(issue.path.join('.') || '(root)', issue.message, file)
-        ),
-    };
+    const findings = parsed.error.issues.map((issue) =>
+        schemaError(issue.path.join('.') || '(root)', issue.message, file)
+    );
+
+    return { findings };
 }

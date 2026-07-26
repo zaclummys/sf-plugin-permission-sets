@@ -44,6 +44,7 @@ describe('sf ps check', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.users).toBe(1);
     });
 
@@ -52,6 +53,7 @@ describe('sf ps check', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.assignments).toBe(1);
     });
 
@@ -111,6 +113,7 @@ describe('sf ps check', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.files).toBe(1);
         expect(result.users).toBe(1);
         expect(result.findings).toHaveLength(2);
@@ -128,6 +131,7 @@ describe('sf ps check', () => {
 
         expect(exitCode).toBe(1);
         const result = parseJson(stdout);
+
         expect(result.findings.some((finding) => finding.code === 'SCHEMA')).toBe(true);
     });
 

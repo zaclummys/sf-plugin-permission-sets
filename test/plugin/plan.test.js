@@ -155,6 +155,7 @@ describe('sf ps plan', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.counts.toAdd).toBe(1);
         expect(result.counts.toUpdate).toBe(0);
         expect(result.counts.toRemove).toBe(1);

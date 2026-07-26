@@ -61,8 +61,10 @@ describe('sf ps apply', () => {
             '--dry-run',
             '--json',
         ]);
+
         expect(applied.exitCode).toBe(0);
         const result = parseJson(applied.stdout);
+
         expect(result.status).toBe('dry-run');
         expect(result.added + result.updated + result.removed).toBe(0);
     });
@@ -79,8 +81,10 @@ describe('sf ps apply', () => {
             'sync',
             '--json',
         ]);
+
         expect(applied.exitCode).toBe(0);
         const result = parseJson(applied.stdout);
+
         expect(result.status).toBe('applied');
         expect(result.added + result.updated + result.removed).toBe(0);
         expect(result.failures).toBe(0);
@@ -106,6 +110,7 @@ describe('sf ps apply', () => {
 
     it('leaves the org unchanged when the --max-deletes guard trips', async ({ expect }) => {
         const before = await runPsTargetOrg(['ps', 'export']);
+
         expect(before.exitCode).toBe(0);
 
         const guarded = await runPsTargetOrg([
@@ -118,11 +123,13 @@ describe('sf ps apply', () => {
             '--max-deletes',
             '0',
         ]);
+
         // Assert the guard is what stopped the run, so a file that failed to load earlier
         // cannot make this pass for the wrong reason.
         expect(guarded.stderr).toContain('over the --max-deletes limit of 0');
 
         const after = await runPsTargetOrg(['ps', 'export']);
+
         expect(after.stdout).toBe(before.stdout);
     });
 
@@ -139,6 +146,7 @@ describe('sf ps apply', () => {
 
         expect(exitCode).toBe(1);
         const error = JSON.parse(stdout);
+
         expect(error.name).toBe('PromptInJsonError');
     });
 

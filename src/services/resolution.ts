@@ -27,12 +27,13 @@ export class Resolution {
     public constructor(
         public readonly findings: Findings,
         private readonly userIds: Map<string, string>,
-        private readonly targetIds: Record<Kind, Map<string, string>>
+        private readonly targetIds: Record<Kind, Map<string, string>>,
     ) {}
 
     /** Every target that resolved, as the managed set to compare the org's state against. */
     public managedTargets(): TargetRef[] {
         const refs: TargetRef[] = [];
+
         for (const kind of kinds) {
             for (const id of this.targetIds[kind].values()) {
                 refs.push({ kind, id });
@@ -68,6 +69,7 @@ export class ResolutionService {
                 }
 
                 const found = await this.findTargetsOfKind(kind, targets);
+
                 return { kind, targets, found };
             })
         );
@@ -78,17 +80,19 @@ export class ResolutionService {
         ]);
 
         const findings: Finding[] = [...evaluateUsers(usernames, foundUsers)];
+
         for (const { kind, targets, found } of perKind) {
             findings.push(
                 ...evaluateTargets(
                     kind,
                     targets,
-                    found.map((target) => target.name)
+                    found.map((target) => target.name),
                 )
             );
         }
 
         const targetIds = {} as Record<Kind, Map<string, string>>;
+
         for (const { kind, found } of perKind) {
             targetIds[kind] = indexTargetsById(found);
         }

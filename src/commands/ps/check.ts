@@ -26,9 +26,7 @@ export default class Check extends SfCommand<PsCheckResult> {
             required: true,
             multiple: true,
         }),
-        strict: Flags.boolean({
-            summary: messages.getMessage('flags.strict.summary'),
-        }),
+        strict: Flags.boolean({ summary: messages.getMessage('flags.strict.summary') }),
     };
 
     public async run(): Promise<PsCheckResult> {

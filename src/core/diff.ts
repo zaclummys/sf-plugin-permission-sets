@@ -12,7 +12,7 @@ export class ScopedChange {
         public readonly additions: DesiredAssignment[],
         public readonly updates: AssignmentUpdate[],
         public readonly removals: ActualAssignment[],
-        public readonly drift: Drift
+        public readonly drift: Drift,
     ) {}
 
     /** How many assignments this mode would act on. */
@@ -39,7 +39,7 @@ export class Diff {
         public readonly toAdd: DesiredAssignment[],
         public readonly toUpdate: AssignmentUpdate[],
         public readonly toRemove: ActualAssignment[],
-        public readonly unchanged: ActualAssignment[]
+        public readonly unchanged: ActualAssignment[],
     ) {}
 
     /** The diff of a run that aborted before it ever reached the org. */
@@ -85,6 +85,7 @@ function assignmentKey(assignee: Username, kind: Kind, target: TargetName): stri
  */
 export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssignment[]): Diff {
     const actualByKey = new Map<string, ActualAssignment>();
+
     for (const assignment of actual) {
         actualByKey.set(assignmentKey(assignment.assignee, assignment.kind, assignment.target), assignment);
     }
@@ -96,12 +97,14 @@ export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssi
 
     for (const assignment of desired) {
         const key = assignmentKey(assignment.assignee, assignment.kind, assignment.target);
+
         if (desiredKeys.has(key)) {
             continue;
         }
         desiredKeys.add(key);
 
         const existing = actualByKey.get(key);
+
         if (!existing) {
             toAdd.push(assignment);
         } else if (Expiration.same(existing.expiration, assignment.expiration)) {

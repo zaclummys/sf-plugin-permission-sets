@@ -51,12 +51,8 @@ export default class Plan extends SfCommand<PsPlanResult> {
             options: ['additive', 'destructive', 'sync'] as const,
             default: 'additive',
         })(),
-        'show-unchanged': Flags.boolean({
-            summary: messages.getMessage('flags.show-unchanged.summary'),
-        }),
-        strict: Flags.boolean({
-            summary: messages.getMessage('flags.strict.summary'),
-        }),
+        'show-unchanged': Flags.boolean({ summary: messages.getMessage('flags.show-unchanged.summary') }),
+        strict: Flags.boolean({ summary: messages.getMessage('flags.strict.summary') }),
     };
 
     public async run(): Promise<PsPlanResult> {
@@ -200,6 +196,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         }
 
         const skipped = drift.adds + drift.updates;
+
         if (skipped > 0) {
             this.logDriftDestructive(skipped);
         }
@@ -219,6 +216,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
     private applyCommand(orgName: string, files: string[], mode: ReconcileMode): string {
         const fileArgs = files.map((file) => `-f "${file}"`).join(' ');
         const modeArg = mode === 'additive' ? '' : ` --mode ${mode}`;
+
         return `${this.config.bin} ps apply -o ${orgName} ${fileArgs}${modeArg}`;
     }
 

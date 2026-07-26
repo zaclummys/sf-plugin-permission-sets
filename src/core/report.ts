@@ -85,6 +85,7 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
     const showDestructive = options.mode !== 'additive';
 
     const byKind = new Map<Kind, Map<string, TargetBucket>>();
+
     if (showAdditive) {
         for (const assignment of diff.toAdd) {
             const bucket = bucketFor(byKind, assignment.kind, assignment.target);
@@ -136,6 +137,7 @@ function sortedByAssignee<Value>(group: Map<string, Value>): [string, Value][] {
 /** The `+`/`~`/`-`/`=` lines for one target, each group sorted by assignee. Empty when nothing shows. */
 function renderBucket(bucket: DiffBucket): string[] {
     const entries: string[] = [];
+
     for (const [assignee, expiration] of sortedByAssignee(bucket.adds)) {
         entries.push(`    + ${withExpiry(assignee, expiration)}`);
     }
@@ -161,8 +163,10 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
     const byKind = collectBuckets(diff, options);
 
     const lines: string[] = [];
+
     for (const [kind] of kindKeys) {
         const byTarget = byKind.get(kind);
+
         if (!byTarget) {
             continue;
         }
@@ -171,8 +175,10 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
             left.target.toString().localeCompare(right.target.toString())
         );
         const targetLines: string[] = [];
+
         for (const { target, bucket } of sorted) {
             const entries = renderBucket(bucket);
+
             if (entries.length === 0) {
                 continue;
             }

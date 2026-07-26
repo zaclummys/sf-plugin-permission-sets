@@ -9,12 +9,11 @@ export function parseFile(text: string, file: string): { data?: unknown; finding
     const doc = parseDocument(text, { uniqueKeys: true });
 
     if (doc.errors.length > 0) {
-        return {
-            findings: doc.errors.map((err) => yamlError(err.message, file, err.linePos?.[0]?.line)),
-        };
+        return { findings: doc.errors.map((err) => yamlError(err.message, file, err.linePos?.[0]?.line)) };
     }
 
     const data = doc.toJS() as unknown;
+
     if (data == null) {
         return { findings: [emptyFileWarning(file)] };
     }

@@ -42,18 +42,10 @@ export default class Apply extends SfCommand<PsApplyResult> {
             default: 50,
             min: 0,
         }),
-        'dry-run': Flags.boolean({
-            summary: messages.getMessage('flags.dry-run.summary'),
-        }),
-        'show-unchanged': Flags.boolean({
-            summary: messages.getMessage('flags.show-unchanged.summary'),
-        }),
-        'no-prompt': Flags.boolean({
-            summary: messages.getMessage('flags.no-prompt.summary'),
-        }),
-        strict: Flags.boolean({
-            summary: messages.getMessage('flags.strict.summary'),
-        }),
+        'dry-run': Flags.boolean({ summary: messages.getMessage('flags.dry-run.summary') }),
+        'show-unchanged': Flags.boolean({ summary: messages.getMessage('flags.show-unchanged.summary') }),
+        'no-prompt': Flags.boolean({ summary: messages.getMessage('flags.no-prompt.summary') }),
+        strict: Flags.boolean({ summary: messages.getMessage('flags.strict.summary') }),
     };
 
     public async run(): Promise<PsApplyResult> {
@@ -86,7 +78,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         result: ApplyResult,
         mode: ReconcileMode,
         maxDeletes: number,
-        showUnchanged: boolean
+        showUnchanged: boolean,
     ): PsApplyResult {
         for (const line of result.findings.format()) {
             this.log(line);
@@ -132,7 +124,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         summary: PsApplyResult,
         scoped: ScopedChange,
         mode: string,
-        maxDeletes: number
+        maxDeletes: number,
     ): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
@@ -252,7 +244,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
                 removeCount,
                 maxDeletes,
             ]),
-            { exit: 1 }
+            { exit: 1 },
         );
     }
 

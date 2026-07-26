@@ -65,7 +65,7 @@ export function dupTargetWarning(username: Username, target: TargetName, scopeKe
     return warning(
         'DUP_TARGET',
         `${username.toString()}: ${target.toString()} is listed twice under ${scopeKey}`,
-        { file }
+        { file },
     );
 }
 

@@ -45,6 +45,7 @@ describe('sf ps validate', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(Number.isInteger(result.files)).toBe(true);
         expect(Number.isInteger(result.users)).toBe(true);
         expect(Number.isInteger(result.assignments)).toBe(true);

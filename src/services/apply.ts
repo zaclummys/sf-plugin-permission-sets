@@ -53,7 +53,7 @@ function invalidResult(files: string[], findings: Findings): ApplyResult {
 export class ApplyService {
     public constructor(
         private readonly org: OrgClient,
-        private readonly confirmDeletions: ConfirmDeletions
+        private readonly confirmDeletions: ConfirmDeletions,
     ) {}
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
@@ -86,6 +86,7 @@ export class ApplyService {
 
         if (removals.length > 0) {
             const confirmed = await this.confirmDeletions(removals.length);
+
             if (!confirmed) {
                 return { ...untouched, status: 'declined' };
             }
@@ -99,7 +100,7 @@ export class ApplyService {
     private async executeResolved(
         additions: ResolvedAddition[],
         updates: AssignmentUpdate[],
-        removals: ActualAssignment[]
+        removals: ActualAssignment[],
     ): Promise<Outcomes> {
         const [added, updated, removed] = await Promise.all([
             additions.length > 0 ? this.org.addAssignments(additions) : Promise.resolve<AssignmentOutcome[]>([]),

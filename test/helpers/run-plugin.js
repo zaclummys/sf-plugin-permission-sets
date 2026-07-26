@@ -55,5 +55,6 @@ export async function runPsTargetOrg(args) {
 /** Unwrap the `--json` envelope sf commands print: `{ status, result, warnings }`. */
 export function parseJson(stdout) {
     const parsed = JSON.parse(stdout);
+
     return parsed.result ?? parsed;
 }

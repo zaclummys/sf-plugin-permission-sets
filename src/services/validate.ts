@@ -44,32 +44,37 @@ export class ValidateService {
         const tasks: Promise<Finding[]>[] = [];
 
         const usernames = distinctAssignees(assignments);
+
         if (usernames.length > 0) {
             tasks.push(this.evaluateUserRefs(usernames));
         }
 
         for (const kind of kinds) {
             const targets = distinctTargets(assignments, kind);
+
             if (targets.length > 0) {
                 tasks.push(this.evaluateTargetRefs(kind, targets));
             }
         }
 
         const results = await Promise.all(tasks);
+
         return Findings.of(results.flat());
     }
 
     private async evaluateUserRefs(usernames: Username[]): Promise<Finding[]> {
         const found = await this.org.findUsers(usernames);
+
         return evaluateUsers(usernames, found);
     }
 
     private async evaluateTargetRefs(kind: Kind, targets: TargetName[]): Promise<Finding[]> {
         const found = await this.findTargetsOfKind(kind, targets);
+
         return evaluateTargets(
             kind,
             targets,
-            found.map((target) => target.name)
+            found.map((target) => target.name),
         );
     }
 

@@ -26,6 +26,7 @@ function byText(left: { toString(): string }, right: { toString(): string }): nu
 /** One user's entries for one scope, de-duplicated by target and ordered by name. */
 function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
     const byTarget = new Map<string, { target: TargetName; expiration: Expiration | null }>();
+
     for (const assignment of assignments) {
         if (!byTarget.has(assignment.target.asKey())) {
             byTarget.set(assignment.target.asKey(), { target: assignment.target, expiration: assignment.expiration });

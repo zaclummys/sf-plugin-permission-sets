@@ -21,6 +21,7 @@ describe('sf ps export', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.outputFile).toBe(file);
         expect(Number.isInteger(result.users)).toBe(true);
         // Every exported user holds at least one assignment, so assignments never trails users.
@@ -40,6 +41,7 @@ describe('sf ps export', () => {
         expect(stdout).toContain('Exported');
         const content = await readFile(file, 'utf8');
         const document = parse(content);
+
         expect(document).toHaveProperty('users');
     });
 
@@ -48,6 +50,7 @@ describe('sf ps export', () => {
     it('writes a file that ps check accepts (round-trip)', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const exported = await runPsTargetOrg(['ps', 'export', '--output-file', file]);
+
         expect(exported.exitCode).toBe(0);
 
         const checked = await runPs(['ps', 'check', '--file', file]);
@@ -77,9 +80,11 @@ describe('sf ps export', () => {
         const content = await readFile(file, 'utf8');
         const document = parse(content);
         const entries = Object.values(document.users);
+
         // Guard against a vacuous pass: an org with no rows of this kind proves nothing.
         expect(entries.length).toBeGreaterThan(0);
         const declaredKinds = new Set(entries.flatMap((entry) => Object.keys(entry)));
+
         expect([...declaredKinds]).toEqual(['permissionSets']);
     });
 
@@ -88,6 +93,7 @@ describe('sf ps export', () => {
 
         expect(exitCode).toBe(0);
         const document = parse(stdout);
+
         expect(document).toHaveProperty('users');
     });
 
@@ -106,6 +112,7 @@ describe('sf ps export', () => {
         expect(toFile.exitCode).toBe(0);
         expect(toStdout.exitCode).toBe(0);
         const fileContent = await readFile(file, 'utf8');
+
         // execa strips the trailing newline from stdout, so compare trimmed.
         expect(toStdout.stdout).toBe(fileContent.trimEnd());
     });
@@ -115,6 +122,7 @@ describe('sf ps export', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.outputFile).toBe(null);
         expect(result.content).toContain('users:');
     });
@@ -156,6 +164,7 @@ describe('sf ps export', () => {
         expect(exitCode).toBe(0);
         const content = await readFile(file, 'utf8');
         const scoped = parse(content);
+
         expect(Object.keys(scoped.users)).toEqual([declaredUser]);
     });
 
@@ -173,6 +182,7 @@ describe('sf ps export', () => {
 
         expect(exitCode).toBe(0);
         const result = parseJson(stdout);
+
         expect(result.unmatchedUsers).toEqual([]);
     });
 
@@ -191,6 +201,7 @@ describe('sf ps export', () => {
 
         expect(exitCode).toBe(0);
         const envelope = JSON.parse(stdout);
+
         expect(envelope.result.unmatchedUsers).toContain(missing);
         expect(envelope.result.users).toBe(0);
         expect(envelope.warnings.some((warning) => warning.includes(missing))).toBe(true);

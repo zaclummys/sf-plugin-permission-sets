@@ -9,11 +9,13 @@ import { Finding, Findings, noFilesError } from './finding.js';
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
 function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
     const parsed = parseFile(text, file);
+
     if (!parsed.data) {
         return { assignments: [], findings: parsed.findings };
     }
 
     const validated = validateFile(parsed.data, file);
+
     if (!validated.data) {
         return {
             assignments: [],
@@ -25,6 +27,7 @@ function checkContent(text: string, file: string): { assignments: DesiredAssignm
     }
 
     const normalized = normalize(validated.data, file);
+
     return {
         assignments: normalized.assignments,
         findings: [
@@ -38,6 +41,7 @@ function checkContent(text: string, file: string): { assignments: DesiredAssignm
 /** Expand the globs, read every matched file, and merge into one model by union. */
 export async function loadFiles(patterns: string[]): Promise<LoadResult> {
     const files = await globby(patterns);
+
     if (files.length === 0) {
         return {
             files,
@@ -49,6 +53,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
     const checked = await Promise.all(
         files.map(async (file) => {
             const text = await readFile(file, 'utf8');
+
             return checkContent(text, file);
         })
     );
@@ -61,6 +66,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
 
     for (const assignment of collected) {
         const dedupeKey = `${assignment.assignee.asKey()} ${assignment.kind} ${assignment.target.asKey()}`;
+
         if (seen.has(dedupeKey)) {
             continue;
         }

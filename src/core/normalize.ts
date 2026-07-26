@@ -17,6 +17,7 @@ export const kindKeys: [Kind, ScopeKey][] = [
 /** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
 export function kindForScopeKey(key: ScopeKey): Kind {
     const pair = kindKeys.find(([, scopeKey]) => scopeKey === key);
+
     if (!pair) {
         throw new Error(`Unknown scope key: ${key}`);
     }
@@ -67,10 +68,12 @@ function normalizeUser(
 ): { assignments: DesiredAssignment[]; findings: Finding[] } {
     const assignments: DesiredAssignment[] = [];
     const findings: Finding[] = [];
+
     let scopeCount = 0;
 
     for (const [kind, key] of kindKeys) {
         const list = entry[key];
+
         if (!list) {
             continue;
         }
@@ -81,6 +84,7 @@ function normalizeUser(
 
         scopeCount += 1;
         const scope = normalizeScope(username, kind, key, list, file);
+
         assignments.push(...scope.assignments);
         findings.push(...scope.findings);
     }
@@ -102,6 +106,7 @@ export function normalize(data: FileShape, file: string): { assignments: Desired
 
     for (const [username, entry] of Object.entries(data.users)) {
         const user = normalizeUser(Username.of(username), entry, file);
+
         assignments.push(...user.assignments);
         findings.push(...user.findings);
     }
