@@ -123,23 +123,23 @@ export class Findings {
     }
 
     /** How many findings are error-level. */
-    public get errors(): number {
+    public errors(): number {
         return this.countOf('error');
     }
 
     /** How many findings are warning-level. */
-    public get warnings(): number {
+    public warnings(): number {
         return this.countOf('warning');
     }
 
     /** Whether the run has to abort: an error is fatal whatever the mode. */
-    public get hasErrors(): boolean {
-        return this.errors > 0;
+    public hasErrors(): boolean {
+        return this.items.some((finding) => finding.level === 'error');
     }
 
     /** Whether anything was flagged short of an error, which `--strict` promotes to a failure. */
-    public get hasWarnings(): boolean {
-        return this.warnings > 0;
+    public hasWarnings(): boolean {
+        return this.items.some((finding) => finding.level === 'warning');
     }
 
     /** Both sets in order, so file findings still read before the org's answers. */

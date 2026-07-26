@@ -83,7 +83,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
                 toUpdate: diff.toUpdate.length,
                 toRemove: diff.toRemove.length,
                 unchanged: diff.unchanged.length,
-                usersAffected: scoped.usersAffected,
+                usersAffected: scoped.usersAffected(),
             },
             drift: scoped.drift,
             changes: {
@@ -128,7 +128,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         this.logHeaderTitle();
         this.logHeaderOrg(orgName, orgId, mode);
 
-        if (diff.changeCount === 0) {
+        if (diff.changeCount() === 0) {
             if (showUnchanged && diff.unchanged.length > 0) {
                 this.logBody(formatDiff(diff, { mode, showUnchanged: true }));
             } else {
@@ -140,7 +140,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         this.logBody(formatDiff(diff, { mode, showUnchanged }));
 
-        if (scoped.count === 0) {
+        if (scoped.count() === 0) {
             this.logEmptyNothingToApply(mode);
         } else {
             this.log(this.countsLine(scoped, mode));
@@ -149,7 +149,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         this.reportDrift(scoped.drift);
         this.reportUnchanged(diff.unchanged.length, showUnchanged);
 
-        if (scoped.count > 0) {
+        if (scoped.count() > 0) {
             this.logSummaryNext(this.applyCommand(orgName, files, mode));
         }
     }
@@ -165,21 +165,21 @@ export default class Plan extends SfCommand<PsPlanResult> {
         if (mode === 'destructive') {
             return messages.getMessage('summary.counts.destructive', [
                 scoped.removals.length,
-                scoped.usersAffected,
+                scoped.usersAffected(),
             ]);
         }
         if (mode === 'additive') {
             return messages.getMessage('summary.counts.additive', [
                 scoped.additions.length,
                 scoped.updates.length,
-                scoped.usersAffected,
+                scoped.usersAffected(),
             ]);
         }
         return messages.getMessage('summary.counts.sync', [
             scoped.additions.length,
             scoped.updates.length,
             scoped.removals.length,
-            scoped.usersAffected,
+            scoped.usersAffected(),
         ]);
     }
 

@@ -35,7 +35,7 @@ export class ValidateService {
             files: loaded.files,
             assignments: loaded.assignments,
             findings,
-            failed: findings.hasErrors,
+            failed: findings.hasErrors(),
         };
     }
 

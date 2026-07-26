@@ -39,7 +39,7 @@ export class PlanService {
 
     public async run(files: string[]): Promise<PlanResult> {
         const loaded = await loadFiles(files);
-        if (loaded.findings.hasErrors) {
+        if (loaded.findings.hasErrors()) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
@@ -47,7 +47,7 @@ export class PlanService {
         const resolution = await resolutionService.run(loaded.assignments);
         const findings = loaded.findings.concat(resolution.findings);
 
-        if (findings.hasErrors) {
+        if (findings.hasErrors()) {
             return invalidResult(loaded.files, findings);
         }
 

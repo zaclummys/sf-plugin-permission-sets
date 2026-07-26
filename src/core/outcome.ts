@@ -27,27 +27,27 @@ export class Outcomes {
     }
 
     /** How many additions the org accepted. */
-    public get added(): number {
+    public added(): number {
         return this.acceptedOf('add');
     }
 
     /** How many updates the org accepted. */
-    public get updated(): number {
+    public updated(): number {
         return this.acceptedOf('update');
     }
 
     /** How many removals the org accepted. */
-    public get removed(): number {
+    public removed(): number {
         return this.acceptedOf('remove');
     }
 
     /** Every record the org rejected, so each one gets a line of its own. */
-    public get failures(): AssignmentOutcome[] {
+    public failures(): AssignmentOutcome[] {
         return this.items.filter((outcome) => !outcome.success);
     }
 
     /** Whether the org rejected anything, which is what fails the run. */
-    public get hasFailures(): boolean {
+    public hasFailures(): boolean {
         return this.items.some((outcome) => !outcome.success);
     }
 

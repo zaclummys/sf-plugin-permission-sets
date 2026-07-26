@@ -44,7 +44,7 @@ export default class Check extends SfCommand<PsCheckResult> {
         const assignees = distinctAssignees(result.assignments);
 
         this.log('');
-        this.logSummaryCounts(result.findings.errors, result.findings.warnings);
+        this.logSummaryCounts(result.findings.errors(), result.findings.warnings());
 
         if (result.failed) {
             process.exitCode = 1;

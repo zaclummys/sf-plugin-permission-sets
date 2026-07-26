@@ -15,12 +15,12 @@ export class ScopedChange {
     ) {}
 
     /** How many assignments this mode would act on. */
-    public get count(): number {
+    public count(): number {
         return this.additions.length + this.updates.length + this.removals.length;
     }
 
     /** How many distinct users this mode would touch. */
-    public get usersAffected(): number {
+    public usersAffected(): number {
         const acted = [
             ...this.additions,
             ...this.updates,
@@ -47,7 +47,7 @@ export class Diff {
     }
 
     /** How many assignments differ, whatever the mode would act on. */
-    public get changeCount(): number {
+    public changeCount(): number {
         return this.toAdd.length + this.toUpdate.length + this.toRemove.length;
     }
 

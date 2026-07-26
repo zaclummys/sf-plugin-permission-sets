@@ -25,6 +25,8 @@ A rule that more than one call site has to remember belongs on an object, not in
 
 A collection is where this hides best: two call sites doing the same `filter().length` over the same array is the same missing method, one level up. Reach for the aggregate the moment a second site asks the array a question, and let it own `toJSON()` so the `--json` payload stays the plain array it always was.
 
+Every derived answer is a **method**, never a `get` accessor: `findings.errors()`, not `findings.errors`. A getter reads like a stored field while it actually runs a filter over the whole collection, so the call site cannot see what it costs or that it recomputes on every read. Plain `readonly` fields (`ScopedChange.additions`, `Diff.toAdd`) stay fields, because they are what the object was built with rather than something it works out.
+
 Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because nothing reads them: `level` and `success` both drive the exit code. They carry plain strings because their fields are only ever *displayed*, never compared as identifiers, so a value object would buy nothing.
 
 ## Barrels (`index.ts`)
