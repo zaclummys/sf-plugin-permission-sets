@@ -1,5 +1,6 @@
-import { loadFiles, diffAssignments, Diff, Findings } from '../core/index.js';
+import { diffAssignments, Diff, Findings } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
+import { CheckService } from './check.js';
 import { Resolution, ResolutionService } from './resolution.js';
 
 /** What every plan reports, however it ended, so the caller can set the exit code. */
@@ -35,25 +36,31 @@ function invalidResult(files: string[], findings: Findings): PlanResult {
  * org. This is the apply pipeline stopping before any DML.
  */
 export class PlanService {
-    public constructor(private readonly org: OrgClient) {}
+    public constructor(private readonly org: OrgClient) { }
 
     public async run(files: string[]): Promise<PlanResult> {
-        const loaded = await loadFiles(files);
-        if (loaded.findings.hasErrors()) {
-            return invalidResult(loaded.files, loaded.findings);
+        const checkService = new CheckService();
+        const checked = await checkService.run(files);
+
+        if (checked.findings.hasErrors()) {
+            return invalidResult(checked.files, checked.findings);
         }
 
         const resolutionService = new ResolutionService(this.org);
-        const resolution = await resolutionService.run(loaded.assignments);
-        const findings = loaded.findings.concat(resolution.findings);
+        const resolution = await resolutionService.run(checked.assignments);
+
+        const findings = Findings
+            .empty()
+            .concat(checked.findings)
+            .concat(resolution.findings);
 
         if (findings.hasErrors()) {
-            return invalidResult(loaded.files, findings);
+            return invalidResult(checked.files, findings);
         }
 
         const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
-        const diff = diffAssignments(loaded.assignments, actual);
+        const diff = diffAssignments(checked.assignments, actual);
 
-        return { files: loaded.files, findings, diff, resolution, status: 'planned' };
+        return { files: checked.files, findings, diff, resolution, status: 'planned' };
     }
 }

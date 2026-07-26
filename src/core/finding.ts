@@ -116,7 +116,11 @@ function locationPrefix(finding: Finding): string {
  * that would otherwise have to remember them.
  */
 export class Findings {
-    private constructor(private readonly items: Finding[]) {}
+    private constructor(private readonly items: Finding[]) { }
+
+    public static empty(): Findings {
+        return new Findings([]);
+    }
 
     public static of(items: Finding[]): Findings {
         return new Findings(items);
