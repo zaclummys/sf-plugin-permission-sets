@@ -13,9 +13,13 @@ export default defineConfig([
             // makes the next added line silently fall outside the branch.
             curly: ["error", "all"],
             // The body starts on the line after the opening brace, and `} else {` stays
-            // on one line, so every branch body reads at the same indent. Core formatting
-            // rules ship until ESLint 11, then this moves to @stylistic/brace-style.
+            // on one line, so every branch body reads at the same indent.
             "brace-style": ["error", "1tbs", { allowSingleLine: false }],
+            // Four spaces, matching .editorconfig, so an editor and the linter never
+            // disagree about a line.
+            // brace-style and indent are core formatting rules: they ship until ESLint 11,
+            // then both move to @stylistic.
+            indent: ["error", 4, { SwitchCase: 1 }],
         },
     },
 
