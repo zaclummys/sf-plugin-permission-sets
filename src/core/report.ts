@@ -54,7 +54,9 @@ function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, tar
  */
 function canonicalExpiration(value: string): string {
     const parsed = Date.parse(value);
-    if (Number.isNaN(parsed)) return value;
+    if (Number.isNaN(parsed)) {
+        return value;
+    }
 
     const instant = new Date(parsed);
     return instant.toISOString().replace(/\.\d{3}Z$/, 'Z');
@@ -62,14 +64,18 @@ function canonicalExpiration(value: string): string {
 
 /** An assignee line suffixed with its expiration when there is one. */
 function withExpiry(assignee: string, expiration: string | null): string {
-    if (!expiration) return assignee;
+    if (!expiration) {
+        return assignee;
+    }
 
     return `${assignee}   expires ${canonicalExpiration(expiration)}`;
 }
 
 /** A canonical expiration for display, with `never` standing in for no expiration. */
 function expiryOrNever(expiration: string | null): string {
-    if (!expiration) return 'never';
+    if (!expiration) {
+        return 'never';
+    }
 
     return canonicalExpiration(expiration);
 }
@@ -128,7 +134,9 @@ function sortedByAssignee<Value>(group: Map<string, Value>): [string, Value][] {
     const rows = [...group];
 
     return rows.sort(([leftAssignee], [rightAssignee]) => {
-        if (leftAssignee < rightAssignee) return -1;
+        if (leftAssignee < rightAssignee) {
+            return -1;
+        }
 
         return leftAssignee > rightAssignee ? 1 : 0;
     });
@@ -143,7 +151,9 @@ function renderBucket(bucket: DiffBucket): string[] {
     for (const [assignee, change] of sortedByAssignee(bucket.updates)) {
         entries.push(`    ~ ${withTransition(assignee, change.previous, change.next)}`);
     }
-    for (const assignee of [...bucket.removes].sort()) entries.push(`    - ${assignee}`);
+    for (const assignee of [...bucket.removes].sort()) {
+        entries.push(`    - ${assignee}`);
+    }
     for (const [assignee, expiration] of sortedByAssignee(bucket.unchanged)) {
         entries.push(`    = ${withExpiry(assignee, expiration)}`);
     }
@@ -162,7 +172,9 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
     const lines: string[] = [];
     for (const [kind] of kindKeys) {
         const byTarget = byKind.get(kind);
-        if (!byTarget) continue;
+        if (!byTarget) {
+            continue;
+        }
 
         const sorted = [...byTarget.values()].sort((left, right) =>
             left.target.toString().localeCompare(right.target.toString())
@@ -170,11 +182,15 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
         const targetLines: string[] = [];
         for (const { target, bucket } of sorted) {
             const entries = renderBucket(bucket);
-            if (entries.length === 0) continue;
+            if (entries.length === 0) {
+                continue;
+            }
             targetLines.push(`  ${target.toString()}`, ...entries);
         }
 
-        if (targetLines.length === 0) continue;
+        if (targetLines.length === 0) {
+            continue;
+        }
         lines.push(kindLabels[kind], ...targetLines);
     }
     return lines;

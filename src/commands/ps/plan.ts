@@ -100,7 +100,9 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.reportInvalid(result.findings);
+            if (!this.jsonEnabled()) {
+                this.reportInvalid(result.findings);
+            }
             return summary;
         }
 
@@ -160,8 +162,12 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
     private logBody(body: string[]): void {
         this.log('');
-        for (const line of body) this.log(line);
-        if (body.length > 0) this.log('');
+        for (const line of body) {
+            this.log(line);
+        }
+        if (body.length > 0) {
+            this.log('');
+        }
     }
 
     /** The counts line reports what the mode acts on, so it never contradicts the body above it. */
@@ -189,16 +195,25 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
     /** Drift is already mode-scoped: only additive leaves removes, only destructive leaves adds. */
     private reportDrift(drift: Drift): void {
-        if (drift.removes > 0) this.logDriftAdditive(drift.removes);
+        if (drift.removes > 0) {
+            this.logDriftAdditive(drift.removes);
+        }
 
         const skipped = drift.adds + drift.updates;
-        if (skipped > 0) this.logDriftDestructive(skipped);
+        if (skipped > 0) {
+            this.logDriftDestructive(skipped);
+        }
     }
 
     private reportUnchanged(count: number, showUnchanged: boolean): void {
-        if (count === 0) return;
-        if (showUnchanged) this.logSummaryUnchangedListed(count);
-        else this.logSummaryUnchanged(count);
+        if (count === 0) {
+            return;
+        }
+        if (showUnchanged) {
+            this.logSummaryUnchangedListed(count);
+        } else {
+            this.logSummaryUnchanged(count);
+        }
     }
 
     private applyCommand(orgName: string, files: string[], mode: ReconcileMode): string {
@@ -209,8 +224,11 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
     /** An error and a strict warning both stop the plan, for reasons worth telling apart. */
     private reportInvalid(findings: Findings): void {
-        if (findings.hasErrors()) this.errorInvalid();
-        else this.errorStrict();
+        if (findings.hasErrors()) {
+            this.errorInvalid();
+        } else {
+            this.errorStrict();
+        }
     }
 
     private errorInvalid(): void {

@@ -8,6 +8,15 @@ export default defineConfig([
         files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
         extends: [js.configs.recommended],
         languageOptions: { globals: globals.node },
+        rules: {
+            // Always brace a block statement, even a single-line if: a braceless body
+            // makes the next added line silently fall outside the branch.
+            curly: ["error", "all"],
+            // The body starts on the line after the opening brace, and `} else {` stays
+            // on one line, so every branch body reads at the same indent. Core formatting
+            // rules ship until ESLint 11, then this moves to @stylistic/brace-style.
+            "brace-style": ["error", "1tbs", { allowSingleLine: false }],
+        },
     },
 
     // Typed linting: rules that need the type checker. no-floating-promises and

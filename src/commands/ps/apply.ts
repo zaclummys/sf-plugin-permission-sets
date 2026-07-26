@@ -62,8 +62,12 @@ export default class Apply extends SfCommand<PsApplyResult> {
         const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const confirmDeletions: ConfirmDeletions = async (count) => {
-            if (flags['no-prompt']) return true;
-            if (this.jsonEnabled()) throw messages.createError('error.promptInJson');
+            if (flags['no-prompt']) {
+                return true;
+            }
+            if (this.jsonEnabled()) {
+                throw messages.createError('error.promptInJson');
+            }
             return this.confirmDelete(count);
         };
         const service = new ApplyService(orgClient, confirmDeletions);
@@ -103,7 +107,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.reportInvalid(result.findings);
+            if (!this.jsonEnabled()) {
+                this.reportInvalid(result.findings);
+            }
             return summary;
         }
 
@@ -130,7 +136,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
     ): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.errorMaxDeletes(result.diff.toRemove.length, maxDeletes);
+            if (!this.jsonEnabled()) {
+                this.errorMaxDeletes(result.diff.toRemove.length, maxDeletes);
+            }
             return;
         }
 
@@ -155,14 +163,22 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.outcomes.hasFailures()) {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.errorFailed();
+            if (!this.jsonEnabled()) {
+                this.errorFailed();
+            }
         }
     }
 
     private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
-        if (drift.adds > 0) this.logDriftNote(drift.adds, mode);
-        if (drift.updates > 0) this.logDriftNote(drift.updates, mode);
-        if (drift.removes > 0) this.logDriftNote(drift.removes, mode);
+        if (drift.adds > 0) {
+            this.logDriftNote(drift.adds, mode);
+        }
+        if (drift.updates > 0) {
+            this.logDriftNote(drift.updates, mode);
+        }
+        if (drift.removes > 0) {
+            this.logDriftNote(drift.removes, mode);
+        }
     }
 
     private logSummaryDryRun(toAdd: number, toUpdate: number, toRemove: number): void {
@@ -215,8 +231,11 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
     /** An error and a strict warning both stop the run, for reasons worth telling apart. */
     private reportInvalid(findings: Findings): void {
-        if (findings.hasErrors()) this.errorInvalid();
-        else this.errorStrict();
+        if (findings.hasErrors()) {
+            this.errorInvalid();
+        } else {
+            this.errorStrict();
+        }
     }
 
     private errorInvalid(): void {

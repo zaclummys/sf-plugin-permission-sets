@@ -103,8 +103,12 @@ export function targetAmbiguousError(target: TargetName, label: string): Finding
 
 /** The trailing-space location prefix for a finding: `file:line `, `file `, or empty. */
 function locationPrefix(finding: Finding): string {
-    if (!finding.file) return '';
-    if (!finding.line) return `${finding.file} `;
+    if (!finding.file) {
+        return '';
+    }
+    if (!finding.line) {
+        return `${finding.file} `;
+    }
 
     return `${finding.file}:${finding.line} `;
 }

@@ -15,7 +15,9 @@ function byText(left: { toString(): string }, right: { toString(): string }): nu
     const leftText = left.toString();
     const rightText = right.toString();
 
-    if (leftText === rightText) return 0;
+    if (leftText === rightText) {
+        return 0;
+    }
 
     return leftText < rightText ? -1 : 1;
 }
@@ -32,7 +34,9 @@ function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
     const sorted = [...byTarget.values()].sort((left, right) => byText(left.target, right.target));
 
     return sorted.map(({ target, expiration }) => {
-        if (!expiration) return target.toString();
+        if (!expiration) {
+            return target.toString();
+        }
 
         return { name: target.toString(), expiration };
     });

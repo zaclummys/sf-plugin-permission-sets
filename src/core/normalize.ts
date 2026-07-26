@@ -16,7 +16,9 @@ export const kindKeys: [Kind, ScopeKey][] = [
 /** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
 export function kindForScopeKey(key: ScopeKey): Kind {
     const pair = kindKeys.find(([, scopeKey]) => scopeKey === key);
-    if (!pair) throw new Error(`Unknown scope key: ${key}`);
+    if (!pair) {
+        throw new Error(`Unknown scope key: ${key}`);
+    }
 
     return pair[0];
 }
@@ -25,7 +27,9 @@ type ScopeItem = string | { name: string; expiration: string };
 
 /** A scope item in canonical form: the bare string is a target with no expiration. */
 function scopeItemFields(item: ScopeItem): { target: TargetName; expiration: string | null } {
-    if (typeof item === 'string') return { target: TargetName.of(item), expiration: null };
+    if (typeof item === 'string') {
+        return { target: TargetName.of(item), expiration: null };
+    }
 
     return { target: TargetName.of(item.name), expiration: item.expiration };
 }
@@ -66,7 +70,9 @@ function normalizeUser(
 
     for (const [kind, key] of kindKeys) {
         const list = entry[key];
-        if (!list) continue;
+        if (!list) {
+            continue;
+        }
         if (list.length === 0) {
             findings.push(emptyListWarning(username, key, file));
             continue;

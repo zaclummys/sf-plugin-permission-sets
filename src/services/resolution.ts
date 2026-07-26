@@ -63,7 +63,9 @@ export class ResolutionService {
             usernames.length > 0 ? this.org.findUsers(usernames) : Promise.resolve([]);
         const targetsTask = Promise.all(
             targetsByKind.map(async ({ kind, targets }) => {
-                if (targets.length === 0) return { kind, targets, found: [] as OrgTarget[] };
+                if (targets.length === 0) {
+                    return { kind, targets, found: [] as OrgTarget[] };
+                }
 
                 const found = await this.findTargetsOfKind(kind, targets);
                 return { kind, targets, found };

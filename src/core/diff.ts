@@ -103,7 +103,9 @@ export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssi
 
     for (const assignment of desired) {
         const key = assignmentKey(assignment.assignee, assignment.kind, assignment.target);
-        if (desiredKeys.has(key)) continue;
+        if (desiredKeys.has(key)) {
+            continue;
+        }
         desiredKeys.add(key);
 
         const existing = actualByKey.get(key);

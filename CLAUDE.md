@@ -56,7 +56,9 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Code style
 
-> Layering, barrel imports, cyclomatic complexity, function size and shape caps, no single-letter names, no `=== undefined`, and no `.then()` are enforced by ESLint (`eslint.config.js`). The rest are by convention.
+> Layering, barrel imports, cyclomatic complexity, function size and shape caps, braces on every block, no single-letter names, no `=== undefined`, and no `.then()` are enforced by ESLint (`eslint.config.js`). The rest are by convention.
+
+- Every `if`, `else`, and loop body gets braces, and the body starts on the line after the opening brace: no `if (x) return`, no `if (x) { return }` folded onto one line. `} else {` stays on a single line.
 
 - The complexity and function size/shape caps live in `eslint.config.js`, set just above today's largest functions to block future growth, not as targets: prefer smaller. When a function trips a cap, split it into cohesive helpers (e.g. a `collect*` phase and a `render*`/`report*` phase), or bundle params into an options object, rather than raising the cap. Tighten a cap once the outliers shrink.
 - No single-letter variable names, including arrow-fn params and loop vars: use descriptive names.

@@ -72,9 +72,15 @@ function buildMembershipQuery(
         'Assignee.IsActive = true',
         'PermissionSet.IsOwnedByProfile = false',
     ];
-    if (usernames) clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
-    if (!wantsGroup) clauses.push('PermissionSetGroupId = null');
-    if (!wantsPermissionSet) clauses.push('PermissionSetGroupId != null');
+    if (usernames) {
+        clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
+    }
+    if (!wantsGroup) {
+        clauses.push('PermissionSetGroupId = null');
+    }
+    if (!wantsPermissionSet) {
+        clauses.push('PermissionSetGroupId != null');
+    }
 
     return `
         SELECT
@@ -92,8 +98,12 @@ function buildMembershipQuery(
 /** Full membership SOQL for the current assignments of the given permission set and group ids. */
 function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds: string[]): string {
     const clauses: string[] = [];
-    if (permissionSetIds.length > 0) clauses.push(`PermissionSetId IN(${buildInList(permissionSetIds)})`);
-    if (groupIds.length > 0) clauses.push(`PermissionSetGroupId IN(${buildInList(groupIds)})`);
+    if (permissionSetIds.length > 0) {
+        clauses.push(`PermissionSetId IN(${buildInList(permissionSetIds)})`);
+    }
+    if (groupIds.length > 0) {
+        clauses.push(`PermissionSetGroupId IN(${buildInList(groupIds)})`);
+    }
 
     return `
         SELECT
@@ -111,7 +121,9 @@ function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds: strin
 /** Full license SOQL for the active assignments matching the filter. */
 function buildLicenseQuery(usernames: Username[] | undefined): string {
     const clauses = ['Assignee.IsActive = true'];
-    if (usernames) clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
+    if (usernames) {
+        clauses.push(`Assignee.Username IN(${buildNameList(usernames)})`);
+    }
 
     return `
         SELECT
