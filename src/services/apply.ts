@@ -3,6 +3,7 @@ import {
     AssignmentOutcome,
     AssignmentUpdate,
     Diff,
+    Outcomes,
     ResolvedAddition,
     Findings,
 } from '../core/index.js';
@@ -27,9 +28,8 @@ export type ApplyResult = {
     files: string[];
     findings: Findings;
     diff: Diff;
-    outcomes: AssignmentOutcome[];
+    outcomes: Outcomes;
     status: ApplyStatus;
-    failed: boolean;
 };
 
 /** An aborted-before-any-change result, carrying the findings that explain why. */
@@ -38,9 +38,8 @@ function invalidResult(files: string[], findings: Findings): ApplyResult {
         files,
         findings,
         diff: Diff.empty(),
-        outcomes: [],
+        outcomes: Outcomes.of([]),
         status: 'invalid',
-        failed: true,
     };
 }
 
@@ -68,49 +67,48 @@ export class ApplyService {
         const { mode, maxDeletes, dryRun } = input;
         const { additions, updates, removals } = diff.scopeTo(mode);
 
+        const untouched = {
+            files: planned,
+            findings,
+            diff,
+            outcomes: Outcomes.of([]),
+        };
+
         if (removals.length > maxDeletes) {
-            return {
-                files: planned,
-                findings,
-                diff,
-                outcomes: [],
-                status: 'max-deletes-exceeded',
-                failed: true,
-            };
+            return { ...untouched, status: 'max-deletes-exceeded' };
         }
 
         if (dryRun) {
-            return { files: planned, findings, diff, outcomes: [], status: 'dry-run', failed: false };
+            return { ...untouched, status: 'dry-run' };
         }
 
         if (removals.length > 0) {
             const confirmed = await this.confirmDeletions(removals.length);
             if (!confirmed) {
-                return { files: planned, findings, diff, outcomes: [], status: 'declined', failed: false };
+                return { ...untouched, status: 'declined' };
             }
         }
 
         const outcomes = await this.executeResolved(plan.resolution.resolveAdditions(additions), updates, removals);
-        const failed = outcomes.some((outcome) => !outcome.success);
 
-        return { files: planned, findings, diff, outcomes, status: 'applied', failed };
+        return { files: planned, findings, diff, outcomes, status: 'applied' };
     }
 
     private async executeResolved(
         additions: ResolvedAddition[],
         updates: AssignmentUpdate[],
         removals: ActualAssignment[]
-    ): Promise<AssignmentOutcome[]> {
+    ): Promise<Outcomes> {
         const [added, updated, removed] = await Promise.all([
             additions.length > 0 ? this.org.addAssignments(additions) : Promise.resolve<AssignmentOutcome[]>([]),
             updates.length > 0 ? this.org.updateAssignments(updates) : Promise.resolve<AssignmentOutcome[]>([]),
             removals.length > 0 ? this.org.removeAssignments(removals) : Promise.resolve<AssignmentOutcome[]>([]),
         ]);
 
-        return [
+        return Outcomes.of([
             ...added,
             ...updated,
             ...removed,
-        ];
+        ]);
     }
 }

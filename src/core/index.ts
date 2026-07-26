@@ -4,7 +4,6 @@ export { loadFiles } from './load.js';
 export {
   ActualAssignment,
   AssignmentFilter,
-  AssignmentOutcome,
   AssignmentUpdate,
   DesiredAssignment,
   Kind,
@@ -15,6 +14,7 @@ export {
   TargetRef,
 } from './model.js';
 export { kindForScopeKey } from './normalize.js';
+export { AssignmentOutcome, Outcomes } from './outcome.js';
 export { formatDiff } from './report.js';
 export {
   kinds,

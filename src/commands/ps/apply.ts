@@ -84,20 +84,17 @@ export default class Apply extends SfCommand<PsApplyResult> {
             this.log(line);
         }
 
-        const added = result.outcomes.filter((outcome) => outcome.operation === 'add' && outcome.success).length;
-        const updated = result.outcomes.filter((outcome) => outcome.operation === 'update' && outcome.success).length;
-        const removed = result.outcomes.filter((outcome) => outcome.operation === 'remove' && outcome.success).length;
-        const failures = result.outcomes.filter((outcome) => !outcome.success);
+        const outcomes = result.outcomes;
 
         const summary: PsApplyResult = {
             status: result.status,
             toAdd: result.diff.toAdd.length,
             toUpdate: result.diff.toUpdate.length,
             toRemove: result.diff.toRemove.length,
-            added,
-            updated,
-            removed,
-            failures: failures.length,
+            added: outcomes.added,
+            updated: outcomes.updated,
+            removed: outcomes.removed,
+            failures: outcomes.failures.length,
         };
 
         if (result.status === 'invalid') {
@@ -148,12 +145,11 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
 
         this.logSummaryApplied(summary.added, summary.updated, summary.removed);
-        const failures = result.outcomes.filter((outcome) => !outcome.success);
-        for (const failure of failures) {
+        for (const failure of result.outcomes.failures) {
             this.logFailureLine(failure.operation, failure.assignee, failure.target, failure.message ?? '');
         }
 
-        if (result.failed) {
+        if (result.outcomes.hasFailures) {
             process.exitCode = 1;
             if (!this.jsonEnabled()) this.errorFailed();
         }

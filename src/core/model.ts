@@ -67,20 +67,6 @@ export type ResolvedAddition = DesiredAssignment & {
     targetId: string;
 };
 
-/**
- * The per-record result of one add or remove, for partial-success reporting. A report
- * record rather than a model record: it is only ever displayed, so it carries the names
- * as plain text.
- */
-export type AssignmentOutcome = {
-    assignee: string;
-    kind: Kind;
-    target: string;
-    operation: 'add' | 'update' | 'remove';
-    success: boolean;
-    message?: string;
-};
-
 export type LoadResult = {
     files: string[];
     assignments: DesiredAssignment[];
