@@ -17,6 +17,10 @@ export default defineConfig({
         // plugin into sf so those commands resolve.
         include: ['test/**/*.test.js'],
         testTimeout: 60_000,
+        // Cleanup spawns `sf` too (test/helpers/org-state.js deletes what a spec created),
+        // so the hooks need the same room as the specs. The 10s default expires mid-delete
+        // under load and leaves the org holding a permission set nobody owns.
+        hookTimeout: 60_000,
         globalSetup: ['./test/global-setup.js'],
         // Run every test concurrently, not just files in parallel. Each test is an
         // independent `sf` subprocess (the real-org ones write their own temp files), so there is

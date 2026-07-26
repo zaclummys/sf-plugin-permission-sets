@@ -1,18 +1,30 @@
-import { describe, it } from 'vitest';
-import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
+import {
+    describe, it, 
+} from 'vitest';
+import {
+    runPs, runPsTargetOrg, parseJson, 
+} from '../helpers/run-plugin.js';
 import { exportOrgSnapshot } from '../helpers/org-snapshot.js';
-import { validPath, schemaErrorPath, malformedPath, warningsPath, undeclaredPath, noOrg } from '../fixtures/index.js';
+import {
+    validPath, schemaErrorPath, malformedPath, warningsPath, undeclaredPath, noOrg, declaredUser,
+} from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'apply', '--file', validPath, '--target-org', noOrg, '--mode', 'bogus']);
+        const {
+            stderr, exitCode, 
+        } = await runPs([
+            'ps', 'apply', '--file', validPath, '--target-org', noOrg, '--mode', 'bogus',
+        ]);
 
         expect(exitCode).toBe(1);
         expect(stderr).toContain('additive, destructive, sync');
     });
 
     it('rejects a negative --max-deletes', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs([
+        const {
+            stderr, exitCode, 
+        } = await runPs([
             'ps',
             'apply',
             '--file',
@@ -29,14 +41,22 @@ describe('sf ps apply', () => {
     // With the org resolvable, the missing-file failure is the command's own, not the org
     // resolver's (which runs first during flag parsing and would otherwise mask it).
     it('requires --file', async ({ expect }) => {
-        const { stderr, exitCode } = await runPsTargetOrg(['ps', 'apply']);
+        const {
+            stderr, exitCode, 
+        } = await runPsTargetOrg([
+            'ps', 'apply',
+        ]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('Missing required flag file');
     });
 
     it('--help documents its flags', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'apply', '--help']);
+        const {
+            stdout, exitCode, 
+        } = await runPs([
+            'ps', 'apply', '--help',
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('--mode');
@@ -93,7 +113,9 @@ describe('sf ps apply', () => {
     // The destructive guards. Both return before the service calls the org client's write
     // methods, so a tripped guard drives a real org without ever changing it.
     it('refuses a destructive run that would remove more than --max-deletes', async ({ expect }) => {
-        const { stderr, exitCode } = await runPsTargetOrg([
+        const {
+            stderr, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',
@@ -108,8 +130,13 @@ describe('sf ps apply', () => {
         expect(stderr).toContain('Refusing to remove 1 assignment(s): over the --max-deletes limit of 0.');
     });
 
+    // Scoped to declaredUser like the snapshot helper: the two exports have to agree, so
+    // they must not straddle a spec creating or deleting a permission set of its own on
+    // islandUser's half of the org.
     it('leaves the org unchanged when the --max-deletes guard trips', async ({ expect }) => {
-        const before = await runPsTargetOrg(['ps', 'export']);
+        const before = await runPsTargetOrg([
+            'ps', 'export', '--user', declaredUser,
+        ]);
 
         expect(before.exitCode).toBe(0);
 
@@ -128,13 +155,17 @@ describe('sf ps apply', () => {
         // cannot make this pass for the wrong reason.
         expect(guarded.stderr).toContain('over the --max-deletes limit of 0');
 
-        const after = await runPsTargetOrg(['ps', 'export']);
+        const after = await runPsTargetOrg([
+            'ps', 'export', '--user', declaredUser,
+        ]);
 
         expect(after.stdout).toBe(before.stdout);
     });
 
     it('refuses to delete in a --json run without --no-prompt', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',
@@ -156,7 +187,9 @@ describe('sf ps apply', () => {
 
     // Load errors abort before any org call or DML, so the org just needs to resolve.
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPsTargetOrg([
+        const {
+            stdout, stderr, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',
@@ -170,7 +203,9 @@ describe('sf ps apply', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',
@@ -185,7 +220,9 @@ describe('sf ps apply', () => {
     // No --dry-run on purpose: --strict has to stop a real apply before any DML, which is
     // the whole point of it matching what plan --strict refused.
     it('refuses a real apply of a file with warnings under --strict', async ({ expect }) => {
-        const { stderr, exitCode } = await runPsTargetOrg([
+        const {
+            stderr, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',
@@ -199,7 +236,9 @@ describe('sf ps apply', () => {
     });
 
     it('names the warnings that --strict refused to apply', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout, exitCode, 
+        } = await runPsTargetOrg([
             'ps',
             'apply',
             '--file',

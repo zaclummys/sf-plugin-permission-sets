@@ -9,6 +9,7 @@ export {
     declaredPermissionSet,
     undeclaredPermissionSet,
     undeclaredHolder,
+    islandUser,
 } from './org.js';
 
 /** Parses and resolves cleanly against no org: no findings expected. */
