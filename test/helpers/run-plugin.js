@@ -26,7 +26,11 @@ const env = {
  * @returns {Promise<{ stdout: string; stderr: string; exitCode: number }>}
  */
 export async function runPs(args) {
-    const result = await execa('sf', args, { cwd: projectRoot, reject: false, env });
+    const result = await execa('sf', args, {
+        cwd: projectRoot,
+        reject: false,
+        env,
+    });
 
     return {
         stdout: result.stdout ?? '',

@@ -20,7 +20,12 @@ import { declaredUser } from '../fixtures/org.js';
 export async function exportOrgSnapshot(expect) {
     const snapshot = await tempFile('ps-snapshot-', 'snap.yml');
     const exported = await runPsTargetOrg([
-        'ps', 'export', '--output-file', snapshot, '--user', declaredUser,
+        'ps',
+        'export',
+        '--output-file',
+        snapshot,
+        '--user',
+        declaredUser,
     ]);
 
     expect(exported.exitCode).toBe(0);

@@ -26,23 +26,39 @@ export type Finding = {
 };
 
 /** Where a finding was raised. Both optional: org-side findings have no file or line. */
-type Where = { file?: string; line?: number };
+type Where = {
+    file?: string;
+    line?: number
+};
 
 /** Construct an error-level finding. Private: callers use the named constructors below. */
 function error(code: FindingCode, message: string, where: Where = {}): Finding {
-    return { level: 'error', code, message, ...where };
+    return {
+        level: 'error',
+        code,
+        message,
+        ...where,
+    };
 }
 
 /** Construct a warning-level finding. Private: callers use the named constructors below. */
 function warning(code: FindingCode, message: string, where: Where = {}): Finding {
-    return { level: 'warning', code, message, ...where };
+    return {
+        level: 'warning',
+        code,
+        message,
+        ...where,
+    };
 }
 
 // Findings raised while reading and structurally checking a file.
 
 /** Invalid YAML: the parser rejected the document. */
 export function yamlError(message: string, file: string, line?: number): Finding {
-    return error('YAML', message, { file, line });
+    return error('YAML', message, {
+        file,
+        line,
+    });
 }
 
 /** The document parsed to nothing. */

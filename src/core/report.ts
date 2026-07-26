@@ -11,13 +11,19 @@ import { TargetName } from './target-name.js';
  */
 type DiffBucket = {
     adds: Map<string, Expiration | null>;
-    updates: Map<string, { previous: Expiration | null; next: Expiration | null }>;
+    updates: Map<string, {
+        previous: Expiration | null;
+        next: Expiration | null
+    }>;
     removes: Set<string>;
     unchanged: Map<string, Expiration | null>;
 };
 
 /** A target's bucket plus the name to print it under, since the map is keyed by comparison key. */
-type TargetBucket = { target: TargetName; bucket: DiffBucket };
+type TargetBucket = {
+    target: TargetName;
+    bucket: DiffBucket
+};
 
 /** Human labels for the section headers, so the plan reads as prose, not YAML keys. */
 const kindLabels: Record<Kind, string> = {
@@ -41,9 +47,17 @@ function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, tar
 
     let entry = byTarget.get(target.asKey());
     if (!entry) {
-        const bucket = { adds: new Map(), updates: new Map(), removes: new Set<string>(), unchanged: new Map() };
+        const bucket = {
+            adds: new Map(),
+            updates: new Map(),
+            removes: new Set<string>(),
+            unchanged: new Map(),
+        };
 
-        entry = { target, bucket };
+        entry = {
+            target,
+            bucket,
+        };
         byTarget.set(target.asKey(), entry);
     }
     return entry.bucket;
@@ -138,16 +152,25 @@ function sortedByAssignee<Value>(group: Map<string, Value>): [string, Value][] {
 function renderBucket(bucket: DiffBucket): string[] {
     const entries: string[] = [];
 
-    for (const [assignee, expiration] of sortedByAssignee(bucket.adds)) {
+    for (const [
+        assignee,
+        expiration,
+    ] of sortedByAssignee(bucket.adds)) {
         entries.push(`    + ${withExpiry(assignee, expiration)}`);
     }
-    for (const [assignee, change] of sortedByAssignee(bucket.updates)) {
+    for (const [
+        assignee,
+        change,
+    ] of sortedByAssignee(bucket.updates)) {
         entries.push(`    ~ ${withTransition(assignee, change.previous, change.next)}`);
     }
     for (const assignee of [...bucket.removes].sort()) {
         entries.push(`    - ${assignee}`);
     }
-    for (const [assignee, expiration] of sortedByAssignee(bucket.unchanged)) {
+    for (const [
+        assignee,
+        expiration,
+    ] of sortedByAssignee(bucket.unchanged)) {
         entries.push(`    = ${withExpiry(assignee, expiration)}`);
     }
     return entries;
@@ -172,11 +195,14 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
         }
 
         const sorted = [...byTarget.values()].sort((left, right) =>
-            left.target.toString().localeCompare(right.target.toString())
+            left.target.toString().localeCompare(right.target.toString()),
         );
         const targetLines: string[] = [];
 
-        for (const { target, bucket } of sorted) {
+        for (const {
+            target,
+            bucket,
+        } of sorted) {
             const entries = renderBucket(bucket);
 
             if (entries.length === 0) {

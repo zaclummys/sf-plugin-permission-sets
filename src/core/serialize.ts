@@ -6,7 +6,10 @@ import { distinctAssignees } from './resolve.js';
 import { TargetName } from './target-name.js';
 
 /** A single serialized entry: a bare name, or a name with an expiration. */
-type SerializedEntry = string | { name: string; expiration: string };
+type SerializedEntry = string | {
+    name: string;
+    expiration: string
+};
 
 /** The YAML shape we emit. A superset of FileShape: every scope accepts the object form. */
 type OutputFile = { users: Record<string, Partial<Record<ScopeKey, SerializedEntry[]>>> };
@@ -25,22 +28,34 @@ function byText(left: { toString(): string }, right: { toString(): string }): nu
 
 /** One user's entries for one scope, de-duplicated by target and ordered by name. */
 function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
-    const byTarget = new Map<string, { target: TargetName; expiration: Expiration | null }>();
+    const byTarget = new Map<string, {
+        target: TargetName;
+        expiration: Expiration | null
+    }>();
 
     for (const assignment of assignments) {
         if (!byTarget.has(assignment.target.asKey())) {
-            byTarget.set(assignment.target.asKey(), { target: assignment.target, expiration: assignment.expiration });
+            byTarget.set(assignment.target.asKey(), {
+                target: assignment.target,
+                expiration: assignment.expiration,
+            });
         }
     }
 
     const sorted = [...byTarget.values()].sort((left, right) => byText(left.target, right.target));
 
-    return sorted.map(({ target, expiration }) => {
+    return sorted.map(({
+        target,
+        expiration,
+    }) => {
         if (!expiration) {
             return target.toString();
         }
 
-        return { name: target.toString(), expiration: expiration.toString() };
+        return {
+            name: target.toString(),
+            expiration: expiration.toString(),
+        };
     });
 }
 
@@ -59,9 +74,12 @@ export function serializeAssignments(assignments: DesiredAssignment[]): string {
     for (const username of usernames) {
         const entry: OutputFile['users'][string] = {};
 
-        for (const [kind, key] of kindKeys) {
+        for (const [
+            kind,
+            key,
+        ] of kindKeys) {
             const matching = assignments.filter(
-                (assignment) => assignment.assignee.equals(username) && assignment.kind === kind
+                (assignment) => assignment.assignee.equals(username) && assignment.kind === kind,
             );
             const entries = scopeEntries(matching);
 

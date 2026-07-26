@@ -19,11 +19,24 @@ Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.plan');
 
 export type PsPlanResult = {
-    org: { username: string; id: string };
+    org: {
+        username: string;
+        id: string
+    };
     mode: string;
-    counts: { toAdd: number; toUpdate: number; toRemove: number; unchanged: number; usersAffected: number };
+    counts: {
+        toAdd: number;
+        toUpdate: number;
+        toRemove: number;
+        unchanged: number;
+        usersAffected: number
+    };
     /** What the chosen mode would not act on (surfaced as drift). */
-    drift: { adds: number; updates: number; removes: number };
+    drift: {
+        adds: number;
+        updates: number;
+        removes: number
+    };
     /** The full diff, regardless of mode, so machine consumers see everything the text scopes away. */
     changes: {
         toAdd: DesiredAssignment[];
@@ -48,7 +61,11 @@ export default class Plan extends SfCommand<PsPlanResult> {
         }),
         mode: Flags.option({
             summary: messages.getMessage('flags.mode.summary'),
-            options: ['additive', 'destructive', 'sync'] as const,
+            options: [
+                'additive',
+                'destructive',
+                'sync',
+            ] as const,
             default: 'additive',
         })(),
         'show-unchanged': Flags.boolean({ summary: messages.getMessage('flags.show-unchanged.summary') }),
@@ -76,7 +93,10 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const orgName = username || orgId;
 
         const summary: PsPlanResult = {
-            org: { username, id: orgId },
+            org: {
+                username,
+                id: orgId,
+            },
             mode,
             counts: {
                 toAdd: diff.toAdd.length,
@@ -125,14 +145,25 @@ export default class Plan extends SfCommand<PsPlanResult> {
         files: string[];
         showUnchanged: boolean;
     }): void {
-        const { diff, scoped, mode, orgName, orgId, files, showUnchanged } = args;
+        const {
+            diff,
+            scoped,
+            mode,
+            orgName,
+            orgId,
+            files,
+            showUnchanged,
+        } = args;
 
         this.logHeaderTitle();
         this.logHeaderOrg(orgName, orgId, mode);
 
         if (diff.changeCount() === 0) {
             if (showUnchanged && diff.unchanged.length > 0) {
-                this.logBody(formatDiff(diff, { mode, showUnchanged: true }));
+                this.logBody(formatDiff(diff, {
+                    mode,
+                    showUnchanged: true,
+                }));
             } else {
                 this.log('');
             }
@@ -140,7 +171,10 @@ export default class Plan extends SfCommand<PsPlanResult> {
             return;
         }
 
-        this.logBody(formatDiff(diff, { mode, showUnchanged }));
+        this.logBody(formatDiff(diff, {
+            mode,
+            showUnchanged,
+        }));
 
         if (scoped.count() === 0) {
             this.logEmptyNothingToApply(mode);
@@ -247,7 +281,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
                 orgName,
                 orgId,
                 mode,
-            ])
+            ]),
         );
     }
 

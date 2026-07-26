@@ -17,7 +17,10 @@ import {
 import { OrgClient } from '../services/adapters/index.js';
 
 /** SObject + id field per kind, for inserting and deleting assignments. */
-type AssignmentObject = { sobject: string; idField: string };
+type AssignmentObject = {
+    sobject: string;
+    idField: string
+};
 
 /** Shapes of the assignment rows we read back, with relationship fields nested. */
 type MembershipRecord = {
@@ -49,13 +52,25 @@ function toExpiration(value: string | null): Expiration | null {
 }
 
 /** The slice of a DML save/delete result we report on. Structurally a jsforce SaveResult. */
-type DmlResult = { success: boolean; errors: { message: string }[] };
+type DmlResult = {
+    success: boolean;
+    errors: { message: string }[]
+};
 
 /** SObject + foreign-key field to set per kind when assigning. */
 const assignmentObjects: Record<Kind, AssignmentObject> = {
-    permissionSet: { sobject: 'PermissionSetAssignment', idField: 'PermissionSetId' },
-    permissionSetGroup: { sobject: 'PermissionSetAssignment', idField: 'PermissionSetGroupId' },
-    permissionSetLicense: { sobject: 'PermissionSetLicenseAssign', idField: 'PermissionSetLicenseId' },
+    permissionSet: {
+        sobject: 'PermissionSetAssignment',
+        idField: 'PermissionSetId',
+    },
+    permissionSetGroup: {
+        sobject: 'PermissionSetAssignment',
+        idField: 'PermissionSetGroupId',
+    },
+    permissionSetLicense: {
+        sobject: 'PermissionSetLicenseAssign',
+        idField: 'PermissionSetLicenseId',
+    },
 };
 
 /** The sObject Collections API caps each create/delete call at 200 records. */
@@ -222,7 +237,11 @@ function chunk<T>(items: T[], size: number): T[][] {
 
 /** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
 function deriveOutcome(
-    assignment: { assignee: Username; kind: Kind; target: TargetName },
+    assignment: {
+        assignee: Username;
+        kind: Kind;
+        target: TargetName
+    },
     operation: 'add' | 'update' | 'remove',
     result: DmlResult | undefined,
 ): AssignmentOutcome {
@@ -243,12 +262,19 @@ function deriveOutcome(
 type DmlRecord = Record<string, string | null>;
 
 /** A DML update record: the id to update, plus the expiration to set (null clears it). */
-type UpdateRecord = { Id: string; ExpirationDate: string | null };
+type UpdateRecord = {
+    Id: string;
+    ExpirationDate: string | null
+};
 
 /** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */
 function buildAdditionBatches(
-    additions: ResolvedAddition[]
-): { sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }[] {
+    additions: ResolvedAddition[],
+): {
+    sobject: string;
+    additions: ResolvedAddition[];
+    records: DmlRecord[]
+}[] {
     const bySobject = new Map<string, ResolvedAddition[]>();
 
     for (const addition of additions) {
@@ -259,9 +285,16 @@ function buildAdditionBatches(
         bySobject.set(sobject, grouped);
     }
 
-    const batches: { sobject: string; additions: ResolvedAddition[]; records: DmlRecord[] }[] = [];
+    const batches: {
+        sobject: string;
+        additions: ResolvedAddition[];
+        records: DmlRecord[]
+    }[] = [];
 
-    for (const [sobject, grouped] of bySobject) {
+    for (const [
+        sobject,
+        grouped,
+    ] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records = batch.map((addition) => ({
                 AssigneeId: addition.assigneeId,
@@ -269,7 +302,11 @@ function buildAdditionBatches(
                 ...(addition.expiration ? { ExpirationDate: addition.expiration.toString() } : {}),
             }));
 
-            batches.push({ sobject, additions: batch, records });
+            batches.push({
+                sobject,
+                additions: batch,
+                records,
+            });
         }
     }
     return batches;
@@ -277,8 +314,12 @@ function buildAdditionBatches(
 
 /** Group expiration updates by sObject and chunk them, building the Id + ExpirationDate records. */
 function buildUpdateBatches(
-    updates: AssignmentUpdate[]
-): { sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }[] {
+    updates: AssignmentUpdate[],
+): {
+    sobject: string;
+    updates: AssignmentUpdate[];
+    records: UpdateRecord[]
+}[] {
     const bySobject = new Map<string, AssignmentUpdate[]>();
 
     for (const update of updates) {
@@ -289,23 +330,37 @@ function buildUpdateBatches(
         bySobject.set(sobject, grouped);
     }
 
-    const batches: { sobject: string; updates: AssignmentUpdate[]; records: UpdateRecord[] }[] = [];
+    const batches: {
+        sobject: string;
+        updates: AssignmentUpdate[];
+        records: UpdateRecord[]
+    }[] = [];
 
-    for (const [sobject, grouped] of bySobject) {
+    for (const [
+        sobject,
+        grouped,
+    ] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records: UpdateRecord[] = batch.map((update) => ({
                 Id: update.recordId,
                 ExpirationDate: update.expiration?.toString() ?? null,
             }));
 
-            batches.push({ sobject, updates: batch, records });
+            batches.push({
+                sobject,
+                updates: batch,
+                records,
+            });
         }
     }
     return batches;
 }
 
 /** Group removals by sObject and chunk them for the Collections API. */
-function buildRemovalBatches(removals: ActualAssignment[]): { sobject: string; removals: ActualAssignment[] }[] {
+function buildRemovalBatches(removals: ActualAssignment[]): {
+    sobject: string;
+    removals: ActualAssignment[]
+}[] {
     const bySobject = new Map<string, ActualAssignment[]>();
 
     for (const removal of removals) {
@@ -316,11 +371,20 @@ function buildRemovalBatches(removals: ActualAssignment[]): { sobject: string; r
         bySobject.set(sobject, grouped);
     }
 
-    const batches: { sobject: string; removals: ActualAssignment[] }[] = [];
+    const batches: {
+        sobject: string;
+        removals: ActualAssignment[]
+    }[] = [];
 
-    for (const [sobject, grouped] of bySobject) {
+    for (const [
+        sobject,
+        grouped,
+    ] of bySobject) {
         for (const batch of chunk(grouped, collectionBatchSize)) {
-            batches.push({ sobject, removals: batch });
+            batches.push({
+                sobject,
+                removals: batch,
+            });
         }
     }
     return batches;
@@ -332,10 +396,16 @@ function classifyMembership(record: MembershipRecord): {
     target: TargetName;
 } {
     if (record.PermissionSetGroupId && record.PermissionSetGroup) {
-        return { kind: 'permissionSetGroup', target: TargetName.of(record.PermissionSetGroup.DeveloperName) };
+        return {
+            kind: 'permissionSetGroup',
+            target: TargetName.of(record.PermissionSetGroup.DeveloperName),
+        };
     }
 
-    return { kind: 'permissionSet', target: TargetName.of(record.PermissionSet.Name) };
+    return {
+        kind: 'permissionSet',
+        target: TargetName.of(record.PermissionSet.Name),
+    };
 }
 
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
@@ -343,7 +413,11 @@ export class ConnectionOrgClient implements OrgClient {
     public constructor(private readonly connection: Connection) { }
 
     public async findUsers(usernames: Username[]): Promise<OrgUser[]> {
-        const records = await this.query<{ Id: string; Username: string; IsActive: boolean }>(buildUserQuery(usernames));
+        const records = await this.query<{
+            Id: string;
+            Username: string;
+            IsActive: boolean
+        }>(buildUserQuery(usernames));
 
         return records.map((record) => ({
             id: record.Id,
@@ -353,21 +427,39 @@ export class ConnectionOrgClient implements OrgClient {
     }
 
     public async findPermissionSets(names: TargetName[]): Promise<OrgTarget[]> {
-        const records = await this.query<{ Id: string; Name: string }>(buildPermissionSetQuery(names));
+        const records = await this.query<{
+            Id: string;
+            Name: string
+        }>(buildPermissionSetQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.Name) }));
+        return records.map((record) => ({
+            id: record.Id,
+            name: TargetName.of(record.Name),
+        }));
     }
 
     public async findPermissionSetGroups(names: TargetName[]): Promise<OrgTarget[]> {
-        const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetGroupQuery(names));
+        const records = await this.query<{
+            Id: string;
+            DeveloperName: string
+        }>(buildPermissionSetGroupQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.DeveloperName) }));
+        return records.map((record) => ({
+            id: record.Id,
+            name: TargetName.of(record.DeveloperName),
+        }));
     }
 
     public async findPermissionSetLicenses(names: TargetName[]): Promise<OrgTarget[]> {
-        const records = await this.query<{ Id: string; DeveloperName: string }>(buildPermissionSetLicenseQuery(names));
+        const records = await this.query<{
+            Id: string;
+            DeveloperName: string
+        }>(buildPermissionSetLicenseQuery(names));
 
-        return records.map((record) => ({ id: record.Id, name: TargetName.of(record.DeveloperName) }));
+        return records.map((record) => ({
+            id: record.Id,
+            name: TargetName.of(record.DeveloperName),
+        }));
     }
 
     public async listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]> {
@@ -399,7 +491,10 @@ export class ConnectionOrgClient implements OrgClient {
         const records = await this.query<MembershipRecord>(soql);
 
         return records.map((record) => {
-            const { kind, target } = classifyMembership(record);
+            const {
+                kind,
+                target,
+            } = classifyMembership(record);
 
             return {
                 kind,
@@ -450,7 +545,10 @@ export class ConnectionOrgClient implements OrgClient {
         const records = await this.query<MembershipRecord>(soql);
 
         return records.map((record) => {
-            const { kind, target } = classifyMembership(record);
+            const {
+                kind,
+                target,
+            } = classifyMembership(record);
 
             return {
                 kind,
@@ -480,13 +578,19 @@ export class ConnectionOrgClient implements OrgClient {
             batches.map(async (batch) => {
                 const results = await this.connection.create(batch.sobject, batch.records, { allOrNone: false });
 
-                return { batch, results };
-            })
+                return {
+                    batch,
+                    results,
+                };
+            }),
         );
 
         const outcomes: AssignmentOutcome[] = [];
 
-        for (const { batch, results } of settled) {
+        for (const {
+            batch,
+            results,
+        } of settled) {
             batch.additions.forEach((addition, index) => {
                 outcomes.push(deriveOutcome(addition, 'add', results[index]));
             });
@@ -500,13 +604,19 @@ export class ConnectionOrgClient implements OrgClient {
             batches.map(async (batch) => {
                 const results = await this.connection.update(batch.sobject, batch.records, { allOrNone: false });
 
-                return { batch, results };
-            })
+                return {
+                    batch,
+                    results,
+                };
+            }),
         );
 
         const outcomes: AssignmentOutcome[] = [];
 
-        for (const { batch, results } of settled) {
+        for (const {
+            batch,
+            results,
+        } of settled) {
             batch.updates.forEach((update, index) => {
                 outcomes.push(deriveOutcome(update, 'update', results[index]));
             });
@@ -521,13 +631,19 @@ export class ConnectionOrgClient implements OrgClient {
                 const recordIds = batch.removals.map((removal) => removal.recordId);
                 const results = await this.connection.destroy(batch.sobject, recordIds, { allOrNone: false });
 
-                return { batch, results };
-            })
+                return {
+                    batch,
+                    results,
+                };
+            }),
         );
 
         const outcomes: AssignmentOutcome[] = [];
 
-        for (const { batch, results } of settled) {
+        for (const {
+            batch,
+            results,
+        } of settled) {
             batch.removals.forEach((removal, index) => {
                 outcomes.push(deriveOutcome(removal, 'remove', results[index]));
             });

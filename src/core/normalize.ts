@@ -9,14 +9,25 @@ export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSet
 
 /** The (kind, file scope key) pairing, in canonical order. Shared with serialize. */
 export const kindKeys: [Kind, ScopeKey][] = [
-    ['permissionSet', 'permissionSets'],
-    ['permissionSetGroup', 'permissionSetGroups'],
-    ['permissionSetLicense', 'permissionSetLicenses'],
+    [
+        'permissionSet',
+        'permissionSets',
+    ],
+    [
+        'permissionSetGroup',
+        'permissionSetGroups',
+    ],
+    [
+        'permissionSetLicense',
+        'permissionSetLicenses',
+    ],
 ];
 
 /** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
 export function kindForScopeKey(key: ScopeKey): Kind {
-    const pair = kindKeys.find(([, scopeKey]) => scopeKey === key);
+    const pair = kindKeys.find(([
+        , scopeKey,
+    ]) => scopeKey === key);
 
     if (!pair) {
         throw new Error(`Unknown scope key: ${key}`);
@@ -25,15 +36,27 @@ export function kindForScopeKey(key: ScopeKey): Kind {
     return pair[0];
 }
 
-type ScopeItem = string | { name: string; expiration: string };
+type ScopeItem = string | {
+    name: string;
+    expiration: string
+};
 
 /** A scope item in canonical form: the bare string is a target with no expiration. */
-function scopeItemFields(item: ScopeItem): { target: TargetName; expiration: Expiration | null } {
+function scopeItemFields(item: ScopeItem): {
+    target: TargetName;
+    expiration: Expiration | null
+} {
     if (typeof item === 'string') {
-        return { target: TargetName.of(item), expiration: null };
+        return {
+            target: TargetName.of(item),
+            expiration: null,
+        };
     }
 
-    return { target: TargetName.of(item.name), expiration: Expiration.of(item.expiration) };
+    return {
+        target: TargetName.of(item.name),
+        expiration: Expiration.of(item.expiration),
+    };
 }
 
 function normalizeScope(
@@ -42,36 +65,56 @@ function normalizeScope(
     key: ScopeKey,
     list: ScopeItem[],
     file: string,
-): { assignments: DesiredAssignment[]; findings: Finding[] } {
+): {
+    assignments: DesiredAssignment[];
+    findings: Finding[]
+} {
     const items = list.map(scopeItemFields);
 
     const assignments: DesiredAssignment[] = [];
     const findings: Finding[] = [];
     const seen = new Set<string>();
 
-    for (const { target, expiration } of items) {
+    for (const {
+        target,
+        expiration,
+    } of items) {
         if (seen.has(target.asKey())) {
             findings.push(dupTargetWarning(username, target, key, file));
             continue;
         }
         seen.add(target.asKey());
-        assignments.push({ assignee: username, kind, target, expiration });
+        assignments.push({
+            assignee: username,
+            kind,
+            target,
+            expiration,
+        });
     }
 
-    return { assignments, findings };
+    return {
+        assignments,
+        findings,
+    };
 }
 
 function normalizeUser(
     username: Username,
     entry: FileShape['users'][string],
     file: string,
-): { assignments: DesiredAssignment[]; findings: Finding[] } {
+): {
+    assignments: DesiredAssignment[];
+    findings: Finding[]
+} {
     const assignments: DesiredAssignment[] = [];
     const findings: Finding[] = [];
 
     let scopeCount = 0;
 
-    for (const [kind, key] of kindKeys) {
+    for (const [
+        kind,
+        key,
+    ] of kindKeys) {
         const list = entry[key];
 
         if (!list) {
@@ -93,23 +136,35 @@ function normalizeUser(
         findings.push(emptyUserWarning(username, file));
     }
 
-    return { assignments, findings };
+    return {
+        assignments,
+        findings,
+    };
 }
 
 /**
  * Turn a validated file into canonical (assignee, kind, target) tuples, and
  * emit the structural findings: duplicate targets, empty lists, empty users.
  */
-export function normalize(data: FileShape, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
+export function normalize(data: FileShape, file: string): {
+    assignments: DesiredAssignment[];
+    findings: Finding[]
+} {
     const assignments: DesiredAssignment[] = [];
     const findings: Finding[] = [];
 
-    for (const [username, entry] of Object.entries(data.users)) {
+    for (const [
+        username,
+        entry,
+    ] of Object.entries(data.users)) {
         const user = normalizeUser(Username.of(username), entry, file);
 
         assignments.push(...user.assignments);
         findings.push(...user.findings);
     }
 
-    return { assignments, findings };
+    return {
+        assignments,
+        findings,
+    };
 }

@@ -64,7 +64,7 @@ export default class Check extends SfCommand<PsCheckResult> {
             messages.getMessage('summary.counts', [
                 errors,
                 warnings,
-            ])
+            ]),
         );
     }
 

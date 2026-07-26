@@ -37,7 +37,7 @@ async function sfData(args) {
         '--json',
     ], {
         reject: false,
-        env, 
+        env,
     });
     const parsed = JSON.parse(result.stdout);
 

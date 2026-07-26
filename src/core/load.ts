@@ -7,11 +7,17 @@ import { DesiredAssignment, LoadResult } from './model.js';
 import { Finding, Findings, noFilesError } from './finding.js';
 
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
-function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
+function checkContent(text: string, file: string): {
+    assignments: DesiredAssignment[];
+    findings: Finding[]
+} {
     const parsed = parseFile(text, file);
 
     if (!parsed.data) {
-        return { assignments: [], findings: parsed.findings };
+        return {
+            assignments: [],
+            findings: parsed.findings,
+        };
     }
 
     const validated = validateFile(parsed.data, file);
@@ -55,7 +61,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
             const text = await readFile(file, 'utf8');
 
             return checkContent(text, file);
-        })
+        }),
     );
 
     const findings = checked.flatMap((entry) => entry.findings);
@@ -74,5 +80,9 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         assignments.push(assignment);
     }
 
-    return { files, assignments, findings: Findings.of(findings) };
+    return {
+        files,
+        assignments,
+        findings: Findings.of(findings),
+    };
 }

@@ -4,7 +4,11 @@ import { TargetName } from './target-name.js';
 import { Username } from './username.js';
 
 /** What a mode deliberately leaves alone, reported beneath a plan as drift. */
-export type Drift = { adds: number; updates: number; removes: number };
+export type Drift = {
+    adds: number;
+    updates: number;
+    removes: number
+};
 
 /** A diff narrowed to one mode: what that mode acts on, and the drift it leaves behind. */
 export class ScopedChange {
@@ -122,7 +126,7 @@ export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssi
     }
 
     const toRemove = actual.filter(
-        (assignment) => !desiredKeys.has(assignmentKey(assignment.assignee, assignment.kind, assignment.target))
+        (assignment) => !desiredKeys.has(assignmentKey(assignment.assignee, assignment.kind, assignment.target)),
     );
 
     return new Diff(toAdd, toUpdate, toRemove, unchanged);

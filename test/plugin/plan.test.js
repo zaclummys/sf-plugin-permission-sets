@@ -15,14 +15,31 @@ import {
 
 describe('sf ps plan', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
-        const { stderr, exitCode } = await runPs(['ps', 'plan', '--file', validPath, '--target-org', noOrg]);
+        const {
+            stderr,
+            exitCode,
+        } = await runPs([
+            'ps',
+            'plan',
+            '--file',
+            validPath,
+            '--target-org',
+            noOrg,
+        ]);
 
         expect(exitCode).toBe(2);
         expect(stderr).toContain('No authorization information found');
     });
 
     it('--help documents its flags', async ({ expect }) => {
-        const { stdout, exitCode } = await runPs(['ps', 'plan', '--help']);
+        const {
+            stdout,
+            exitCode,
+        } = await runPs([
+            'ps',
+            'plan',
+            '--help',
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('--mode');
@@ -35,7 +52,15 @@ describe('sf ps plan', () => {
     it('reports no changes when planning an org snapshot back against the org', async ({ expect }) => {
         const snapshot = await exportOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            snapshot,
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('No changes.');
@@ -44,7 +69,10 @@ describe('sf ps plan', () => {
     it('headers the plan with the org and the mode', async ({ expect }) => {
         const snapshot = await exportOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -61,7 +89,10 @@ describe('sf ps plan', () => {
     it('lists unchanged assignments under --show-unchanged', async ({ expect }) => {
         const snapshot = await exportOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -76,21 +107,40 @@ describe('sf ps plan', () => {
     it('leaves unchanged assignments out of the body by default', async ({ expect }) => {
         const snapshot = await exportOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            snapshot,
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).not.toContain(declaredPermissionSet);
     });
 
     it('counts the assignments an additive run would add', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', undeclaredPath]);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            undeclaredPath,
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Plan: 1 to add, 0 to update. 1 users affected.');
     });
 
     it('counts additions and removals together in sync mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -104,7 +154,10 @@ describe('sf ps plan', () => {
     });
 
     it('marks the holder of an undeclared assignment for removal in sync mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -119,14 +172,25 @@ describe('sf ps plan', () => {
     });
 
     it('reports undeclared assignments as drift in additive mode', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', undeclaredPath]);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            undeclaredPath,
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('Drift: 1 undeclared assignment(s) not removed in additive mode.');
     });
 
     it('suggests the apply command that would carry out the plan', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -143,7 +207,10 @@ describe('sf ps plan', () => {
     });
 
     it('returns counts, drift and the full diff in the --json envelope', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -160,12 +227,19 @@ describe('sf ps plan', () => {
         expect(result.counts.toUpdate).toBe(0);
         expect(result.counts.toRemove).toBe(1);
         expect(result.counts.usersAffected).toBe(2);
-        expect(result.drift).toEqual({ adds: 0, updates: 0, removes: 0 });
+        expect(result.drift).toEqual({
+            adds: 0,
+            updates: 0,
+            removes: 0,
+        });
         expect(result.changes.toRemove).toHaveLength(1);
     });
 
     it('keeps stdout pure JSON when --json is passed', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -180,7 +254,11 @@ describe('sf ps plan', () => {
     // Load errors abort before any org call, so the org just needs to resolve; nothing
     // is ever queried or changed.
     it('fails a schema violation with exit 1', async ({ expect }) => {
-        const { stdout, stderr, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            stderr,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -193,14 +271,25 @@ describe('sf ps plan', () => {
     });
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', malformedPath]);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            malformedPath,
+        ]);
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
     });
 
     it('turns warnings into a failure under --strict', async ({ expect }) => {
-        const { stderr, exitCode } = await runPsTargetOrg([
+        const {
+            stderr,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -213,7 +302,10 @@ describe('sf ps plan', () => {
     });
 
     it('names the warnings that --strict refused to plan', async ({ expect }) => {
-        const { stdout, exitCode } = await runPsTargetOrg([
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
             'ps',
             'plan',
             '--file',
@@ -228,7 +320,16 @@ describe('sf ps plan', () => {
     it('plans an org snapshot under --strict, which raises no warnings', async ({ expect }) => {
         const snapshot = await exportOrgSnapshot(expect);
 
-        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot, '--strict']);
+        const {
+            stdout,
+            exitCode,
+        } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            snapshot,
+            '--strict',
+        ]);
 
         expect(exitCode).toBe(0);
         expect(stdout).toContain('No changes.');

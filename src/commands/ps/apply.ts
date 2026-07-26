@@ -34,7 +34,11 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }),
         mode: Flags.option({
             summary: messages.getMessage('flags.mode.summary'),
-            options: ['additive', 'destructive', 'sync'] as const,
+            options: [
+                'additive',
+                'destructive',
+                'sync',
+            ] as const,
             default: 'additive',
         })(),
         'max-deletes': Flags.integer({
@@ -106,7 +110,10 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
 
         this.log('');
-        for (const line of formatDiff(result.diff, { mode, showUnchanged })) {
+        for (const line of formatDiff(result.diff, {
+            mode,
+            showUnchanged,
+        })) {
             this.log(line);
         }
         this.log('');
@@ -161,7 +168,11 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
     }
 
-    private reportDrift(drift: { adds: number; updates: number; removes: number }, mode: string): void {
+    private reportDrift(drift: {
+        adds: number;
+        updates: number;
+        removes: number
+    }, mode: string): void {
         if (drift.adds > 0) {
             this.logDriftNote(drift.adds, mode);
         }
@@ -179,7 +190,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
                 toAdd,
                 toUpdate,
                 toRemove,
-            ])
+            ]),
         );
     }
 
@@ -193,7 +204,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
                 added,
                 updated,
                 removed,
-            ])
+            ]),
         );
     }
 
@@ -204,7 +215,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
                 assignee,
                 target,
                 message,
-            ])
+            ]),
         );
     }
 
@@ -213,7 +224,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
             messages.getMessage('drift.note', [
                 count,
                 mode,
-            ])
+            ]),
         );
     }
 

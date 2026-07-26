@@ -14,7 +14,11 @@ function sf(args) {
         NO_COLOR: '1',
     };
 
-    return execa('sf', args, { cwd: projectRoot, reject: false, env });
+    return execa('sf', args, {
+        cwd: projectRoot,
+        reject: false,
+        env,
+    });
 }
 
 /**
@@ -32,13 +36,22 @@ export default async function setup() {
 
     // --no-install is required: without it, `sf plugins link` runs a production install
     // in this dir and prunes devDependencies (vitest, execa), breaking the test run.
-    const linked = await sf(['plugins', 'link', '.', '--no-install']);
+    const linked = await sf([
+        'plugins',
+        'link',
+        '.',
+        '--no-install',
+    ]);
 
     if (linked.exitCode !== 0) {
         throw new Error(`Could not link the plugin into sf: \n${linked.stderr}`);
     }
 
     return async () => {
-        await sf(['plugins', 'unlink', '.']);
+        await sf([
+            'plugins',
+            'unlink',
+            '.',
+        ]);
     };
 }

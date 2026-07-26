@@ -33,7 +33,7 @@ export function distinctAssignees(assignments: DesiredAssignment[]): Username[] 
 /** The distinct targets of one kind across all assignments. */
 export function distinctTargets(assignments: DesiredAssignment[], kind: Kind): TargetName[] {
     return distinct(
-        assignments.filter((assignment) => assignment.kind === kind).map((assignment) => assignment.target)
+        assignments.filter((assignment) => assignment.kind === kind).map((assignment) => assignment.target),
     );
 }
 

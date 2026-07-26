@@ -67,7 +67,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
             messages.getMessage('summary.counts', [
                 errors,
                 warnings,
-            ])
+            ]),
         );
     }
 

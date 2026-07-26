@@ -15,7 +15,7 @@ const expiringList = z.array(
             name,
             expiration,
         }),
-    ])
+    ]),
 );
 
 /** Licenses cannot expire (PermissionSetLicenseAssign has no ExpirationDate), so names only. */
@@ -32,14 +32,20 @@ const fileSchema = z.strictObject({ users: z.record(z.string().min(1), userEntry
 export type FileShape = z.infer<typeof fileSchema>;
 
 /** Validate a parsed object against the file contract, turning issues into findings. */
-export function validateFile(data: unknown, file: string): { data?: FileShape; findings: Finding[] } {
+export function validateFile(data: unknown, file: string): {
+    data?: FileShape;
+    findings: Finding[]
+} {
     const parsed = fileSchema.safeParse(data);
 
     if (parsed.success) {
-        return { data: parsed.data, findings: [] };
+        return {
+            data: parsed.data,
+            findings: [],
+        };
     }
     const findings = parsed.error.issues.map((issue) =>
-        schemaError(issue.path.join('.') || '(root)', issue.message, file)
+        schemaError(issue.path.join('.') || '(root)', issue.message, file),
     );
 
     return { findings };

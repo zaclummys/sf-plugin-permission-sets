@@ -1,18 +1,10 @@
-import {
-    describe, it, 
-} from 'vitest';
+import { describe, it } from 'vitest';
 import { parse } from 'yaml';
 import { readFile } from 'node:fs/promises';
-import {
-    runPs, runPsTargetOrg, parseJson, 
-} from '../helpers/run-plugin.js';
+import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { tempFile } from '../helpers/temp-file.js';
-import {
-    createPermissionSet, grant,
-} from '../helpers/org-state.js';
-import {
-    declaredUser, declaredUserOtherCase, islandUser, noOrg,
-} from '../fixtures/index.js';
+import { createPermissionSet, grant } from '../helpers/org-state.js';
+import { declaredUser, declaredUserOtherCase, islandUser, noOrg } from '../fixtures/index.js';
 
 // Real-org tests: drive `sf ps export` against the org named by PS_TARGET_ORG, which the
 // caller always provides (a local logged-in org, or one a CI step authenticates). export is
@@ -21,7 +13,8 @@ describe('sf ps export', () => {
     it('returns the exported counts in the --json envelope', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'export',
@@ -42,7 +35,8 @@ describe('sf ps export', () => {
     it('writes a user-keyed document to --output-file', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'export',
@@ -63,13 +57,19 @@ describe('sf ps export', () => {
     it('writes a file that ps check accepts (round-trip)', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const exported = await runPsTargetOrg([
-            'ps', 'export', '--output-file', file,
+            'ps',
+            'export',
+            '--output-file',
+            file,
         ]);
 
         expect(exported.exitCode).toBe(0);
 
         const checked = await runPs([
-            'ps', 'check', '--file', file,
+            'ps',
+            'check',
+            '--file',
+            file,
         ]);
 
         expect(checked.exitCode).toBe(0);
@@ -81,7 +81,8 @@ describe('sf ps export', () => {
     // which the schema rejects, so writing that spelling straight back out produced a file
     // ps check refused. The date is far enough out that it never has to be maintained.
     it('writes an org expiration in canonical ISO form', async ({
-        expect, onTestFinished, 
+        expect,
+        onTestFinished,
     }) => {
         const permissionSet = await createPermissionSet(onTestFinished, 'Ps_Test_Export_Expiration_Form');
 
@@ -107,7 +108,8 @@ describe('sf ps export', () => {
     });
 
     it('writes a file ps check accepts when the org holds an expiration', async ({
-        expect, onTestFinished, 
+        expect,
+        onTestFinished,
     }) => {
         const permissionSet = await createPermissionSet(onTestFinished, 'Ps_Test_Export_Expiration_RoundTrip');
 
@@ -125,7 +127,10 @@ describe('sf ps export', () => {
         expect(exported.exitCode).toBe(0);
 
         const checked = await runPs([
-            'ps', 'check', '--file', file,
+            'ps',
+            'check',
+            '--file',
+            file,
         ]);
 
         expect(checked.exitCode).toBe(0);
@@ -157,9 +162,11 @@ describe('sf ps export', () => {
 
     it('writes the document to stdout when --output-file is omitted', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
-            'ps', 'export',
+            'ps',
+            'export',
         ]);
 
         expect(exitCode).toBe(0);
@@ -170,9 +177,11 @@ describe('sf ps export', () => {
 
     it('keeps stdout free of the summary line when it carries the document', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
-            'ps', 'export',
+            'ps',
+            'export',
         ]);
 
         expect(exitCode).toBe(0);
@@ -184,10 +193,18 @@ describe('sf ps export', () => {
     it('emits the same document to stdout as it writes to a file', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const toFile = await runPsTargetOrg([
-            'ps', 'export', '--output-file', file, '--user', declaredUser,
+            'ps',
+            'export',
+            '--output-file',
+            file,
+            '--user',
+            declaredUser,
         ]);
         const toStdout = await runPsTargetOrg([
-            'ps', 'export', '--user', declaredUser,
+            'ps',
+            'export',
+            '--user',
+            declaredUser,
         ]);
 
         expect(toFile.exitCode).toBe(0);
@@ -200,9 +217,12 @@ describe('sf ps export', () => {
 
     it('returns the document in the --json envelope with a null outputFile', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
-            'ps', 'export', '--json',
+            'ps',
+            'export',
+            '--json',
         ]);
 
         expect(exitCode).toBe(0);
@@ -214,9 +234,12 @@ describe('sf ps export', () => {
 
     it('--help documents its flags', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPs([
-            'ps', 'export', '--help',
+            'ps',
+            'export',
+            '--help',
         ]);
 
         expect(exitCode).toBe(0);
@@ -227,7 +250,8 @@ describe('sf ps export', () => {
 
     it('rejects an unknown --kind value', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPs([
             'ps',
             'export',
@@ -262,7 +286,8 @@ describe('sf ps export', () => {
     it('matches a requested --user whose case differs from the org', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'export',
@@ -283,7 +308,8 @@ describe('sf ps export', () => {
         const file = await tempFile('ps-export-', 'export.yml');
         const missing = 'no-such-user@nowhere.invalid';
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'export',

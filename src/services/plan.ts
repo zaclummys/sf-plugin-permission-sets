@@ -17,7 +17,10 @@ type PlannedFiles = {
  */
 export type PlanResult =
     | (PlannedFiles & { status: 'invalid' })
-    | (PlannedFiles & { status: 'planned'; resolution: Resolution });
+    | (PlannedFiles & {
+        status: 'planned';
+        resolution: Resolution
+    });
 
 /** An aborted-before-the-diff result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Findings): PlanResult {
@@ -61,6 +64,12 @@ export class PlanService {
         const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
         const diff = diffAssignments(checked.assignments, actual);
 
-        return { files: checked.files, findings, diff, resolution, status: 'planned' };
+        return {
+            files: checked.files,
+            findings,
+            diff,
+            resolution,
+            status: 'planned',
+        };
     }
 }

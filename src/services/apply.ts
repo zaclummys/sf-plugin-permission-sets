@@ -57,7 +57,12 @@ export class ApplyService {
     ) {}
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
-        const { mode, maxDeletes, dryRun, strict } = input;
+        const {
+            mode,
+            maxDeletes,
+            dryRun,
+            strict,
+        } = input;
 
         const planService = new PlanService(this.org);
         const plan = await planService.run(files, strict);
@@ -66,8 +71,14 @@ export class ApplyService {
             return invalidResult(plan.files, plan.findings);
         }
 
-        const { files: planned, findings, diff } = plan;
-        const { additions, updates, removals } = diff.scopeTo(mode);
+        const {
+            files: planned, findings, diff,
+        } = plan;
+        const {
+            additions,
+            updates,
+            removals,
+        } = diff.scopeTo(mode);
 
         const untouched = {
             files: planned,
@@ -77,24 +88,39 @@ export class ApplyService {
         };
 
         if (removals.length > maxDeletes) {
-            return { ...untouched, status: 'max-deletes-exceeded' };
+            return {
+                ...untouched,
+                status: 'max-deletes-exceeded',
+            };
         }
 
         if (dryRun) {
-            return { ...untouched, status: 'dry-run' };
+            return {
+                ...untouched,
+                status: 'dry-run',
+            };
         }
 
         if (removals.length > 0) {
             const confirmed = await this.confirmDeletions(removals.length);
 
             if (!confirmed) {
-                return { ...untouched, status: 'declined' };
+                return {
+                    ...untouched,
+                    status: 'declined',
+                };
             }
         }
 
         const outcomes = await this.executeResolved(plan.resolution.resolveAdditions(additions), updates, removals);
 
-        return { files: planned, findings, diff, outcomes, status: 'applied' };
+        return {
+            files: planned,
+            findings,
+            diff,
+            outcomes,
+            status: 'applied',
+        };
     }
 
     private async executeResolved(
@@ -102,7 +128,11 @@ export class ApplyService {
         updates: AssignmentUpdate[],
         removals: ActualAssignment[],
     ): Promise<Outcomes> {
-        const [added, updated, removed] = await Promise.all([
+        const [
+            added,
+            updated,
+            removed,
+        ] = await Promise.all([
             additions.length > 0 ? this.org.addAssignments(additions) : Promise.resolve<AssignmentOutcome[]>([]),
             updates.length > 0 ? this.org.updateAssignments(updates) : Promise.resolve<AssignmentOutcome[]>([]),
             removals.length > 0 ? this.org.removeAssignments(removals) : Promise.resolve<AssignmentOutcome[]>([]),

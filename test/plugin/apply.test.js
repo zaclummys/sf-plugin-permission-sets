@@ -1,20 +1,22 @@
-import {
-    describe, it, 
-} from 'vitest';
-import {
-    runPs, runPsTargetOrg, parseJson, 
-} from '../helpers/run-plugin.js';
+import { describe, it } from 'vitest';
+import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
 import { exportOrgSnapshot } from '../helpers/org-snapshot.js';
-import {
-    validPath, schemaErrorPath, malformedPath, warningsPath, undeclaredPath, noOrg, declaredUser,
-} from '../fixtures/index.js';
+import { validPath, schemaErrorPath, malformedPath, warningsPath, undeclaredPath, noOrg, declaredUser } from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPs([
-            'ps', 'apply', '--file', validPath, '--target-org', noOrg, '--mode', 'bogus',
+            'ps',
+            'apply',
+            '--file',
+            validPath,
+            '--target-org',
+            noOrg,
+            '--mode',
+            'bogus',
         ]);
 
         expect(exitCode).toBe(1);
@@ -23,7 +25,8 @@ describe('sf ps apply', () => {
 
     it('rejects a negative --max-deletes', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPs([
             'ps',
             'apply',
@@ -42,9 +45,11 @@ describe('sf ps apply', () => {
     // resolver's (which runs first during flag parsing and would otherwise mask it).
     it('requires --file', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPsTargetOrg([
-            'ps', 'apply',
+            'ps',
+            'apply',
         ]);
 
         expect(exitCode).toBe(2);
@@ -53,9 +58,12 @@ describe('sf ps apply', () => {
 
     it('--help documents its flags', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPs([
-            'ps', 'apply', '--help',
+            'ps',
+            'apply',
+            '--help',
         ]);
 
         expect(exitCode).toBe(0);
@@ -114,7 +122,8 @@ describe('sf ps apply', () => {
     // methods, so a tripped guard drives a real org without ever changing it.
     it('refuses a destructive run that would remove more than --max-deletes', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',
@@ -135,7 +144,10 @@ describe('sf ps apply', () => {
     // islandUser's half of the org.
     it('leaves the org unchanged when the --max-deletes guard trips', async ({ expect }) => {
         const before = await runPsTargetOrg([
-            'ps', 'export', '--user', declaredUser,
+            'ps',
+            'export',
+            '--user',
+            declaredUser,
         ]);
 
         expect(before.exitCode).toBe(0);
@@ -156,7 +168,10 @@ describe('sf ps apply', () => {
         expect(guarded.stderr).toContain('over the --max-deletes limit of 0');
 
         const after = await runPsTargetOrg([
-            'ps', 'export', '--user', declaredUser,
+            'ps',
+            'export',
+            '--user',
+            declaredUser,
         ]);
 
         expect(after.stdout).toBe(before.stdout);
@@ -164,7 +179,8 @@ describe('sf ps apply', () => {
 
     it('refuses to delete in a --json run without --no-prompt', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',
@@ -188,7 +204,9 @@ describe('sf ps apply', () => {
     // Load errors abort before any org call or DML, so the org just needs to resolve.
     it('fails a schema violation with exit 1', async ({ expect }) => {
         const {
-            stdout, stderr, exitCode, 
+            stdout,
+            stderr,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',
@@ -204,7 +222,8 @@ describe('sf ps apply', () => {
 
     it('fails malformed YAML with exit 1', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',
@@ -221,7 +240,8 @@ describe('sf ps apply', () => {
     // the whole point of it matching what plan --strict refused.
     it('refuses a real apply of a file with warnings under --strict', async ({ expect }) => {
         const {
-            stderr, exitCode, 
+            stderr,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',
@@ -237,7 +257,8 @@ describe('sf ps apply', () => {
 
     it('names the warnings that --strict refused to apply', async ({ expect }) => {
         const {
-            stdout, exitCode, 
+            stdout,
+            exitCode,
         } = await runPsTargetOrg([
             'ps',
             'apply',

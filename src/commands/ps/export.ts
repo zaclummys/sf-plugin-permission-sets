@@ -34,7 +34,11 @@ export default class Export extends SfCommand<PsExportResult> {
         }),
         kind: Flags.option({
             summary: messages.getMessage('flags.kind.summary'),
-            options: ['permissionSets', 'permissionSetGroups', 'permissionSetLicenses'] as const,
+            options: [
+                'permissionSets',
+                'permissionSetGroups',
+                'permissionSetLicenses',
+            ] as const,
             multiple: true,
         })(),
     };
@@ -86,7 +90,7 @@ export default class Export extends SfCommand<PsExportResult> {
                 assignments,
                 users,
                 outputFile,
-            ])
+            ]),
         );
     }
 
