@@ -219,7 +219,7 @@ A run performs three operations: **add** missing assignments, **update** changed
 
 ## Validations
 
-Every run checks the files first. `check` runs the file checks with no org, and `validate` adds the org-side checks. When files merge, most overlaps are unions rather than errors.
+Every run checks the files first. `check` runs the file checks with no org, `validate` adds the org-side checks, and `plan` and `apply` run both before they touch anything. When files merge, most overlaps are unions rather than errors.
 
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
@@ -229,6 +229,8 @@ Every run checks the files first. `check` runs the file checks with no org, and 
 | A user with no scopes, or an empty list | `check` | ⚠️ warning | Ignored as a no-op |
 | Same username key appears twice in one file | `check` | ❌ error | Rejected, the intent is ambiguous |
 | Declared user, permission set, group, or license missing or not unique | `validate` | ❌ error | Run fails before any change |
+
+An ❌ error stops any run. A ⚠️ warning stops one only under `--strict`, which `check`, `plan`, and `apply` all accept and all read the same way. The decision happens before the org is queried, so a strict refusal costs no query and no DML. Pass `--strict` to `plan` and to `apply` together, or the preview refuses a file that the run then applies anyway.
 
 ## Commands
 
@@ -543,7 +545,7 @@ gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 The plugin is layered so every command reuses the same core. Commands stay thin, services hold the orchestration, core holds the reusable primitives, and a thin adapter layer isolates the Salesforce SDK.
 
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
-- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`), plus `resolution`, which the org-facing ones share. Each is a class whose constructor takes only its dependencies (the org client, a confirmation callback), while the per-invocation inputs are `run()` parameters, so one instance serves any number of runs. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
+- **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`), plus `resolution`, which the org-facing ones share. Each is a class whose constructor takes only its dependencies (the org client, a confirmation callback), while the per-invocation inputs are `run()` parameters, so one instance serves any number of runs. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements. Where one command's work contains another's, the service composes rather than repeats it: `apply` runs `plan`, and `plan` runs `check`, so each stage of the pipeline is owned in exactly one place and the three can never disagree about what a set of files means.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
@@ -551,7 +553,8 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | --- | --- |
 | `model` | Shared domain types (assignment, org). |
 | `username`, `target-name` | The identifiers, owning the org's case-insensitive comparison so no caller has to remember it. |
-| `finding` | The finding type and code vocabulary, plus constructors, formatting, and counting. |
+| `finding` | The finding type and code vocabulary, plus the constructors that raise each one. `Findings` is the collection, and it answers everything asked of a run's findings: the counts, the merge, the rendering, and whether they block the run under `--strict`. |
+| `outcome` | The per-record result of one add, update, or remove. `Outcomes` is the collection, answering what the org accepted per operation and what it rejected. |
 | `schema` | The zod contract for a file, plus validation. |
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
 | `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
@@ -561,7 +564,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `diff` | The desired model vs. the org's current state, producing adds, removes, and unchanged. The `Diff` it returns also scopes itself to a reconcile mode, reporting what that mode acts on and the drift it leaves alone. |
 | `report` | Format a diff as a plan. |
 
-Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `apply` is the full pipeline: load, resolve to ids, **fetch** current state, **diff**, then insert and delete through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). `plan` is that same pipeline stopping before the DML: load, resolve to ids, **fetch** current state, **diff**, and report, the same preview `apply --dry-run` produces.
+Commands are slices of one pipeline. `check` runs the **load** stage only, with no org. `validate` adds **resolve**: it looks the declared references up through the `OrgClient` port (the adapter builds the SOQL) and evaluates the org's answers with resolve's pure rules. `export` runs in the opposite direction: it **fetch**es the org's current assignments through the port and **serialize**s them straight back to YAML, skipping load entirely. `plan` adds **fetch** and **diff** on top of check: it resolves to ids, reads the org's current assignments for the targets it manages, and diffs the desired model against them. `apply` is that plan carried through to the DML, inserting and deleting through the Collections API per the mode (guarded by `--max-deletes` and a confirmation). Those two are literal composition rather than a resemblance, which is why `apply --dry-run` and `plan` cannot drift apart.
 
 ## Development
 
