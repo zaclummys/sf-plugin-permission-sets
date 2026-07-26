@@ -21,9 +21,11 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 A rule that more than one call site has to remember belongs on an object, not in a comment. Two kinds live in `core/`, and both are data (unlike services, which are behavior with injected collaborators).
 
 - **Value objects** wrap an identifier whose comparison rule is not the default one: `Username` and `TargetName` compare, index, and de-duplicate through `asKey()` (case-folded, matching the org), keep the text as written for display, and `toJSON()` back to a plain string so `--json` payloads stay unchanged. They are deliberately separate classes rather than one with a shared base: the `private` field is what makes them nominally distinct, so one cannot be passed where the other is expected. Convert at the boundary (adapter, flag parsing) and carry the object inward, so the compiler points at every site that compares a name.
-- **Aggregates** own the derived questions asked of a record so nobody recomputes them: `Diff` answers `changeCount` and `scopeTo(mode)`, and the `ScopedChange` that comes back answers `count`, `usersAffected`, and `drift`. A command that branches on a domain value (`mode === 'destructive'`) to derive data is a missing method here. Selecting a *message* for that value stays in the command.
+- **Aggregates** own the derived questions asked of a record so nobody recomputes them: `Diff` answers `changeCount` and `scopeTo(mode)`, the `ScopedChange` that comes back answers `count`, `usersAffected`, and `drift`, and `Findings` answers `errors`, `warnings`, `hasErrors`, `hasWarnings`, and `concat`. A command that branches on a domain value (`mode === 'destructive'`) to derive data is a missing method here. Selecting a *message* for that value stays in the command.
 
-Report DTOs (`Finding`, `AssignmentOutcome`) are the exception: they are only ever displayed, so they carry plain strings.
+A collection is where this hides best: two call sites doing the same `filter().length` over the same array is the same missing method, one level up. Reach for the aggregate the moment a second site asks the array a question, and let it own `toJSON()` so the `--json` payload stays the plain array it always was.
+
+Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because nothing reads them: `level` and `success` both drive the exit code. They carry plain strings because their fields are only ever *displayed*, never compared as identifiers, so a value object would buy nothing.
 
 ## Barrels (`index.ts`)
 
