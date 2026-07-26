@@ -1,4 +1,4 @@
-import { loadFiles, diffAssignments, Diff, Finding, countFindings } from '../core/index.js';
+import { loadFiles, diffAssignments, Diff, Findings } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 import { ResolutionService } from './resolution.js';
 
@@ -7,13 +7,13 @@ export type PlanStatus = 'planned' | 'invalid';
 
 export type PlanResult = {
     files: string[];
-    findings: Finding[];
+    findings: Findings;
     diff: Diff;
     status: PlanStatus;
 };
 
 /** An aborted-before-the-diff result, carrying the findings that explain why. */
-function invalidResult(files: string[], findings: Finding[]): PlanResult {
+function invalidResult(files: string[], findings: Findings): PlanResult {
     return {
         files,
         findings,
@@ -33,19 +33,15 @@ export class PlanService {
 
     public async run(files: string[]): Promise<PlanResult> {
         const loaded = await loadFiles(files);
-        const loadCounts = countFindings(loaded.findings);
-        if (loadCounts.errors > 0) {
+        if (loaded.findings.hasErrors) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
         const resolutionService = new ResolutionService(this.org);
         const resolution = await resolutionService.run(loaded.assignments);
-        const findings = [
-            ...loaded.findings,
-            ...resolution.findings,
-        ];
-        const findingCounts = countFindings(findings);
-        if (findingCounts.errors > 0) {
+        const findings = loaded.findings.concat(resolution.findings);
+
+        if (findings.hasErrors) {
             return invalidResult(loaded.files, findings);
         }
 

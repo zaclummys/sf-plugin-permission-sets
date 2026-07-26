@@ -5,7 +5,6 @@ import { ConnectionOrgClient } from '../../adapters/index.js';
 import { PlanService } from '../../services/index.js';
 import {
     formatDiff,
-    formatFindings,
     ActualAssignment,
     AssignmentUpdate,
     DesiredAssignment,
@@ -66,7 +65,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const service = new PlanService(orgClient);
         const result = await service.run(flags.file);
 
-        for (const line of formatFindings(result.findings)) {
+        for (const line of result.findings.format()) {
             this.log(line);
         }
 

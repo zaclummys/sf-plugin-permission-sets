@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ValidateService } from '../../services/index.js';
-import { distinctAssignees, formatFindings, Finding } from '../../core/index.js';
+import { distinctAssignees, Finding } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.validate');
@@ -38,14 +38,14 @@ export default class Validate extends SfCommand<PsValidateResult> {
         const service = new ValidateService(orgClient);
         const result = await service.run(flags.file);
 
-        for (const line of formatFindings(result.findings)) {
+        for (const line of result.findings.format()) {
             this.log(line);
         }
 
         const assignees = distinctAssignees(result.assignments);
 
         this.log('');
-        this.logSummaryCounts(result.errors, result.warnings);
+        this.logSummaryCounts(result.findings.errors, result.findings.warnings);
 
         if (result.failed) {
             process.exitCode = 1;
@@ -58,7 +58,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
             files: result.files.length,
             users: assignees.length,
             assignments: result.assignments.length,
-            findings: result.findings,
+            findings: result.findings.toJSON(),
         };
     }
 

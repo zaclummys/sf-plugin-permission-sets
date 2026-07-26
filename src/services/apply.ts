@@ -6,8 +6,7 @@ import {
     AssignmentUpdate,
     Diff,
     ResolvedAddition,
-    Finding,
-    countFindings,
+    Findings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 import { ResolutionService } from './resolution.js';
@@ -28,7 +27,7 @@ export type ApplyStatus = 'applied' | 'dry-run' | 'declined' | 'max-deletes-exce
 
 export type ApplyResult = {
     files: string[];
-    findings: Finding[];
+    findings: Findings;
     diff: Diff;
     outcomes: AssignmentOutcome[];
     status: ApplyStatus;
@@ -36,7 +35,7 @@ export type ApplyResult = {
 };
 
 /** An aborted-before-any-change result, carrying the findings that explain why. */
-function invalidResult(files: string[], findings: Finding[]): ApplyResult {
+function invalidResult(files: string[], findings: Findings): ApplyResult {
     return {
         files,
         findings,
@@ -60,19 +59,15 @@ export class ApplyService {
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
         const loaded = await loadFiles(files);
-        const loadCounts = countFindings(loaded.findings);
-        if (loadCounts.errors > 0) {
+        if (loaded.findings.hasErrors) {
             return invalidResult(loaded.files, loaded.findings);
         }
 
         const resolutionService = new ResolutionService(this.org);
         const resolution = await resolutionService.run(loaded.assignments);
-        const findings = [
-            ...loaded.findings,
-            ...resolution.findings,
-        ];
-        const findingCounts = countFindings(findings);
-        if (findingCounts.errors > 0) {
+        const findings = loaded.findings.concat(resolution.findings);
+
+        if (findings.hasErrors) {
             return invalidResult(loaded.files, findings);
         }
 

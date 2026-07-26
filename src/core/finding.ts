@@ -109,19 +109,64 @@ function locationPrefix(finding: Finding): string {
     return `${finding.file}:${finding.line} `;
 }
 
-/** Render findings as human-readable lines. Shared by check, validate, and apply. */
-export function formatFindings(findings: Finding[]): string[] {
-    return findings.map((finding) => {
-        const where = locationPrefix(finding);
+/**
+ * Everything a run has to say about the files and the org, and every question asked of
+ * it. Findings are not only displayed: an error aborts the run and sets the exit code,
+ * so the counting, merging, and rendering rules live here rather than at each call site
+ * that would otherwise have to remember them.
+ */
+export class Findings {
+    private constructor(private readonly items: Finding[]) {}
 
-        return `${finding.level}: ${where}${finding.message}`;
-    });
-}
+    public static of(items: Finding[]): Findings {
+        return new Findings(items);
+    }
 
-/** Count findings by level. */
-export function countFindings(findings: Finding[]): { errors: number; warnings: number } {
-    const errors = findings.filter((finding) => finding.level === 'error');
-    const warnings = findings.filter((finding) => finding.level === 'warning');
+    /** How many findings are error-level. */
+    public get errors(): number {
+        return this.countOf('error');
+    }
 
-    return { errors: errors.length, warnings: warnings.length };
+    /** How many findings are warning-level. */
+    public get warnings(): number {
+        return this.countOf('warning');
+    }
+
+    /** Whether the run has to abort: an error is fatal whatever the mode. */
+    public get hasErrors(): boolean {
+        return this.errors > 0;
+    }
+
+    /** Whether anything was flagged short of an error, which `--strict` promotes to a failure. */
+    public get hasWarnings(): boolean {
+        return this.warnings > 0;
+    }
+
+    /** Both sets in order, so file findings still read before the org's answers. */
+    public concat(other: Findings): Findings {
+        return new Findings([
+            ...this.items,
+            ...other.items,
+        ]);
+    }
+
+    /** Render as human-readable lines. Shared by check, validate, plan, and apply. */
+    public format(): string[] {
+        return this.items.map((finding) => {
+            const where = locationPrefix(finding);
+
+            return `${finding.level}: ${where}${finding.message}`;
+        });
+    }
+
+    /** Keeps `--json` payloads the plain array of findings they have always been. */
+    public toJSON(): Finding[] {
+        return this.items;
+    }
+
+    private countOf(level: FindingLevel): number {
+        const matching = this.items.filter((finding) => finding.level === level);
+
+        return matching.length;
+    }
 }

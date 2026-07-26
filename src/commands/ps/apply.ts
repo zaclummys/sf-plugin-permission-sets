@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { formatDiff, formatFindings, ReconcileMode, ScopedChange } from '../../core/index.js';
+import { formatDiff, ReconcileMode, ScopedChange } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
@@ -80,7 +80,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
         maxDeletes: number,
         showUnchanged: boolean
     ): PsApplyResult {
-        for (const line of formatFindings(result.findings)) {
+        for (const line of result.findings.format()) {
             this.log(line);
         }
 

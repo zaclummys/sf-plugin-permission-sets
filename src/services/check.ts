@@ -1,11 +1,9 @@
-import { loadFiles, DesiredAssignment, Finding, countFindings } from '../core/index.js';
+import { loadFiles, DesiredAssignment, Findings } from '../core/index.js';
 
 export type CheckResult = {
     files: string[];
     assignments: DesiredAssignment[];
-    findings: Finding[];
-    errors: number;
-    warnings: number;
+    findings: Findings;
     failed: boolean;
 };
 
@@ -13,16 +11,13 @@ export type CheckResult = {
 export class CheckService {
     public async run(files: string[], strict: boolean): Promise<CheckResult> {
         const loaded = await loadFiles(files);
-        const { errors, warnings } = countFindings(loaded.findings);
-        const failed = errors > 0 || (strict && warnings > 0);
+        const findings = loaded.findings;
 
         return {
             files: loaded.files,
             assignments: loaded.assignments,
-            findings: loaded.findings,
-            errors,
-            warnings,
-            failed,
+            findings,
+            failed: findings.hasErrors || (strict && findings.hasWarnings),
         };
     }
 }

@@ -7,6 +7,7 @@ import {
     TargetName,
     TargetRef,
     Finding,
+    Findings,
     kinds,
     distinctAssignees,
     distinctTargets,
@@ -24,7 +25,7 @@ import { OrgClient } from './adapters/index.js';
  */
 export class Resolution {
     public constructor(
-        public readonly findings: Finding[],
+        public readonly findings: Findings,
         private readonly userIds: Map<string, string>,
         private readonly targetIds: Record<Kind, Map<string, string>>
     ) {}
@@ -90,7 +91,7 @@ export class ResolutionService {
             targetIds[kind] = indexTargetsById(found);
         }
 
-        return new Resolution(findings, indexUsersById(foundUsers), targetIds);
+        return new Resolution(Findings.of(findings), indexUsersById(foundUsers), targetIds);
     }
 
     // No default case on purpose: a new Kind then fails to compile here, which is a

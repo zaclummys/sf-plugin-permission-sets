@@ -4,7 +4,7 @@ import { parseFile } from './parse.js';
 import { validateFile } from './schema.js';
 import { normalize } from './normalize.js';
 import { DesiredAssignment, LoadResult } from './model.js';
-import { Finding, noFilesError } from './finding.js';
+import { Finding, Findings, noFilesError } from './finding.js';
 
 /** Process one file's text through parse, validate, and normalize. Pure, no disk. */
 function checkContent(text: string, file: string): { assignments: DesiredAssignment[]; findings: Finding[] } {
@@ -42,7 +42,7 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         return {
             files,
             assignments: [],
-            findings: [noFilesError(patterns)],
+            findings: Findings.of([noFilesError(patterns)]),
         };
     }
 
@@ -66,5 +66,5 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         assignments.push(assignment);
     }
 
-    return { files, assignments, findings };
+    return { files, assignments, findings: Findings.of(findings) };
 }

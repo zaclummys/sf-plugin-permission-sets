@@ -1,4 +1,4 @@
-import { Finding } from './finding.js';
+import { Findings } from './finding.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
 
@@ -84,5 +84,5 @@ export type AssignmentOutcome = {
 export type LoadResult = {
     files: string[];
     assignments: DesiredAssignment[];
-    findings: Finding[];
+    findings: Findings;
 };

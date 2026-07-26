@@ -7,8 +7,8 @@ import {
     evaluateTargets,
     DesiredAssignment,
     Finding,
+    Findings,
     Kind,
-    countFindings,
     OrgTarget,
     TargetName,
     Username,
@@ -18,9 +18,7 @@ import { OrgClient } from './adapters/index.js';
 export type ValidateResult = {
     files: string[];
     assignments: DesiredAssignment[];
-    findings: Finding[];
-    errors: number;
-    warnings: number;
+    findings: Findings;
     failed: boolean;
 };
 
@@ -31,25 +29,18 @@ export class ValidateService {
     public async run(files: string[]): Promise<ValidateResult> {
         const loaded = await loadFiles(files);
         const resolved = await this.resolve(loaded.assignments);
-
-        const findings = [
-            ...loaded.findings,
-            ...resolved,
-        ];
-        const { errors, warnings } = countFindings(findings);
+        const findings = loaded.findings.concat(resolved);
 
         return {
             files: loaded.files,
             assignments: loaded.assignments,
             findings,
-            errors,
-            warnings,
-            failed: errors > 0,
+            failed: findings.hasErrors,
         };
     }
 
     /** Look every reference up in the org (in parallel) and evaluate the results. */
-    private async resolve(assignments: DesiredAssignment[]): Promise<Finding[]> {
+    private async resolve(assignments: DesiredAssignment[]): Promise<Findings> {
         const tasks: Promise<Finding[]>[] = [];
 
         const usernames = distinctAssignees(assignments);
@@ -65,7 +56,7 @@ export class ValidateService {
         }
 
         const results = await Promise.all(tasks);
-        return results.flat();
+        return Findings.of(results.flat());
     }
 
     private async evaluateUserRefs(usernames: Username[]): Promise<Finding[]> {

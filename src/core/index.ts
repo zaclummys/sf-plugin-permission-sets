@@ -1,5 +1,5 @@
 export { diffAssignments, Diff, Drift, ScopedChange } from './diff.js';
-export { Finding, formatFindings, countFindings } from './finding.js';
+export { Finding, Findings } from './finding.js';
 export { loadFiles } from './load.js';
 export {
   ActualAssignment,
