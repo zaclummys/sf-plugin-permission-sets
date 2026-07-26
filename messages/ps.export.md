@@ -12,7 +12,7 @@ Path of the YAML file to write. Created (and its parent directories) if missing,
 
 # flags.user.summary
 
-Only export these users, matched on exact username. Repeatable; multiple values are a union.
+Only export these users, matched case-insensitively as the org does. Repeatable; multiple values are a union.
 
 # flags.kind.summary
 
