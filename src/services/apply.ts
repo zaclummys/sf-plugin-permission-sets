@@ -1,6 +1,4 @@
 import {
-    loadFiles,
-    diffAssignments,
     ActualAssignment,
     AssignmentOutcome,
     AssignmentUpdate,
@@ -9,7 +7,7 @@ import {
     Findings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { ResolutionService } from './resolution.js';
+import { PlanService } from './plan.js';
 
 export type ApplyMode = 'additive' | 'destructive' | 'sync';
 
@@ -47,9 +45,10 @@ function invalidResult(files: string[], findings: Findings): ApplyResult {
 }
 
 /**
- * Load the files, resolve every reference to an org id, diff against the org's
- * current state, then add and/or remove per the mode. Deletions are capped by
- * maxDeletes and gated by an injected confirmation.
+ * Plan the run, then add and/or remove per the mode. The whole read-only half is
+ * PlanService: apply is that plan carried through to the DML, so the two can never
+ * disagree about what a set of files means. Deletions are capped by maxDeletes and
+ * gated by an injected confirmation.
  */
 export class ApplyService {
     public constructor(
@@ -58,28 +57,20 @@ export class ApplyService {
     ) {}
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
-        const loaded = await loadFiles(files);
-        if (loaded.findings.hasErrors) {
-            return invalidResult(loaded.files, loaded.findings);
+        const planService = new PlanService(this.org);
+        const plan = await planService.run(files);
+
+        if (plan.status === 'invalid') {
+            return invalidResult(plan.files, plan.findings);
         }
 
-        const resolutionService = new ResolutionService(this.org);
-        const resolution = await resolutionService.run(loaded.assignments);
-        const findings = loaded.findings.concat(resolution.findings);
-
-        if (findings.hasErrors) {
-            return invalidResult(loaded.files, findings);
-        }
-
-        const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
-        const diff = diffAssignments(loaded.assignments, actual);
-
+        const { files: planned, findings, diff } = plan;
         const { mode, maxDeletes, dryRun } = input;
         const { additions, updates, removals } = diff.scopeTo(mode);
 
         if (removals.length > maxDeletes) {
             return {
-                files: loaded.files,
+                files: planned,
                 findings,
                 diff,
                 outcomes: [],
@@ -89,20 +80,20 @@ export class ApplyService {
         }
 
         if (dryRun) {
-            return { files: loaded.files, findings, diff, outcomes: [], status: 'dry-run', failed: false };
+            return { files: planned, findings, diff, outcomes: [], status: 'dry-run', failed: false };
         }
 
         if (removals.length > 0) {
             const confirmed = await this.confirmDeletions(removals.length);
             if (!confirmed) {
-                return { files: loaded.files, findings, diff, outcomes: [], status: 'declined', failed: false };
+                return { files: planned, findings, diff, outcomes: [], status: 'declined', failed: false };
             }
         }
 
-        const outcomes = await this.executeResolved(resolution.resolveAdditions(additions), updates, removals);
+        const outcomes = await this.executeResolved(plan.resolution.resolveAdditions(additions), updates, removals);
         const failed = outcomes.some((outcome) => !outcome.success);
 
-        return { files: loaded.files, findings, diff, outcomes, status: 'applied', failed };
+        return { files: planned, findings, diff, outcomes, status: 'applied', failed };
     }
 
     private async executeResolved(

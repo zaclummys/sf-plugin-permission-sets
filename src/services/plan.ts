@@ -1,16 +1,22 @@
 import { loadFiles, diffAssignments, Diff, Findings } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
-import { ResolutionService } from './resolution.js';
+import { Resolution, ResolutionService } from './resolution.js';
 
-/** How a run ended, so the command can report and set the exit code. */
-export type PlanStatus = 'planned' | 'invalid';
-
-export type PlanResult = {
+/** What every plan reports, however it ended, so the caller can set the exit code. */
+type PlannedFiles = {
     files: string[];
     findings: Findings;
     diff: Diff;
-    status: PlanStatus;
 };
+
+/**
+ * A plan, discriminated by status so that only a plan the org answered carries the
+ * Resolution. Apply needs the resolved ids to insert with, and the discriminant is what
+ * proves it can reach them only on the path where every reference did resolve.
+ */
+export type PlanResult =
+    | (PlannedFiles & { status: 'invalid' })
+    | (PlannedFiles & { status: 'planned'; resolution: Resolution });
 
 /** An aborted-before-the-diff result, carrying the findings that explain why. */
 function invalidResult(files: string[], findings: Findings): PlanResult {
@@ -48,6 +54,6 @@ export class PlanService {
         const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
         const diff = diffAssignments(loaded.assignments, actual);
 
-        return { files: loaded.files, findings, diff, status: 'planned' };
+        return { files: loaded.files, findings, diff, resolution, status: 'planned' };
     }
 }
