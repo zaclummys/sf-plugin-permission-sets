@@ -278,14 +278,17 @@ group, and license referenced actually exists and resolves uniquely.
 
 ```
 USAGE
-  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged] [--json]
+  $ sf ps plan -o <org> -f <glob>... [--mode <value>] [--show-unchanged] [--strict] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
   -f, --file=<glob>...     (required) YAML file(s) to read. Repeatable, globs expanded by the plugin.
   --mode=<value>           additive | destructive | sync   [default: additive]
   --show-unchanged         List assignments that already match, instead of only counting them.
+  --strict                 Treat warnings as errors.
 ```
+
+`--strict` means the same thing it means on `check`: a warning stops the run. It is refused before the org is ever queried, so a plan that trips it costs nothing and tells you the same thing `check --strict` would have.
 
 The body shows only what the mode will do, and unchanged assignments are summarized as a count (pass `--show-unchanged` to list them). The default `additive` run previews only what it grants, and reports the undeclared assignment it won't remove as drift:
 

@@ -38,11 +38,11 @@ function invalidResult(files: string[], findings: Findings): PlanResult {
 export class PlanService {
     public constructor(private readonly org: OrgClient) { }
 
-    public async run(files: string[]): Promise<PlanResult> {
+    public async run(files: string[], strict = false): Promise<PlanResult> {
         const checkService = new CheckService();
-        const checked = await checkService.run(files);
+        const checked = await checkService.run(files, strict);
 
-        if (checked.findings.hasErrors()) {
+        if (checked.findings.blocks(strict)) {
             return invalidResult(checked.files, checked.findings);
         }
 
@@ -54,7 +54,7 @@ export class PlanService {
             .concat(checked.findings)
             .concat(resolution.findings);
 
-        if (findings.hasErrors()) {
+        if (findings.blocks(strict)) {
             return invalidResult(checked.files, findings);
         }
 

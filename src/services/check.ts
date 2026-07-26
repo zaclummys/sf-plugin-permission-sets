@@ -22,7 +22,7 @@ export class CheckService {
             files: loaded.files,
             assignments: loaded.assignments,
             findings,
-            failed: findings.hasErrors() || (strict && findings.hasWarnings()),
+            failed: findings.blocks(strict),
         };
     }
 }

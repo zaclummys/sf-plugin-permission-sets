@@ -10,6 +10,7 @@ import {
     DesiredAssignment,
     Diff,
     Drift,
+    Findings,
     ReconcileMode,
     ScopedChange,
 } from '../../core/index.js';
@@ -53,6 +54,9 @@ export default class Plan extends SfCommand<PsPlanResult> {
         'show-unchanged': Flags.boolean({
             summary: messages.getMessage('flags.show-unchanged.summary'),
         }),
+        strict: Flags.boolean({
+            summary: messages.getMessage('flags.strict.summary'),
+        }),
     };
 
     public async run(): Promise<PsPlanResult> {
@@ -63,7 +67,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const connection = targetOrg.getConnection();
         const orgClient = new ConnectionOrgClient(connection);
         const service = new PlanService(orgClient);
-        const result = await service.run(flags.file);
+        const result = await service.run(flags.file, flags.strict);
 
         for (const line of result.findings.format()) {
             this.log(line);
@@ -96,7 +100,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.errorInvalid();
+            if (!this.jsonEnabled()) this.reportInvalid(result.findings);
             return summary;
         }
 
@@ -203,8 +207,18 @@ export default class Plan extends SfCommand<PsPlanResult> {
         return `${this.config.bin} ps apply -o ${orgName} ${fileArgs}${modeArg}`;
     }
 
+    /** An error and a strict warning both stop the plan, for reasons worth telling apart. */
+    private reportInvalid(findings: Findings): void {
+        if (findings.hasErrors()) this.errorInvalid();
+        else this.errorStrict();
+    }
+
     private errorInvalid(): void {
         this.error(messages.getMessage('error.invalid'), { exit: 1 });
+    }
+
+    private errorStrict(): void {
+        this.error(messages.getMessage('error.strict'), { exit: 1 });
     }
 
     private logHeaderTitle(): void {

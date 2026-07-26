@@ -146,6 +146,15 @@ export class Findings {
         return this.items.some((finding) => finding.level === 'warning');
     }
 
+    /**
+     * Whether these findings stop the run. An error always does. A warning does only under
+     * `--strict`, which is why the flag's value is the caller's to pass rather than a
+     * verdict one command inherits from another.
+     */
+    public blocks(strict: boolean): boolean {
+        return this.hasErrors() || (strict && this.hasWarnings());
+    }
+
     /** Both sets in order, so file findings still read before the org's answers. */
     public concat(other: Findings): Findings {
         return new Findings([

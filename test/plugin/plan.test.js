@@ -5,6 +5,7 @@ import {
     validPath,
     schemaErrorPath,
     malformedPath,
+    warningsPath,
     undeclaredPath,
     noOrg,
     declaredPermissionSet,
@@ -13,7 +14,7 @@ import {
 } from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the starting point for an empty-diff plan. */
-async function writeOrgSnapshot(expect) {
+async function exportOrgSnapshot(expect) {
     const snapshot = await tempFile('ps-plan-', 'snap.yml');
     const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
 
@@ -37,11 +38,12 @@ describe('sf ps plan', () => {
         expect(stdout).toContain('--mode');
         expect(stdout).toContain('--file');
         expect(stdout).toContain('--show-unchanged');
+        expect(stdout).toContain('--strict');
     });
 
     // plan is read-only: it queries the org and prints a diff, so these never change org state.
     it('reports no changes when planning an org snapshot back against the org', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
 
@@ -50,7 +52,7 @@ describe('sf ps plan', () => {
     });
 
     it('headers the plan with the org and the mode', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
@@ -67,7 +69,7 @@ describe('sf ps plan', () => {
     });
 
     it('lists unchanged assignments under --show-unchanged', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
@@ -82,7 +84,7 @@ describe('sf ps plan', () => {
     });
 
     it('leaves unchanged assignments out of the body by default', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot]);
 
@@ -204,5 +206,40 @@ describe('sf ps plan', () => {
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
+    });
+
+    it('turns warnings into a failure under --strict', async ({ expect }) => {
+        const { stderr, exitCode } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            warningsPath,
+            '--strict',
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain('--strict treats them as errors');
+    });
+
+    it('names the warnings that --strict refused to plan', async ({ expect }) => {
+        const { stdout, exitCode } = await runPsTargetOrg([
+            'ps',
+            'plan',
+            '--file',
+            warningsPath,
+            '--strict',
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('listed twice under permissionSets');
+    });
+
+    it('plans an org snapshot under --strict, which raises no warnings', async ({ expect }) => {
+        const snapshot = await exportOrgSnapshot(expect);
+
+        const { stdout, exitCode } = await runPsTargetOrg(['ps', 'plan', '--file', snapshot, '--strict']);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('No changes.');
     });
 });

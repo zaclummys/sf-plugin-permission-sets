@@ -18,6 +18,10 @@ Which half of the reconcile to preview: additive adds and updates expirations, d
 
 List assignments that already match, instead of only counting them.
 
+# flags.strict.summary
+
+Treat warnings as errors.
+
 # header.title
 
 Permission Set Assignments Plan
@@ -69,6 +73,10 @@ Nothing to apply in %s mode.
 # error.invalid
 
 The files do not resolve cleanly against the org. Fix the errors above, then re-run.
+
+# error.strict
+
+The files raised warnings and --strict treats them as errors. Fix the warnings above, or drop --strict to plan anyway.
 
 # examples
 

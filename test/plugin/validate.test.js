@@ -4,7 +4,7 @@ import { tempFile } from '../helpers/temp-file.js';
 import { validPath, schemaErrorPath, malformedPath, noOrg } from '../fixtures/index.js';
 
 /** Snapshot the org into a temp file, the input every resolution case validates back. */
-async function writeOrgSnapshot(expect) {
+async function exportOrgSnapshot(expect) {
     const snapshot = await tempFile('ps-validate-', 'snap.yml');
     const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
 
@@ -34,7 +34,7 @@ describe('sf ps validate', () => {
     // and validating that snapshot back against the same org is the round-trip: every reference
     // resolves because it came from the org, so the resolution path reports no problems.
     it('validates an org snapshot back against the same org with no findings', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg(['ps', 'validate', '--file', snapshot]);
 
@@ -43,7 +43,7 @@ describe('sf ps validate', () => {
     });
 
     it('returns a valid --json envelope with resolved counts', async ({ expect }) => {
-        const snapshot = await writeOrgSnapshot(expect);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const { stdout, exitCode } = await runPsTargetOrg([
             'ps',
