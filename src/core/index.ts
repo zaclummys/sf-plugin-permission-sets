@@ -1,4 +1,5 @@
 export { diffAssignments, Diff, Drift, ScopedChange } from './diff.js';
+export { Expiration } from './expiration.js';
 export { Finding, Findings } from './finding.js';
 export { loadFiles } from './load.js';
 export {

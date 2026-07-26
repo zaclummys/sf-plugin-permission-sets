@@ -5,6 +5,7 @@ import {
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
+    Expiration,
     Kind,
     OrgTarget,
     OrgUser,
@@ -33,6 +34,19 @@ type LicenseRecord = {
     Assignee: { Username: string };
     PermissionSetLicense: { DeveloperName: string };
 };
+
+/**
+ * The org's ExpirationDate as an instant. The API serializes datetimes with a basic-format
+ * offset (`2026-12-31T23:59:59.000+0000`), so converting here is what keeps that spelling
+ * from reaching a comparison, a plan line, or an exported file.
+ */
+function toExpiration(value: string | null): Expiration | null {
+    if (!value) {
+        return null;
+    }
+
+    return Expiration.of(value);
+}
 
 /** The slice of a DML save/delete result we report on. Structurally a jsforce SaveResult. */
 type DmlResult = { success: boolean; errors: { message: string }[] };
@@ -245,7 +259,7 @@ function buildAdditionBatches(
             const records = batch.map((addition) => ({
                 AssigneeId: addition.assigneeId,
                 [assignmentObjects[addition.kind].idField]: addition.targetId,
-                ...(addition.expiration ? { ExpirationDate: addition.expiration } : {}),
+                ...(addition.expiration ? { ExpirationDate: addition.expiration.toString() } : {}),
             }));
             batches.push({ sobject, additions: batch, records });
         }
@@ -270,7 +284,7 @@ function buildUpdateBatches(
         for (const batch of chunk(grouped, collectionBatchSize)) {
             const records: UpdateRecord[] = batch.map((update) => ({
                 Id: update.recordId,
-                ExpirationDate: update.expiration ?? null,
+                ExpirationDate: update.expiration?.toString() ?? null,
             }));
             batches.push({ sobject, updates: batch, records });
         }
@@ -374,7 +388,7 @@ export class ConnectionOrgClient implements OrgClient {
                 kind,
                 target,
                 assignee: Username.of(record.Assignee.Username),
-                expiration: record.ExpirationDate,
+                expiration: toExpiration(record.ExpirationDate),
             };
         });
     }
@@ -422,7 +436,7 @@ export class ConnectionOrgClient implements OrgClient {
                 target,
                 recordId: record.Id,
                 assignee: Username.of(record.Assignee.Username),
-                expiration: record.ExpirationDate,
+                expiration: toExpiration(record.ExpirationDate),
             };
         });
     }

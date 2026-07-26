@@ -56,6 +56,12 @@ describe('sf ps export', () => {
         expect(checked.stdout).toContain('0 errors');
     });
 
+    // The round-trip above only covers expirations once the org holds one: the API returns
+    // datetimes as `2026-12-31T23:59:59.000+0000`, which the schema rejects, so writing that
+    // spelling back out produces a file ps check refuses. Needs an expiring assignment in
+    // PS_TARGET_ORG, recorded in test/fixtures/org.js like the rest of the org's state.
+    it.todo('writes an org expiration in the canonical form ps check accepts');
+
     it('scopes the file to the requested --kind only', async ({ expect }) => {
         const file = await tempFile('ps-export-', 'export.yml');
         const { exitCode } = await runPsTargetOrg([

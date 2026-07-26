@@ -1,4 +1,5 @@
 import { stringify } from 'yaml';
+import { Expiration } from './expiration.js';
 import { DesiredAssignment } from './model.js';
 import { kindKeys, ScopeKey } from './normalize.js';
 import { distinctAssignees } from './resolve.js';
@@ -24,7 +25,7 @@ function byText(left: { toString(): string }, right: { toString(): string }): nu
 
 /** One user's entries for one scope, de-duplicated by target and ordered by name. */
 function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
-    const byTarget = new Map<string, { target: TargetName; expiration: string | null }>();
+    const byTarget = new Map<string, { target: TargetName; expiration: Expiration | null }>();
     for (const assignment of assignments) {
         if (!byTarget.has(assignment.target.asKey())) {
             byTarget.set(assignment.target.asKey(), { target: assignment.target, expiration: assignment.expiration });
@@ -38,7 +39,7 @@ function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
             return target.toString();
         }
 
-        return { name: target.toString(), expiration };
+        return { name: target.toString(), expiration: expiration.toString() };
     });
 }
 
@@ -46,7 +47,8 @@ function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
  * Emit canonical assignments back to a user-keyed YAML document: the inverse of
  * normalize. Usernames and targets are sorted and de-duplicated so the output is
  * deterministic, empty scopes are omitted, and an assignment with an expiration
- * is written as the object form so it round-trips through the schema.
+ * is written as the object form, in Expiration's canonical spelling, so the file
+ * round-trips back through the schema.
  */
 export function serializeAssignments(assignments: DesiredAssignment[]): string {
     const assignees = distinctAssignees(assignments);

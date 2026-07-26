@@ -1,3 +1,4 @@
+import { Expiration } from './expiration.js';
 import { ActualAssignment, AssignmentUpdate, DesiredAssignment, Kind, ReconcileMode } from './model.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
@@ -75,14 +76,6 @@ function assignmentKey(assignee: Username, kind: Kind, target: TargetName): stri
     return `${assignee.asKey()} ${kind} ${target.asKey()}`;
 }
 
-/** Whether two expirations name the same instant. Both absent (null) counts as equal. */
-function sameExpiration(left: string | null, right: string | null): boolean {
-    if (!left || !right) {
-        return left === right;
-    }
-    return Date.parse(left) === Date.parse(right);
-}
-
 /**
  * Compare the desired assignments against the org's current memberships of the
  * managed targets. `actual` must hold only assignments for targets that appear
@@ -111,7 +104,7 @@ export function diffAssignments(desired: DesiredAssignment[], actual: ActualAssi
         const existing = actualByKey.get(key);
         if (!existing) {
             toAdd.push(assignment);
-        } else if (sameExpiration(existing.expiration, assignment.expiration)) {
+        } else if (Expiration.same(existing.expiration, assignment.expiration)) {
             unchanged.push(existing);
         } else {
             toUpdate.push({

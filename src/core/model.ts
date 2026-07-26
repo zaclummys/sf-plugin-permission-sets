@@ -1,3 +1,4 @@
+import { Expiration } from './expiration.js';
 import { Findings } from './finding.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
@@ -17,8 +18,8 @@ export type DesiredAssignment = {
     assignee: Username;
     kind: Kind;
     target: TargetName;
-    /** ISO 8601 datetime the grant should expire; null for no expiration. Only permission sets and groups support it. */
-    expiration: string | null;
+    /** The instant the grant should expire; null for no expiration. Only permission sets and groups support it. */
+    expiration: Expiration | null;
 };
 
 /** A user as it exists in the org, in domain terms (no SObject field names). */
@@ -41,7 +42,7 @@ export type ActualAssignment = {
     kind: Kind;
     target: TargetName;
     /** The expiration the org has on record; null for none. */
-    expiration: string | null;
+    expiration: Expiration | null;
 };
 
 /** An existing assignment whose expiration should change. `expiration` null clears it. */
@@ -50,9 +51,9 @@ export type AssignmentUpdate = {
     assignee: Username;
     kind: Kind;
     target: TargetName;
-    expiration: string | null;
+    expiration: Expiration | null;
     /** The expiration the org has now, before the update. Null means it had none. */
-    previousExpiration: string | null;
+    previousExpiration: Expiration | null;
 };
 
 /** A resolved managed target: its kind and the org id it resolved to. */

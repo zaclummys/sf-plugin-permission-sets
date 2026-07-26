@@ -1,4 +1,5 @@
 import { Diff } from './diff.js';
+import { Expiration } from './expiration.js';
 import { Kind, ReconcileMode } from './model.js';
 import { kindKeys } from './normalize.js';
 import { TargetName } from './target-name.js';
@@ -9,10 +10,10 @@ import { TargetName } from './target-name.js';
  * within a group one user is spelled one way.
  */
 type DiffBucket = {
-    adds: Map<string, string | null>;
-    updates: Map<string, { previous: string | null; next: string | null }>;
+    adds: Map<string, Expiration | null>;
+    updates: Map<string, { previous: Expiration | null; next: Expiration | null }>;
     removes: Set<string>;
-    unchanged: Map<string, string | null>;
+    unchanged: Map<string, Expiration | null>;
 };
 
 /** A target's bucket plus the name to print it under, since the map is keyed by comparison key. */
@@ -48,40 +49,30 @@ function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, tar
     return entry.bucket;
 }
 
-/**
- * A canonical, readable form of an expiration instant, so values from the org and from the
- * files display identically side by side. Falls back to the raw value if it cannot be parsed.
- */
-function canonicalExpiration(value: string): string {
-    const parsed = Date.parse(value);
-    if (Number.isNaN(parsed)) {
-        return value;
-    }
-
-    const instant = new Date(parsed);
-    return instant.toISOString().replace(/\.\d{3}Z$/, 'Z');
-}
-
 /** An assignee line suffixed with its expiration when there is one. */
-function withExpiry(assignee: string, expiration: string | null): string {
+function withExpiry(assignee: string, expiration: Expiration | null): string {
     if (!expiration) {
         return assignee;
     }
 
-    return `${assignee}   expires ${canonicalExpiration(expiration)}`;
+    return `${assignee}   expires ${expiration.toString()}`;
 }
 
-/** A canonical expiration for display, with `never` standing in for no expiration. */
-function expiryOrNever(expiration: string | null): string {
+/**
+ * An expiration for display, with `never` standing in for no expiration. Both sides of a
+ * transition print through Expiration, so a value from the org and one from a file read
+ * identically side by side however each was spelled.
+ */
+function expiryOrNever(expiration: Expiration | null): string {
     if (!expiration) {
         return 'never';
     }
 
-    return canonicalExpiration(expiration);
+    return expiration.toString();
 }
 
 /** An update line showing the expiration transition, with `never` standing in for no expiration. */
-function withTransition(assignee: string, previous: string | null, next: string | null): string {
+function withTransition(assignee: string, previous: Expiration | null, next: Expiration | null): string {
     const from = expiryOrNever(previous);
     const to = expiryOrNever(next);
 

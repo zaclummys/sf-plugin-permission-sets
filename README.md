@@ -160,6 +160,8 @@ users:
 
 Expiration is a property of the grant, so `plan` and `apply` treat a changed `expiration` on an already-assigned target as an **update** (the `~` line, which shows the `old → new` transition), not an add or a remove. Updates ride with the additive half: they run in `additive` and `sync` modes and never count against `--max-deletes`. Permission set **licenses** cannot expire (Salesforce has no expiration on `PermissionSetLicenseAssign`), so the object form is rejected there. `export` writes the object form for any assignment that currently has an expiration in the org.
 
+An expiration names an **instant**, not a piece of text. The file takes an ISO 8601 datetime with an offset, so `2026-12-31T23:59:59Z` and `2026-12-31T20:59:59-03:00` are the same moment written two ways and the plugin treats them as equal: it compares instants, to the second, which is the precision Salesforce stores. A file that spells an expiration differently from the org is therefore in sync, not an endless update. Everything the plugin *writes* (the `export` file, the plan's `expires` lines, the `--json` payload) comes back in one canonical form: UTC, to the second, `Z`-suffixed.
+
 The `--file` flag is repeatable and the plugin expands globs itself, so all of these work:
 
 ```bash

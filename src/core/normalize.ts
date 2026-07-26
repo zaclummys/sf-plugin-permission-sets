@@ -1,4 +1,5 @@
 import { FileShape } from './schema.js';
+import { Expiration } from './expiration.js';
 import { DesiredAssignment, Kind } from './model.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
@@ -26,12 +27,12 @@ export function kindForScopeKey(key: ScopeKey): Kind {
 type ScopeItem = string | { name: string; expiration: string };
 
 /** A scope item in canonical form: the bare string is a target with no expiration. */
-function scopeItemFields(item: ScopeItem): { target: TargetName; expiration: string | null } {
+function scopeItemFields(item: ScopeItem): { target: TargetName; expiration: Expiration | null } {
     if (typeof item === 'string') {
         return { target: TargetName.of(item), expiration: null };
     }
 
-    return { target: TargetName.of(item.name), expiration: item.expiration };
+    return { target: TargetName.of(item.name), expiration: Expiration.of(item.expiration) };
 }
 
 function normalizeScope(
