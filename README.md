@@ -377,8 +377,8 @@ A requested `--user` that has no matching assignments (a typo, or a user who gen
 
 ```
 USAGE
-  $ sf ps apply -o <org> -f <glob>... [--mode <value>]
-                [--max-deletes <n>] [--dry-run] [--show-unchanged] [--no-prompt] [--json]
+  $ sf ps apply -o <org> -f <glob>... [--mode <value>] [--max-deletes <n>]
+                [--dry-run] [--show-unchanged] [--no-prompt] [--strict] [--json]
 
 FLAGS
   -o, --target-org=<org>   (required)
@@ -388,7 +388,10 @@ FLAGS
   --dry-run                Resolve and diff, print what would happen, change nothing.
   --show-unchanged         List assignments that already match, instead of only counting them.
   --no-prompt              Skip the deletion confirmation prompt (for CI).
+  --strict                 Treat warnings as errors.
 ```
+
+`--strict` means the same thing it means on `check` and `plan`: a warning stops the run, before the org is queried and long before any DML. Pass it to the two the same way, or `plan --strict` refuses a file that `apply` then writes anyway.
 
 `apply` recomputes from the files every run: it re-reads the YAML, re-resolves every reference to an org id, and re-diffs against live state, then acts per `--mode`. Run `plan` shortly before `apply` so the preview you review reflects what `apply` will do (an edited file, a renamed permission set, or another admin's change between the two shifts the outcome).
 

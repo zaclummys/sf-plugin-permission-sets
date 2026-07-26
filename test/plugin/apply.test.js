@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
-import { tempFile } from '../helpers/temp-file.js';
-import { validPath, schemaErrorPath, malformedPath, undeclaredPath, noOrg } from '../fixtures/index.js';
+import { exportOrgSnapshot } from '../helpers/org-snapshot.js';
+import { validPath, schemaErrorPath, malformedPath, warningsPath, undeclaredPath, noOrg } from '../fixtures/index.js';
 
 describe('sf ps apply', () => {
     it('rejects an invalid --mode value', async ({ expect }) => {
@@ -43,14 +43,13 @@ describe('sf ps apply', () => {
         expect(stdout).toContain('--file');
         expect(stdout).toContain('--max-deletes');
         expect(stdout).toContain('--no-prompt');
+        expect(stdout).toContain('--strict');
     });
 
     // Real-org round-trips. Applying an org's own export is an empty diff, so --dry-run and a
     // real apply both leave the org untouched.
     it('applies an org export as a no-op round-trip (dry-run)', async ({ expect }) => {
-        const snapshot = await tempFile('ps-apply-', 'snap.yml');
-        const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
-        expect(exported.exitCode).toBe(0);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const applied = await runPsTargetOrg([
             'ps',
@@ -69,9 +68,7 @@ describe('sf ps apply', () => {
     });
 
     it('applies an org export as a no-op round-trip (real apply, no --dry-run)', async ({ expect }) => {
-        const snapshot = await tempFile('ps-apply-', 'snap.yml');
-        const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
-        expect(exported.exitCode).toBe(0);
+        const snapshot = await exportOrgSnapshot(expect);
 
         const applied = await runPsTargetOrg([
             'ps',
@@ -175,5 +172,50 @@ describe('sf ps apply', () => {
 
         expect(exitCode).toBe(1);
         expect(stdout).toContain('error:');
+    });
+
+    // No --dry-run on purpose: --strict has to stop a real apply before any DML, which is
+    // the whole point of it matching what plan --strict refused.
+    it('refuses a real apply of a file with warnings under --strict', async ({ expect }) => {
+        const { stderr, exitCode } = await runPsTargetOrg([
+            'ps',
+            'apply',
+            '--file',
+            warningsPath,
+            '--strict',
+            '--no-prompt',
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stderr).toContain('Nothing was applied');
+    });
+
+    it('names the warnings that --strict refused to apply', async ({ expect }) => {
+        const { stdout, exitCode } = await runPsTargetOrg([
+            'ps',
+            'apply',
+            '--file',
+            warningsPath,
+            '--strict',
+            '--no-prompt',
+        ]);
+
+        expect(exitCode).toBe(1);
+        expect(stdout).toContain('listed twice under permissionSets');
+    });
+
+    it('applies an org export under --strict, which raises no warnings', async ({ expect }) => {
+        const snapshot = await exportOrgSnapshot(expect);
+
+        const { exitCode } = await runPsTargetOrg([
+            'ps',
+            'apply',
+            '--file',
+            snapshot,
+            '--strict',
+            '--dry-run',
+        ]);
+
+        expect(exitCode).toBe(0);
     });
 });

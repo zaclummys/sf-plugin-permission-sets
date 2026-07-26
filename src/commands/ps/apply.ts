@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { formatDiff, ReconcileMode, ScopedChange } from '../../core/index.js';
+import { formatDiff, Findings, ReconcileMode, ScopedChange } from '../../core/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
@@ -51,6 +51,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
         'no-prompt': Flags.boolean({
             summary: messages.getMessage('flags.no-prompt.summary'),
         }),
+        strict: Flags.boolean({
+            summary: messages.getMessage('flags.strict.summary'),
+        }),
     };
 
     public async run(): Promise<PsApplyResult> {
@@ -68,6 +71,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
             mode: flags.mode,
             maxDeletes: flags['max-deletes'],
             dryRun: flags['dry-run'],
+            strict: flags.strict,
         });
 
         return this.report(result, flags.mode, flags['max-deletes'], flags['show-unchanged']);
@@ -99,7 +103,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         if (result.status === 'invalid') {
             process.exitCode = 1;
-            if (!this.jsonEnabled()) this.errorInvalid();
+            if (!this.jsonEnabled()) this.reportInvalid(result.findings);
             return summary;
         }
 
@@ -209,8 +213,18 @@ export default class Apply extends SfCommand<PsApplyResult> {
         return this.confirm({ message: messages.getMessage('confirm.delete', [count]) });
     }
 
+    /** An error and a strict warning both stop the run, for reasons worth telling apart. */
+    private reportInvalid(findings: Findings): void {
+        if (findings.hasErrors()) this.errorInvalid();
+        else this.errorStrict();
+    }
+
     private errorInvalid(): void {
         this.error(messages.getMessage('error.invalid'), { exit: 1 });
+    }
+
+    private errorStrict(): void {
+        this.error(messages.getMessage('error.strict'), { exit: 1 });
     }
 
     private errorMaxDeletes(removeCount: number, maxDeletes: number): void {

@@ -19,6 +19,7 @@ export type ApplyInput = {
     mode: ApplyMode;
     maxDeletes: number;
     dryRun: boolean;
+    strict: boolean;
 };
 
 /** How a run ended, so the command can report and set the exit code. */
@@ -56,15 +57,16 @@ export class ApplyService {
     ) {}
 
     public async run(files: string[], input: ApplyInput): Promise<ApplyResult> {
+        const { mode, maxDeletes, dryRun, strict } = input;
+
         const planService = new PlanService(this.org);
-        const plan = await planService.run(files);
+        const plan = await planService.run(files, strict);
 
         if (plan.status === 'invalid') {
             return invalidResult(plan.files, plan.findings);
         }
 
         const { files: planned, findings, diff } = plan;
-        const { mode, maxDeletes, dryRun } = input;
         const { additions, updates, removals } = diff.scopeTo(mode);
 
         const untouched = {

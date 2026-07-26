@@ -30,6 +30,10 @@ List assignments that already match, instead of only counting them.
 
 Skip the deletion confirmation prompt. Required to delete in JSON or other non-interactive runs.
 
+# flags.strict.summary
+
+Treat warnings as errors.
+
 # confirm.delete
 
 This will remove %s assignment(s) from the org. Continue?
@@ -57,6 +61,10 @@ failed to %s %s on %s: %s
 # error.invalid
 
 The files do not resolve cleanly against the org. Fix the errors above, then re-run.
+
+# error.strict
+
+The files raised warnings and --strict treats them as errors. Nothing was applied. Fix the warnings above, or drop --strict to apply anyway.
 
 # error.maxDeletes
 

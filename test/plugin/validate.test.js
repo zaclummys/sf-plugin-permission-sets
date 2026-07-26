@@ -1,17 +1,7 @@
 import { describe, it } from 'vitest';
 import { runPs, runPsTargetOrg, parseJson } from '../helpers/run-plugin.js';
-import { tempFile } from '../helpers/temp-file.js';
+import { exportOrgSnapshot } from '../helpers/org-snapshot.js';
 import { validPath, schemaErrorPath, malformedPath, noOrg } from '../fixtures/index.js';
-
-/** Snapshot the org into a temp file, the input every resolution case validates back. */
-async function exportOrgSnapshot(expect) {
-    const snapshot = await tempFile('ps-validate-', 'snap.yml');
-    const exported = await runPsTargetOrg(['ps', 'export', '--output-file', snapshot]);
-
-    expect(exported.exitCode).toBe(0);
-
-    return snapshot;
-}
 
 describe('sf ps validate', () => {
     it('fails cleanly when the org cannot be resolved', async ({ expect }) => {
