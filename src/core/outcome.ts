@@ -26,6 +26,11 @@ export class Outcomes {
         return new Outcomes(items);
     }
 
+    /** What a run that never reached the DML did to the org: nothing. */
+    public static empty(): Outcomes {
+        return new Outcomes([]);
+    }
+
     /** How many additions the org accepted. */
     public added(): number {
         return this.acceptedOf('add');

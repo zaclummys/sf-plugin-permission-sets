@@ -71,7 +71,7 @@ export class ApplyService {
             files: planned,
             findings,
             diff,
-            outcomes: Outcomes.of([]),
+            outcomes: Outcomes.empty(),
         };
 
         if (removals.length > maxDeletes) {
