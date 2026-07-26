@@ -19,6 +19,7 @@
     },
     "devDependencies": {
         "@eslint/js": "^10",
+        "@stylistic/eslint-plugin": "^5",
         "eslint": "^10",
         "execa": "^10",
         "globals": "^17",

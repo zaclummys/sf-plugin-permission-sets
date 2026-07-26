@@ -1,4 +1,5 @@
 import js from "@eslint/js";
+import stylistic from "@stylistic/eslint-plugin";
 import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
@@ -18,18 +19,17 @@ export default defineConfig([
         files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
         extends: [js.configs.recommended],
         languageOptions: { globals: globals.node },
+        plugins: { "@stylistic": stylistic },
         rules: {
             // Always brace a block statement, even a single-line if: a braceless body
             // makes the next added line silently fall outside the branch.
             curly: ["error", "all"],
             // The body starts on the line after the opening brace, and `} else {` stays
             // on one line, so every branch body reads at the same indent.
-            "brace-style": ["error", "1tbs", { allowSingleLine: false }],
+            "@stylistic/brace-style": ["error", "1tbs", { allowSingleLine: false }],
             // Four spaces, matching .editorconfig, so an editor and the linter never
             // disagree about a line.
-            // brace-style and indent are core formatting rules: they ship until ESLint 11,
-            // then both move to @stylistic.
-            indent: ["error", 4, { SwitchCase: 1 }],
+            "@stylistic/indent": ["error", 4, { SwitchCase: 1 }],
         },
     },
 
