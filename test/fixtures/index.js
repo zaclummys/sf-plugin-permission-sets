@@ -3,7 +3,13 @@
 // which reads them itself. They stay relative to the project root because runPs spawns
 // `sf` with cwd there.
 
-export * from './org.js';
+export {
+    declaredUser,
+    declaredUserOtherCase,
+    declaredPermissionSet,
+    undeclaredPermissionSet,
+    undeclaredHolder,
+} from './org.js';
 
 /** Parses and resolves cleanly against no org: no findings expected. */
 export const validPath = 'test/fixtures/valid.yml';
