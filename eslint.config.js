@@ -4,6 +4,16 @@ import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+    // Build output is generated JS: it never matches these rules, and linting it
+    // buries the real findings under thousands of them.
+    {
+        ignores: [
+            "lib/**",
+            ".wireit/**",
+            "tmp/**",
+        ],
+    },
+
     {
         files: ["**/*.{js,mjs,cjs,ts,mts,cts}"],
         extends: [js.configs.recommended],

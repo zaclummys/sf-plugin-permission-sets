@@ -95,12 +95,14 @@
             "clean": "if-file-deleted"
         },
         "lint": {
-            "command": "eslint src test --color --cache --cache-location .eslintcache",
+            "command": "eslint . --color --cache --cache-location .eslintcache",
             "files": [
                 "src/**/*.ts",
                 "test/**/*.js",
+                "bin/**",
                 "messages/**",
                 "eslint.config.js",
+                "package.json",
                 "**/tsconfig.json"
             ],
             "output": []
