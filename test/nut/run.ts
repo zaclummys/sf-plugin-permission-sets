@@ -18,9 +18,9 @@ export function fixture(name: string): string {
 export const unresolvableOrg = 'no-such-org-alias-xyz';
 
 /**
- * The minimal SFDX project a scratch org NUT is built from: three permission sets nobody
- * holds, so each test can claim one and never depend on what another test did to the org.
- * TestSession copies it into the session dir, so the commands never touch this directory.
+ * The SFDX project a scratch org NUT is built from: one permission set per job that touches
+ * the org, plus a group, so no test depends on what another left behind. TestSession copies
+ * it into the session dir, so the commands never touch this directory.
  */
 export const projectDir = path.join(repoRoot, 'test', 'nut', 'project');
 
@@ -176,6 +176,63 @@ export function assignUntil(
     );
 }
 
+/**
+ * The developer name of a permission set licence the org has, has a free seat for, and the
+ * assignee does not already hold.
+ *
+ * Which licences an org ships with comes from its edition, so the name cannot be written
+ * down the way a permission set the fixture project deploys can. Not holding it is what
+ * makes a plan against it read as an addition, and the free seat is what lets an apply of
+ * that plan succeed: an org carries plenty of licences with none left.
+ */
+export function unassignedLicense(orgUsername: string, assigneeId: string): string {
+    const all = execCmd<{
+        records: {
+            DeveloperName: string;
+            Status: string;
+            TotalLicenses: number;
+            UsedLicenses: number;
+        }[];
+    }>(
+        `data:query --query 'SELECT DeveloperName, Status, TotalLicenses, UsedLicenses `
+        + `FROM PermissionSetLicense' --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+    const held = execCmd<{
+        records: {
+            AssigneeId: string;
+            PermissionSetLicense: { DeveloperName: string };
+        }[];
+    }>(
+        `data:query --query 'SELECT AssigneeId, PermissionSetLicense.DeveloperName `
+        + `FROM PermissionSetLicenseAssign' --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+    // Filtered here rather than in a WHERE clause: the id would need quoting inside an
+    // argument that is already quoted, which is the shape that does not survive Windows.
+    const taken = new Set(
+        (held.jsonOutput?.result.records ?? [])
+            .filter((record) => record.AssigneeId === assigneeId)
+            .map((record) => record.PermissionSetLicense.DeveloperName),
+    );
+    const free = (all.jsonOutput?.result.records ?? [])
+        .filter((record) => record.Status === 'Active' && record.UsedLicenses < record.TotalLicenses)
+        .map((record) => record.DeveloperName)
+        .find((name) => !taken.has(name));
+
+    if (!free) {
+        throw new Error(`no permission set licence in ${orgUsername} has a free seat for ${assigneeId}`);
+    }
+
+    return free;
+}
+
 /** Switch a user off, so a spec can assert what the plugin says about an inactive assignee. */
 export function deactivateUser(orgUsername: string, userId: string): void {
     execCmd(
@@ -192,6 +249,15 @@ export function deactivateUser(orgUsername: string, userId: string): void {
  * the org's admin, which only exists once the org does, so this cannot be a committed
  * fixture the way test/fixtures/*.yml are.
  */
+/** The same, for the scope the plugin calls permissionSetLicenses. */
+export function writeLicenseFile(dir: string, username: string, license: string): string {
+    const file = path.join(dir, `${license}--license.yml`);
+
+    writeFileSync(file, `users:\n  ${username}:\n    permissionSetLicenses:\n      - ${license}\n`);
+
+    return file;
+}
+
 /** The same, for the scope the plugin calls permissionSetGroups rather than permissionSets. */
 export function writeGroupFile(dir: string, username: string, group: string): string {
     const file = path.join(dir, `${group}--group.yml`);

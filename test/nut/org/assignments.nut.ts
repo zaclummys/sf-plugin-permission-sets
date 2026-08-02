@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
 import { expect } from 'chai';
 import { parse } from 'yaml';
-import { assignPermissionSet, assignUntil, createUser, deactivateUser, fixture, projectDir, ps, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile } from '../run.ts';
+import { assignPermissionSet, assignUntil, createUser, deactivateUser, fixture, projectDir, ps, unassignedLicense, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile, writeLicenseFile } from '../run.ts';
 import type { PsApplyResult } from '../../../src/commands/ps/apply.js';
 import type { PsExportResult } from '../../../src/commands/ps/export.js';
 import type { PsPlanResult } from '../../../src/commands/ps/plan.js';
@@ -28,19 +28,19 @@ const laterExpiration = '2098-06-30T12:00:00Z';
  *
  * Every command shares one session, because a scratch org costs a slot in the Dev Hub's
  * daily allocation and about a minute to create. Independence comes from the fixture
- * project instead: it deploys one permission set per job, so no test can observe what
- * another did. Alpha is only ever planned, Beta only ever dry-run, Gamma is the one apply
- * writes, and Delta and Epsilon are seeded onto the admin below so the diff has state to
- * report that no file put there. Adding a test that writes means adding a permission set.
+ * project instead: one permission set per job, so no test can observe what another did.
+ * Alpha is only ever planned, Beta only ever dry-run, Gamma is what apply writes, Delta and
+ * Epsilon are seeded onto the admin so the diff has state no file put there, Zeta and Eta
+ * belong to islandUser and only export reads them, and Theta goes in already expiring so
+ * that moving its instant is an update. Adding a test that writes means adding one more.
  *
  * Requires a Dev Hub. Set TESTKIT_AUTH_URL or TESTKIT_HUB_USERNAME first, as the
  * Development section of the README describes. Without one, TestSession.create throws and
  * this file fails rather than silently passing.
  *
- * One scope is still untested: permissionSetLicenses. Nothing here holds one, so the
- * adapter's licence query and the licence half of a diff never run. A Developer Edition
- * scratch org does ship assignable licences, which is how plugin-user reaches one in its
- * own NUTs, so this is a gap to close rather than a limit of the approach.
+ * All three scopes are exercised. The licence is picked at run time rather than named:
+ * which licences an org has comes from its edition, so unlike a permission set the fixture
+ * project deploys, its name is not ours to write down.
  */
 describe('scratch org NUTs', () => {
     let session: TestSession | undefined;
@@ -71,6 +71,7 @@ describe('scratch org NUTs', () => {
     // are query and DML paths in the adapter that no other test reaches.
     let groupFile: string;
     let reExpiringFile: string;
+    let licenseFile: string;
 
     before(async () => {
         session = await TestSession.create({
@@ -120,6 +121,7 @@ describe('scratch org NUTs', () => {
         undeclaredFile = writeAssignmentFile(session.dir, islandUser, 'PS_Nut_Delta');
         unchangedFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Epsilon');
         groupFile = writeGroupFile(session.dir, username, 'PS_Nut_Group');
+        licenseFile = writeLicenseFile(session.dir, username, unassignedLicense(username, userId(username, username)));
         reExpiringFile = writeExpiringFile(session.dir, username, 'PS_Nut_Theta', laterExpiration);
     });
 
@@ -145,6 +147,12 @@ describe('scratch org NUTs', () => {
 
             expect(result.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update. 1 users affected.');
             expect(result.shellOutput.stdout).to.contain('PS_Nut_Group');
+        });
+
+        it('plans a permission set licence the same way it plans a permission set', () => {
+            const result = ps(`plan --file ${licenseFile} --target-org ${username}`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update. 1 users affected.');
         });
 
         it('reports the org it planned against in --json', () => {
@@ -575,6 +583,16 @@ describe('scratch org NUTs', () => {
                 updated: 1,
                 removed: 0,
             });
+        });
+
+        it('adds a permission set licence, which is a different sObject from an assignment', () => {
+            const applied = ps(`apply --file ${licenseFile} --target-org ${username} --no-prompt`, 0);
+
+            expect(applied.shellOutput.stdout).to.contain('Applied: 1 added, 0 updated, 0 removed.');
+
+            const after = ps(`plan --file ${licenseFile} --target-org ${username}`, 0);
+
+            expect(after.shellOutput.stdout).to.contain('No changes.');
         });
 
         it('adds the assignment and leaves the org matching the file', () => {
