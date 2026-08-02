@@ -51,16 +51,26 @@ function byLikelihood(names: string[]): string[] {
     ];
 }
 
+/** Give the org an assignment, so a spec can diff a file against state it did not declare. */
+export function assignPermissionSet(orgUsername: string, assignee: string, permissionSet: string): void {
+    execCmd(
+        `org:assign:permset --name ${permissionSet} --on-behalf-of ${assignee} --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+}
+
 /**
- * Create a user in the scratch org and switch it off, so a spec can assert what the plugin
- * says about an inactive assignee.
+ * Create a user in the scratch org.
  *
  * The loop is the point: `sf org create user` needs a profile, which profiles an org ships
  * with is not knowable up front, and a profile existing does not mean a licence is free for
  * it. So ask the org what it has and take the first one it accepts. It lives here rather
  * than in the spec because a `.nut.ts` file may not contain a loop.
  */
-export function createInactiveUser(dir: string, orgUsername: string): CreateUserOutput['fields'] {
+export function createUser(dir: string, orgUsername: string): CreateUserOutput['fields'] {
     const query = execCmd<{ records: { Name: string }[] }>(
         `data:query --query 'SELECT Name FROM Profile' --target-org ${orgUsername} --json`,
         {
@@ -94,15 +104,18 @@ export function createInactiveUser(dir: string, orgUsername: string): CreateUser
         throw new Error(`no profile among ${profiles.join(', ')} could create a user in ${orgUsername}`);
     }
 
+    return created;
+}
+
+/** Switch a user off, so a spec can assert what the plugin says about an inactive assignee. */
+export function deactivateUser(orgUsername: string, userId: string): void {
     execCmd(
-        `data:update:record --sobject User --record-id ${created.id} --values IsActive=false --target-org ${orgUsername} --json`,
+        `data:update:record --sobject User --record-id ${userId} --values IsActive=false --target-org ${orgUsername} --json`,
         {
             ensureExitCode: 0,
             cli: 'sf',
         },
     );
-
-    return created;
 }
 
 /**

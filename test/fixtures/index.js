@@ -7,14 +7,7 @@
 // through their own fixture() helper, which resolves absolute paths because those commands
 // do not run from the project root.
 
-export {
-    declaredUser,
-    declaredUserOtherCase,
-    declaredPermissionSet,
-    undeclaredPermissionSet,
-    undeclaredHolder,
-    islandUser,
-} from './org.js';
+export { declaredUser, declaredUserOtherCase, islandUser } from './org.js';
 
 /** Parses and resolves cleanly against no org: no findings expected. */
 export const validPath = 'test/fixtures/valid.yml';

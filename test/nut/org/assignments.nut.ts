@@ -2,7 +2,7 @@ import { ok } from 'node:assert';
 import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
 import { expect } from 'chai';
-import { createInactiveUser, projectDir, ps, writeAssignmentFile } from '../run.ts';
+import { assignPermissionSet, createUser, deactivateUser, fixture, projectDir, ps, writeAssignmentFile } from '../run.ts';
 import type { PsApplyResult } from '../../../src/commands/ps/apply.js';
 import type { PsExportResult } from '../../../src/commands/ps/export.js';
 import type { PsPlanResult } from '../../../src/commands/ps/plan.js';
@@ -13,10 +13,12 @@ import type { PsPlanResult } from '../../../src/commands/ps/plan.js';
  * deployed into it. Nothing here reads PS_TARGET_ORG, so it cannot collide with the vitest
  * suite, and the org is gone when the session is cleaned.
  *
- * plan and apply share one session because a scratch org costs a slot in the Dev Hub's
- * daily allocation and about a minute to create. They stay independent of each other
- * anyway: the project deploys three permission sets and each test claims its own, so no
- * test can see what another one did to the org.
+ * Every command shares one session, because a scratch org costs a slot in the Dev Hub's
+ * daily allocation and about a minute to create. Independence comes from the fixture
+ * project instead: it deploys one permission set per job, so no test can observe what
+ * another did. Alpha is only ever planned, Beta only ever dry-run, Gamma is the one apply
+ * writes, and Delta and Epsilon are seeded onto the admin below so the diff has state to
+ * report that no file put there. Adding a test that writes means adding a permission set.
  *
  * Requires a Dev Hub. Set TESTKIT_AUTH_URL or TESTKIT_HUB_USERNAME first, as the
  * Development section of the README describes. Without one, TestSession.create throws and
@@ -26,8 +28,7 @@ describe('scratch org NUTs', () => {
     let session: TestSession | undefined;
     let username: string;
 
-    // One permission set per test that touches the org, so the order they run in cannot
-    // change what any of them sees. Only gamma is ever assigned.
+    // Declared but never held, so a plan against them always has exactly one thing to say.
     let readOnlyPlanFile: string;
     let dryRunFile: string;
     let appliedFile: string;
@@ -35,6 +36,14 @@ describe('scratch org NUTs', () => {
     // Declared but never deployed, so the org cannot resolve it.
     let missingTargetFile: string;
     let missingUserFile: string;
+
+    // The org's own state, seeded so the diff has something to say that no file declared.
+    // Delta is held by the admin and declared only for islandUser, which is what puts it in
+    // scope (plan only fetches targets the files name) while leaving the admin's copy
+    // undeclared: one addition, one removal. Epsilon is held by the admin and declared for
+    // the admin, so it is the one assignment that is unchanged.
+    let undeclaredFile: string;
+    let unchangedFile: string;
 
     before(async () => {
         session = await TestSession.create({
@@ -64,6 +73,14 @@ describe('scratch org NUTs', () => {
         appliedFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Gamma');
         missingTargetFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Never_Deployed');
         missingUserFile = writeAssignmentFile(session.dir, 'nobody@nut.invalid', 'PS_Nut_Alpha');
+
+        const islandUser = createUser(session.dir, username);
+
+        assignPermissionSet(username, username, 'PS_Nut_Delta');
+        assignPermissionSet(username, username, 'PS_Nut_Epsilon');
+
+        undeclaredFile = writeAssignmentFile(session.dir, islandUser.username, 'PS_Nut_Delta');
+        unchangedFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Epsilon');
     });
 
     after(async () => {
@@ -92,6 +109,113 @@ describe('scratch org NUTs', () => {
 
             expect(payload?.org.username).to.equal(username);
             expect(payload?.counts.toAdd).to.equal(1);
+        });
+
+        it('headers the plan with the org and the mode', () => {
+            const result = ps(`plan --file ${readOnlyPlanFile} --target-org ${username} --mode sync`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Permission Set Assignments Plan');
+            expect(result.shellOutput.stdout).to.contain('Mode: sync');
+        });
+
+        it('suggests the apply command that would carry out the plan', () => {
+            const result = ps(`plan --file ${readOnlyPlanFile} --target-org ${username} --mode sync`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('ps apply');
+            expect(result.shellOutput.stdout).to.contain(`-f "${readOnlyPlanFile}" --mode sync`);
+        });
+
+        it('reports no changes when everything the file declares is already held', () => {
+            const result = ps(`plan --file ${unchangedFile} --target-org ${username}`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('No changes.');
+        });
+
+        it('lists unchanged assignments under --show-unchanged', () => {
+            const result = ps(`plan --file ${unchangedFile} --target-org ${username} --show-unchanged`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('PS_Nut_Epsilon');
+        });
+
+        it('leaves unchanged assignments out of the body by default', () => {
+            const result = ps(`plan --file ${unchangedFile} --target-org ${username}`, 0);
+
+            expect(result.shellOutput.stdout).to.not.contain('PS_Nut_Epsilon');
+        });
+
+        it('counts additions and removals together in sync mode', () => {
+            const result = ps(`plan --file ${undeclaredFile} --target-org ${username} --mode sync`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update, 1 to remove. 2 users affected.');
+        });
+
+        it('marks the holder of an undeclared assignment for removal in sync mode', () => {
+            const result = ps(`plan --file ${undeclaredFile} --target-org ${username} --mode sync`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('PS_Nut_Delta');
+            expect(result.shellOutput.stdout).to.contain(`- ${username}`);
+        });
+
+        it('reports undeclared assignments as drift in additive mode', () => {
+            const result = ps(`plan --file ${undeclaredFile} --target-org ${username}`, 0);
+
+            expect(result.shellOutput.stdout).to.contain(
+                'Drift: 1 undeclared assignment(s) not removed in additive mode.',
+            );
+        });
+
+        it('returns counts, drift and the full diff in the --json envelope', () => {
+            const result = ps<PsPlanResult>(
+                `plan --file ${undeclaredFile} --target-org ${username} --mode sync --json`,
+                0,
+            );
+            const payload = result.jsonOutput?.result;
+
+            expect(payload?.counts).to.deep.include({
+                toAdd: 1,
+                toUpdate: 0,
+                toRemove: 1,
+                usersAffected: 2,
+            });
+            expect(payload?.changes.toRemove).to.have.lengthOf(1);
+        });
+
+        it('keeps stdout pure JSON when --json is passed', () => {
+            const result = ps(`plan --file ${undeclaredFile} --target-org ${username} --json`, 0);
+
+            expect(result.shellOutput.stdout).to.not.contain('Permission Set Assignments Plan');
+        });
+
+        // These four abort on the file, before the org is ever queried, but they still need
+        // an org that resolves: --target-org is parsed before run() reads anything.
+        it('fails a schema violation with exit 1', () => {
+            const result = ps(`plan --file ${fixture('schema-error.yml')} --target-org ${username}`, 1);
+
+            expect(result.shellOutput.stderr).to.contain('do not resolve cleanly against the org');
+        });
+
+        it('fails malformed YAML with exit 1', () => {
+            const result = ps(`plan --file ${fixture('malformed.yml')} --target-org ${username}`, 1);
+
+            expect(result.shellOutput.stdout).to.contain('error:');
+        });
+
+        it('turns warnings into a failure under --strict', () => {
+            const result = ps(`plan --file ${fixture('warnings.yml')} --target-org ${username} --strict`, 1);
+
+            expect(result.shellOutput.stderr).to.contain('--strict treats them as errors');
+        });
+
+        it('names the warnings that --strict refused to plan', () => {
+            const result = ps(`plan --file ${fixture('warnings.yml')} --target-org ${username} --strict`, 1);
+
+            expect(result.shellOutput.stdout).to.contain('listed twice under permissionSets');
+        });
+
+        it('plans a file with no warnings under --strict', () => {
+            const result = ps(`plan --file ${unchangedFile} --target-org ${username} --strict`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('No changes.');
         });
     });
 
@@ -126,8 +250,9 @@ describe('scratch org NUTs', () => {
 
             before(() => {
                 const sessionDir = session?.dir ?? '';
-                const inactive = createInactiveUser(sessionDir, username);
+                const inactive = createUser(sessionDir, username);
 
+                deactivateUser(username, inactive.id);
                 inactiveUserFile = writeAssignmentFile(sessionDir, inactive.username, 'PS_Nut_Alpha');
             });
 
