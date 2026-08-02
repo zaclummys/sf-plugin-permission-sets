@@ -615,7 +615,16 @@ cp .env.example .env
 | --- | --- | --- |
 | `PS_TARGET_ORG` | yes | Username or alias of an already-authenticated org. The `plan`, `apply`, and `export` specs run against it. |
 | `TESTKIT_HUB_USERNAME` | for `test:nuts:org` | An already-authenticated Dev Hub. The scratch org NUTs create their org from it. |
-| `TESTKIT_AUTH_URL` | for `test:nuts:org` | An sfdx auth url for that Dev Hub, as an alternative to the above. What CI passes in. |
+| `TESTKIT_AUTH_URL` | for `test:nuts:org` | An sfdx auth url for that Dev Hub, as an alternative to the above. What CI passes in, from a repository secret of the same name. |
+
+Keep the two orgs apart. `PS_TARGET_ORG` is long-lived and `test/fixtures/org.js` names users and permission sets that exist in it, so pointing it at a Dev Hub breaks every vitest spec. The Dev Hub is only ever asked for a fresh scratch org. Giving the NUTs their own hub also keeps them from spending the scratch org allocation you are using by hand:
+
+```bash
+# Set the CI secret without the credential passing through a terminal
+sf org display --verbose --json --target-org <your-devhub> \
+  | jq -r '.result.sfdxAuthUrl' \
+  | gh secret set TESTKIT_AUTH_URL
+```
 
 ## License
 
