@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { fixture, ps, unresolvableOrg } from './run.ts';
+import { fixture, ps, unresolvableOrg } from '../run.ts';
 
 const validFile = fixture('valid.yml');
 
@@ -7,9 +7,9 @@ const validFile = fixture('valid.yml');
  * apply is the only command that writes, so its guards are the part worth pinning where no
  * org can be reached: a bad --mode or a negative --max-deletes has to be refused during
  * parsing, before anything opens a connection. What apply does once it has an org is in
- * test/nut/org/, against a scratch org built for it.
+ * apply/org/, against a scratch org built for it.
  */
-describe('ps apply NUTs', () => {
+describe('ps apply before it reaches an org', () => {
     it('renders its summary from the messages file', () => {
         const result = ps('apply --help', 0);
 

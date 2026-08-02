@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { AssignmentFilter, serializeAssignments } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 
-export type ExportResult = {
+type ExportResult = {
     /** The path written, or null when the document was returned for stdout instead of a file. */
     outputFile: string | null;
     /** The serialized YAML document, exactly as written to the file. */

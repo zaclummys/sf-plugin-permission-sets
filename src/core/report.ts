@@ -1,7 +1,7 @@
 import { Diff } from './diff.js';
 import { Expiration } from './expiration.js';
 import { Kind, ReconcileMode } from './model.js';
-import { kindKeys } from './normalize.js';
+import { kindKeys } from './scope-key.js';
 import { TargetName } from './target-name.js';
 
 /**

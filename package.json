@@ -72,7 +72,7 @@
         "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
         "coverage": "npm run compile && rm -rf .v8-coverage coverage && NODE_V8_COVERAGE=.v8-coverage npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
-        "coverage:collect": "mocha \"test/nut/*.nut.ts\" && mocha \"test/nut/org/*.nut.ts\"",
+        "coverage:collect": "mocha \"test/nut/*/*.nut.ts\" && mocha \"test/nut/*/org/*.nut.ts\"",
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
@@ -116,7 +116,7 @@
             "output": []
         },
         "test": {
-            "command": "mocha \"test/nut/*.nut.ts\"",
+            "command": "mocha \"test/nut/*/*.nut.ts\"",
             "dependencies": [
                 "compile"
             ],
@@ -126,7 +126,7 @@
                 "SF_DISABLE_TELEMETRY": "true"
             },
             "files": [
-                "test/nut/*.nut.ts",
+                "test/nut/*/*.ts",
                 "test/nut/run.ts",
                 "test/fixtures/**",
                 "test/tsconfig.json",
@@ -135,7 +135,7 @@
             "output": []
         },
         "test:org": {
-            "command": "mocha \"test/nut/org/*.nut.ts\"",
+            "command": "mocha \"test/nut/*/org/*.nut.ts\"",
             "dependencies": [
                 "compile"
             ],
@@ -151,7 +151,8 @@
                 "SF_DISABLE_TELEMETRY": "true"
             },
             "files": [
-                "test/nut/org/*.nut.ts",
+                "test/nut/*/org/*.ts",
+                "test/nut/org-session.ts",
                 "test/nut/run.ts",
                 "test/nut/project/**",
                 "test/tsconfig.json",

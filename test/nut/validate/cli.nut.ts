@@ -1,14 +1,14 @@
 import { expect } from 'chai';
-import { fixture, ps, unresolvableOrg } from './run.ts';
+import { fixture, ps, unresolvableOrg } from '../run.ts';
 
 const validFile = fixture('valid.yml');
 
 /**
  * validate resolves every declared name against a real org, so what it does with a usable
- * one belongs to the vitest suite. What is left here is the contract that holds with no
- * org at all, plus the messages file only this command reads.
+ * one is in validate/org/. What is left here is the contract that holds with no org at all,
+ * plus the messages file only this command reads.
  */
-describe('ps validate NUTs', () => {
+describe('ps validate before it reaches an org', () => {
     it('renders its summary from the messages file', () => {
         const result = ps('validate --help', 0);
 

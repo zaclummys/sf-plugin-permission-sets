@@ -14,7 +14,7 @@ export {
     ResolvedAddition,
     TargetRef,
 } from './model.js';
-export { kindForScopeKey } from './normalize.js';
+export { kindForScopeKey } from './scope-key.js';
 export { AssignmentOutcome, Outcomes } from './outcome.js';
 export { formatDiff } from './report.js';
 export {

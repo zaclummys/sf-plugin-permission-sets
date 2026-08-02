@@ -1,7 +1,7 @@
 import { stringify } from 'yaml';
 import { Expiration } from './expiration.js';
 import { DesiredAssignment } from './model.js';
-import { kindKeys, ScopeKey } from './normalize.js';
+import { kindKeys, ScopeKey } from './scope-key.js';
 import { distinctAssignees } from './resolve.js';
 import { TargetName } from './target-name.js';
 

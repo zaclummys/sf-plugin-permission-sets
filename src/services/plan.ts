@@ -15,7 +15,7 @@ type PlannedFiles = {
  * Resolution. Apply needs the resolved ids to insert with, and the discriminant is what
  * proves it can reach them only on the path where every reference did resolve.
  */
-export type PlanResult =
+type PlanResult =
     | (PlannedFiles & { status: 'invalid' })
     | (PlannedFiles & {
         status: 'planned';

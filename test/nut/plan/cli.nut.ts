@@ -1,14 +1,14 @@
 import { expect } from 'chai';
-import { fixture, ps, unresolvableOrg } from './run.ts';
+import { fixture, ps, unresolvableOrg } from '../run.ts';
 
 const validFile = fixture('valid.yml');
 
 /**
- * What plan does with a usable org is in test/nut/org/, against a scratch org built for it.
+ * What plan does with a usable org is in plan/org/, against a scratch org built for it.
  * What is here is the half that needs no org and so runs on every pull request: the flags,
  * the messages file, and the refusal when the org cannot be reached.
  */
-describe('ps plan NUTs', () => {
+describe('ps plan before it reaches an org', () => {
     // plan resolves messages/ps.plan.md, which check never touches, so this fails for
     // plan alone if that one file breaks.
     it('renders its summary from the messages file', () => {

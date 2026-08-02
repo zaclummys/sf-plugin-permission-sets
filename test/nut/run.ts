@@ -13,7 +13,7 @@ export function fixture(name: string): string {
 
 /**
  * An alias that resolves nowhere, so the specs that must fail to reach an org fail the same
- * way on any machine. The vitest suite uses the same one, for the same reason.
+ * way on any machine, without the network or a developer's default org.
  */
 export const unresolvableOrg = 'no-such-org-alias-xyz';
 

@@ -4,26 +4,25 @@ import {
     AssignmentUpdate,
     Diff,
     Outcomes,
+    ReconcileMode,
     ResolvedAddition,
     Findings,
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 import { PlanService } from './plan.js';
 
-export type ApplyMode = 'additive' | 'destructive' | 'sync';
-
 /** How the service asks its caller to approve a destructive batch before applying it. */
 export type ConfirmDeletions = (count: number) => Promise<boolean>;
 
-export type ApplyInput = {
-    mode: ApplyMode;
+type ApplyInput = {
+    mode: ReconcileMode;
     maxDeletes: number;
     dryRun: boolean;
     strict: boolean;
 };
 
 /** How a run ended, so the command can report and set the exit code. */
-export type ApplyStatus = 'applied' | 'dry-run' | 'declined' | 'max-deletes-exceeded' | 'invalid';
+type ApplyStatus = 'applied' | 'dry-run' | 'declined' | 'max-deletes-exceeded' | 'invalid';
 
 export type ApplyResult = {
     files: string[];

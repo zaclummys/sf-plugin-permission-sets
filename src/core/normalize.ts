@@ -1,40 +1,10 @@
 import { FileShape } from './schema.js';
 import { Expiration } from './expiration.js';
 import { DesiredAssignment, Kind } from './model.js';
+import { kindKeys, ScopeKey } from './scope-key.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
 import { Finding, emptyListWarning, dupTargetWarning, emptyUserWarning } from './finding.js';
-
-export type ScopeKey = 'permissionSets' | 'permissionSetGroups' | 'permissionSetLicenses';
-
-/** The (kind, file scope key) pairing, in canonical order. Shared with serialize. */
-export const kindKeys: [Kind, ScopeKey][] = [
-    [
-        'permissionSet',
-        'permissionSets',
-    ],
-    [
-        'permissionSetGroup',
-        'permissionSetGroups',
-    ],
-    [
-        'permissionSetLicense',
-        'permissionSetLicenses',
-    ],
-];
-
-/** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
-export function kindForScopeKey(key: ScopeKey): Kind {
-    const pair = kindKeys.find(([
-        , scopeKey,
-    ]) => scopeKey === key);
-
-    if (!pair) {
-        throw new Error(`Unknown scope key: ${key}`);
-    }
-
-    return pair[0];
-}
 
 type ScopeItem = string | {
     name: string;
@@ -59,16 +29,24 @@ function scopeItemFields(item: ScopeItem): {
     };
 }
 
-function normalizeScope(
-    username: Username,
-    kind: Kind,
-    key: ScopeKey,
-    list: ScopeItem[],
-    file: string,
-): {
+/** Where a scope came from: the user it belongs to, the kind it grants, and the file it was read from. */
+type ScopeContext = {
+    username: Username;
+    kind: Kind;
+    key: ScopeKey;
+    file: string;
+};
+
+function normalizeScope(list: ScopeItem[], context: ScopeContext): {
     assignments: DesiredAssignment[];
     findings: Finding[]
 } {
+    const {
+        username,
+        kind,
+        key,
+        file,
+    } = context;
     const items = list.map(scopeItemFields);
 
     const assignments: DesiredAssignment[] = [];
@@ -126,7 +104,12 @@ function normalizeUser(
         }
 
         scopeCount += 1;
-        const scope = normalizeScope(username, kind, key, list, file);
+        const scope = normalizeScope(list, {
+            username,
+            kind,
+            key,
+            file,
+        });
 
         assignments.push(...scope.assignments);
         findings.push(...scope.findings);

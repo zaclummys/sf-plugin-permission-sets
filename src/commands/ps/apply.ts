@@ -19,6 +19,13 @@ export type PsApplyResult = {
     failures: number;
 };
 
+/** What the flags decide about the report: what the diff is scoped to, and how much of it is shown. */
+type ReportOptions = {
+    mode: ReconcileMode;
+    maxDeletes: number;
+    showUnchanged: boolean;
+};
+
 export default class Apply extends SfCommand<PsApplyResult> {
     public static readonly summary = messages.getMessage('summary');
     public static readonly description = messages.getMessage('description');
@@ -74,16 +81,15 @@ export default class Apply extends SfCommand<PsApplyResult> {
             strict: flags.strict,
         });
 
-        return this.report(result, flags.mode, flags['max-deletes'], flags['show-unchanged']);
+        return this.report(result, {
+            mode: flags.mode,
+            maxDeletes: flags['max-deletes'],
+            showUnchanged: flags['show-unchanged'],
+        });
     }
 
     /** Log findings, print the diff body, and report the outcome. Shared by both sources. */
-    private report(
-        result: ApplyResult,
-        mode: ReconcileMode,
-        maxDeletes: number,
-        showUnchanged: boolean,
-    ): PsApplyResult {
+    private report(result: ApplyResult, options: ReportOptions): PsApplyResult {
         for (const line of result.findings.format()) {
             this.log(line);
         }
@@ -111,16 +117,16 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
         this.log('');
         for (const line of formatDiff(result.diff, {
-            mode,
-            showUnchanged,
+            mode: options.mode,
+            showUnchanged: options.showUnchanged,
         })) {
             this.log(line);
         }
         this.log('');
 
-        const scoped = result.diff.scopeTo(mode);
+        const scoped = result.diff.scopeTo(options.mode);
 
-        this.reportOutcome(result, summary, scoped, mode, maxDeletes);
+        this.reportOutcome(result, summary, scoped, options);
 
         return summary;
     }
@@ -130,18 +136,17 @@ export default class Apply extends SfCommand<PsApplyResult> {
         result: ApplyResult,
         summary: PsApplyResult,
         scoped: ScopedChange,
-        mode: string,
-        maxDeletes: number,
+        options: ReportOptions,
     ): void {
         if (result.status === 'max-deletes-exceeded') {
             process.exitCode = 1;
             if (!this.jsonEnabled()) {
-                this.errorMaxDeletes(result.diff.toRemove.length, maxDeletes);
+                this.errorMaxDeletes(result.diff.toRemove.length, options.maxDeletes);
             }
             return;
         }
 
-        this.reportDrift(scoped.drift, mode);
+        this.reportDrift(scoped.drift, options.mode);
 
         if (result.status === 'dry-run') {
             // Report what this mode would actually do, matching the mode-scoped body.

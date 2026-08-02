@@ -15,7 +15,7 @@ import {
 } from '../core/index.js';
 import { OrgClient } from './adapters/index.js';
 
-export type ValidateResult = {
+type ValidateResult = {
     files: string[];
     assignments: DesiredAssignment[];
     findings: Findings;

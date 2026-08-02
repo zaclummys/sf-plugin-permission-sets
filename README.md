@@ -549,7 +549,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 - **Commands** (`src/commands/ps/`): oclif only. They parse flags, construct the service (wiring in the org adapter when the command needs one), render output, and set the exit code.
 - **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `apply`, and `plan`), plus `resolution`, which the org-facing ones share. Each is a class whose constructor takes only its dependencies (the org client, a confirmation callback), while the per-invocation inputs are `run()` parameters, so one instance serves any number of runs. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements. Where one command's work contains another's, the service composes rather than repeats it: `apply` runs `plan`, and `plan` runs `check`, so each stage of the pipeline is owned in exactly one place and the three can never disagree about what a set of files means.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is unit-testable on its own.
-- **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
+- **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port (declared in services) with a Salesforce `Connection`, and owns all the SOQL and SObject detail, with the query text in `soql` and the Collections API grouping and chunking in `dml`. Services depend on the port, not the SDK, so they test against a fake and stay free of connection detail.
 
 | Core module | Responsibility |
 | --- | --- |
@@ -560,6 +560,7 @@ The plugin is layered so every command reuses the same core. Commands stay thin,
 | `outcome` | The per-record result of one add, update, or remove. `Outcomes` is the collection, answering what the org accepted per operation and what it rejected. |
 | `schema` | The zod contract for a file, plus validation. |
 | `parse` | File text to an object, with YAML and duplicate-key errors. |
+| `scope-key` | The one place the (kind, file scope key) pairing is written down, shared by `normalize`, `serialize`, and `report`. Adding a scope means adding a row. |
 | `normalize` | A validated file to canonical `(assignee, kind, target)` tuples, plus structural findings. |
 | `serialize` | Canonical tuples back to a user-keyed YAML document (the inverse of `normalize`). |
 | `load` | Expand globs, run parse then validate then normalize per file, and merge by union. |
@@ -578,7 +579,7 @@ npm test         # the tests that need no org
 npm run test:org # the tests that create a scratch org
 ```
 
-The tests are NUTs, the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/**/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit). They are black box throughout. Nothing imports `src/`, every assertion is on what a command printed and the code it exited with, and the plugin is driven through its own `bin/run.js`, which is what every plugin in `salesforcecli/*` does.
+The tests are NUTs, the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/**/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit). They are black box throughout. The only thing a test takes from `src/` is a type, erased before anything runs and part of the published `--json` contract, every assertion is on what a command printed and the code it exited with, and the plugin is driven through its own `bin/run.js`, which is what every plugin in `salesforcecli/*` does.
 
 `npm test` covers all five commands without touching an org: exit codes, the `--json` envelope, the flags, and the `--help` text. It needs no Salesforce CLI installed and no credentials, which is why it also runs on a fork's pull request.
 

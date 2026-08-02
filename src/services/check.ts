@@ -1,6 +1,6 @@
 import { loadFiles, DesiredAssignment, Findings } from '../core/index.js';
 
-export type CheckResult = {
+type CheckResult = {
     files: string[];
     assignments: DesiredAssignment[];
     findings: Findings;

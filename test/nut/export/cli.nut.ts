@@ -1,12 +1,12 @@
 import { expect } from 'chai';
-import { ps, unresolvableOrg } from './run.ts';
+import { ps, unresolvableOrg } from '../run.ts';
 
 /**
- * export reads the org and writes YAML back, so the round trip is the vitest suite's.
+ * export reads the org and writes YAML back, so the round trip is in export/org/.
  * What holds without an org is the flag surface, which is the widest of any command here:
  * --kind is an enum, and getting one of its values wrong should say which are valid.
  */
-describe('ps export NUTs', () => {
+describe('ps export before it reaches an org', () => {
     it('renders its summary from the messages file', () => {
         const result = ps('export --help', 0);
 

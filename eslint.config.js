@@ -4,6 +4,46 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import { defineConfig } from "eslint/config";
 
+// The size and shape caps, applied to source and specs alike. In a spec file the size caps
+// land on the describe callback rather than on a function anyone wrote, which is deliberate:
+// they are what keeps one file from accumulating every case for a command. Splitting one is
+// splitting the file, so every `test/nut/<command>/org` spec shares one scratch org through
+// a module-level hook (see test/nut/org-session.ts) rather than creating one per file.
+const sharedCaps = {
+    complexity: [
+        "error",
+        10,
+    ],
+    "max-depth": [
+        "error",
+        3,
+    ],
+    "max-lines": [
+        "error",
+        {
+            max: 350,
+            skipBlankLines: true,
+            skipComments: true,
+        },
+    ],
+    "max-lines-per-function": [
+        "error",
+        {
+            max: 60,
+            skipBlankLines: true,
+            skipComments: true,
+        },
+    ],
+    "max-nested-callbacks": [
+        "error",
+        3,
+    ],
+    "max-params": [
+        "error",
+        4,
+    ],
+};
+
 export default defineConfig([
     // Build output is generated JS: it never matches these rules, and linting it
     // buries the real findings under thousands of them.
@@ -169,34 +209,12 @@ export default defineConfig([
     {
         files: ["src/**/*.ts"],
         rules: {
-            // Cap cyclomatic complexity; split branchy functions into helpers.
-            complexity: [
-                "error",
-                10,
-            ],
-            // Size/shape guards, set just above today's max to block future growth
-            // (see CLAUDE.md); tighten as functions get split into helpers.
-            "max-depth": [
-                "error",
-                4,
-            ],
-            "max-params": [
-                "error",
-                5,
-            ],
-            "max-nested-callbacks": [
-                "error",
-                3,
-            ],
+            ...sharedCaps,
+            // Source only, because a describe callback is a list of cases rather than a
+            // procedure: counting its statements would measure how many a file holds.
             "max-statements": [
                 "error",
                 25,
-            ],
-            // 70 rather than 65 because a destructuring pattern of three names now
-            // costs five lines, not one: the count moved without the logic moving.
-            "max-lines-per-function": [
-                "error",
-                70,
             ],
             // No single-letter identifiers.
             "id-length": [
@@ -342,6 +360,13 @@ export default defineConfig([
                 },
             ],
         },
+    },
+
+    // Test code, specs and helpers alike: a spec is code, so the caps that measure a body
+    // rather than a file's structure hold there too.
+    {
+        files: ["test/**/*.ts"],
+        rules: { ...sharedCaps },
     },
 
     // Specs only (see CLAUDE.md): a branch in a test body can skip every assertion and
