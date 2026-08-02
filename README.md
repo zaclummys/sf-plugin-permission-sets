@@ -1,6 +1,6 @@
 # sf-plugin-permission-sets
 
-[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.md)
+[![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Coverage](https://codecov.io/gh/zaclummys/sf-plugin-permission-sets/graph/badge.svg)](https://codecov.io/gh/zaclummys/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.md)
 
 > Declarative, GitOps-style management of **permission set assignments** for Salesforce orgs.
 > Permission sets, permission set groups, and permission set licenses, all in one file.
@@ -510,7 +510,19 @@ sf org display --verbose --json --target-org <your-devhub> \
   | gh secret set TESTKIT_AUTH_URL
 ```
 
-`npm run coverage` writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs both suites, so it needs a Dev Hub and spends one scratch org. Nothing under test runs in the test process, so the number comes from the `NODE_V8_COVERAGE` dumps that `scripts/prune-coverage.js` trims down to this plugin before `c8` merges them. Treat it as a diagnostic and never a target: a line that ran is not a line that was verified.
+`npm run coverage` writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs both suites, so it needs a Dev Hub and spends one scratch org. Nothing under test runs in the test process, so the number comes from the `NODE_V8_COVERAGE` dumps that `scripts/prune-coverage.js` trims down to this plugin before `c8` merges them.
+
+The badge at the top is that same command, run once per release by the `coverage` job in [publish.yml](.github/workflows/publish.yml) and uploaded to Codecov with the `CODECOV_TOKEN` repository secret. Releases are the one trigger that already creates a scratch org, so the number describes the version you can install, and it costs no extra allocation on a push. It gates nothing: an upload that fails, or a hub with no allocation left, leaves the release alone. Treat the number the same way, a diagnostic and never a target, because a line that ran is not a line that was verified.
+
+### Running the org tests without creating a scratch org
+
+A hub's scratch org allocation is daily, so iterating on an org spec can run it out. `TESTKIT_ORG_USERNAME` makes the testkit reuse an org you already have instead of creating one, and it also stops the session from deleting it:
+
+```bash
+TESTKIT_ORG_USERNAME=<username> npx mocha "test/nut/plan/org/undeclared-target.nut.ts"
+```
+
+Point it at an org you can throw away, and read what it does to it first. The setup deploys `test/nut/project` (ten `PS_Nut_*` permission sets), creates a user, and seeds assignments, and none of that is cleaned up, because the cleanup was the org being deleted. A second full run against the same org will also fail rather than pass: the `apply` specs assert on a grant landing, and it has already landed. Treat this as a way to watch one spec while working on it, never as a way to run the suite. CI and `npm run test:org` leave the variable unset and build the org they assert against.
 
 Set `DEBUG=testkit:*` to see every command the testkit runs.
 
