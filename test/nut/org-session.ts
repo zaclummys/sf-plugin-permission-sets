@@ -30,7 +30,8 @@ type Job =
     | 'unchanged'
     | 'group'
     | 'license'
-    | 'reExpiring';
+    | 'reExpiring'
+    | 'undeclaredTarget';
 
 /**
  * The rule every spec used to have to remember, enforced rather than documented: the session
@@ -92,9 +93,15 @@ class OrgSession {
                 },
             ],
         });
-        const scratchOrg = session.orgs.get('default');
+        // TESTKIT_ORG_USERNAME tells TestSession to reuse an org rather than create one, which
+        // is how a developer iterates without spending a slot from a hub's daily allocation.
+        // It registers that org under its username instead of under 'default', so the key has
+        // to follow. Unset, which is what CI and every normal run see, this is 'default' and a
+        // scratch org is created and deleted as before.
+        const reused = process.env.TESTKIT_ORG_USERNAME;
+        const scratchOrg = session.orgs.get(reused ?? 'default');
 
-        ok(scratchOrg?.username, 'the scratch org should have a username');
+        ok(scratchOrg?.username, 'the session should have an org with a username');
 
         this.session = session;
         this.sessionDir = session.dir;
@@ -169,6 +176,13 @@ class OrgSession {
             'PS_Nut_Epsilon',
         ]);
         assignPermissionSets(this.admin, this.island, ['PS_Nut_Zeta']);
+
+        // Kappa is declared and Iota is not, which is the shape of deleting a line from an
+        // exported file: the user stays in the file, the permission set leaves it entirely.
+        assignPermissionSets(this.admin, this.admin, [
+            'PS_Nut_Iota',
+            'PS_Nut_Kappa',
+        ]);
         assignUntil(this.admin, islandId, 'PS_Nut_Eta', seededExpiration);
         assignUntil(this.admin, adminId, 'PS_Nut_Theta', seededExpiration);
     }
@@ -201,6 +215,11 @@ class OrgSession {
         this.jobFiles.set('group', writeGroupFile(dir, admin, 'PS_Nut_Group'));
         this.jobFiles.set('license', writeLicenseFile(dir, admin, license));
         this.jobFiles.set('reExpiring', writeExpiringFile(dir, admin, 'PS_Nut_Theta', movedExpiration));
+
+        // Declares Kappa and says nothing about Iota, which the admin also holds. Nothing else
+        // in the suite names Iota either, so it is a permission set the files have dropped
+        // entirely rather than one another file still keeps in scope.
+        this.jobFiles.set('undeclaredTarget', writeAssignmentFile(dir, admin, 'PS_Nut_Kappa'));
     }
 }
 
