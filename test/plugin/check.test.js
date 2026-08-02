@@ -3,6 +3,8 @@ import { runPs, parseJson } from '../helpers/run-plugin.js';
 import {
     validPath,
     warningsPath,
+    emptyPath,
+    emptyUserPath,
     schemaErrorPath,
     malformedPath,
     mixedCaseUserPath,
@@ -54,6 +56,36 @@ describe('sf ps check', () => {
         expect(exitCode).toBe(0);
         expect(stdout).toContain('warning:');
         expect(stdout).toContain('listed twice under permissionSets');
+    });
+
+    it('warns about a file that parses to nothing', async ({ expect }) => {
+        const {
+            stdout,
+            exitCode,
+        } = await runPs([
+            'ps',
+            'check',
+            '--file',
+            emptyPath,
+        ]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('file is empty');
+    });
+
+    it('warns about a user that declares no scopes', async ({ expect }) => {
+        const {
+            stdout,
+            exitCode,
+        } = await runPs([
+            'ps',
+            'check',
+            '--file',
+            emptyUserPath,
+        ]);
+
+        expect(exitCode).toBe(0);
+        expect(stdout).toContain('carol@example.com: no scopes declared');
     });
 
     it('names the empty scope list it warns about', async ({ expect }) => {

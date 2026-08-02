@@ -1,0 +1,4 @@
+# A user with no scope keys at all: EMPTY_USER. The schema allows it, because all three
+# scopes are optional, so nothing but the warning tells you the entry does nothing.
+users:
+  carol@example.com: {}

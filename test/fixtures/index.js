@@ -18,6 +18,12 @@ export const validPath = 'test/fixtures/valid.yml';
 /** Warnings only, no errors: one duplicate target and one empty scope list. */
 export const warningsPath = 'test/fixtures/warnings.yml';
 
+/** Comments only, so the document parses to nothing: the one file that raises EMPTY_FILE. */
+export const emptyPath = 'test/fixtures/empty.yml';
+
+/** One user with no scope keys, which the schema allows: the one file that raises EMPTY_USER. */
+export const emptyUserPath = 'test/fixtures/empty-user.yml';
+
 /** A schema violation: the object form of a license, which the schema rejects. */
 export const schemaErrorPath = 'test/fixtures/schema-error.yml';
 
