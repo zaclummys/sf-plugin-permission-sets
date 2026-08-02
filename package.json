@@ -21,17 +21,16 @@
         "@eslint/js": "^10",
         "@salesforce/cli-plugins-testkit": "^5",
         "@stylistic/eslint-plugin": "^5",
+        "@types/chai": "^5",
         "@types/mocha": "^10",
         "c8": "^12.0.0",
         "chai": "^6",
         "eslint": "^10",
-        "execa": "^10",
         "globals": "^17",
         "mocha": "^11",
         "ts-node": "^10",
         "typescript": "^6",
         "typescript-eslint": "^8",
-        "vitest": "^4",
         "wireit": "^0"
     },
     "engines": {
@@ -73,12 +72,11 @@
         "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
         "coverage": "npm run compile && rm -rf .v8-coverage coverage && NODE_V8_COVERAGE=.v8-coverage npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
-        "coverage:collect": "vitest run && mocha \"test/nut/*.nut.ts\" && mocha \"test/nut/org/*.nut.ts\"",
+        "coverage:collect": "mocha \"test/nut/*.nut.ts\" && mocha \"test/nut/org/*.nut.ts\"",
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
-        "test:nuts": "wireit",
-        "test:nuts:org": "wireit",
+        "test:org": "wireit",
         "version": "oclif readme"
     },
     "publishConfig": {
@@ -108,7 +106,6 @@
             "command": "eslint . --color --cache --cache-location .eslintcache",
             "files": [
                 "src/**/*.ts",
-                "test/**/*.js",
                 "test/**/*.ts",
                 "bin/**",
                 "messages/**",
@@ -119,24 +116,6 @@
             "output": []
         },
         "test": {
-            "command": "vitest run",
-            "dependencies": [
-                "compile"
-            ],
-            "env": {
-                "FORCE_COLOR": "2",
-                "PS_TARGET_ORG": {
-                    "external": true
-                }
-            },
-            "files": [
-                "test/**",
-                "vitest.config.js",
-                ".env"
-            ],
-            "output": []
-        },
-        "test:nuts": {
             "command": "mocha \"test/nut/*.nut.ts\"",
             "dependencies": [
                 "compile"
@@ -155,7 +134,7 @@
             ],
             "output": []
         },
-        "test:nuts:org": {
+        "test:org": {
             "command": "mocha \"test/nut/org/*.nut.ts\"",
             "dependencies": [
                 "compile"

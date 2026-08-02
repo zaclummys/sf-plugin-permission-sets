@@ -4,7 +4,7 @@ import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
 import { expect } from 'chai';
 import { parse } from 'yaml';
-import { assignPermissionSet, assignUntil, createUser, deactivateUser, fixture, projectDir, ps, writeAssignmentFile } from '../run.ts';
+import { assignPermissionSet, assignUntil, createUser, deactivateUser, fixture, projectDir, ps, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile } from '../run.ts';
 import type { PsApplyResult } from '../../../src/commands/ps/apply.js';
 import type { PsExportResult } from '../../../src/commands/ps/export.js';
 import type { PsPlanResult } from '../../../src/commands/ps/plan.js';
@@ -15,6 +15,10 @@ import type { PsValidateResult } from '../../../src/commands/ps/validate.js';
 // putting the same spelling in and out would pass even if nothing normalised anything.
 const seededExpiration = '2099-12-31T23:59:59.000Z';
 const canonicalExpiration = '2099-12-31T23:59:59Z';
+
+// A different instant for the same assignment, which is what makes a diff report an update
+// rather than an addition or a removal.
+const laterExpiration = '2098-06-30T12:00:00Z';
 
 /**
  * The org-backed NUTs, in the shape every salesforcecli plugin uses: a Dev Hub
@@ -32,6 +36,11 @@ const canonicalExpiration = '2099-12-31T23:59:59Z';
  * Requires a Dev Hub. Set TESTKIT_AUTH_URL or TESTKIT_HUB_USERNAME first, as the
  * Development section of the README describes. Without one, TestSession.create throws and
  * this file fails rather than silently passing.
+ *
+ * One scope is still untested: permissionSetLicenses. Nothing here holds one, so the
+ * adapter's licence query and the licence half of a diff never run. A Developer Edition
+ * scratch org does ship assignable licences, which is how plugin-user reaches one in its
+ * own NUTs, so this is a gap to close rather than a limit of the approach.
  */
 describe('scratch org NUTs', () => {
     let session: TestSession | undefined;
@@ -57,6 +66,11 @@ describe('scratch org NUTs', () => {
     // A second user, holding only what the export specs read, so scoping every export to it
     // keeps them blind to whatever the apply specs did to the admin.
     let islandUser: string;
+
+    // A group rather than a permission set, and an assignment whose expiration moves. Both
+    // are query and DML paths in the adapter that no other test reaches.
+    let groupFile: string;
+    let reExpiringFile: string;
 
     before(async () => {
         session = await TestSession.create({
@@ -99,8 +113,14 @@ describe('scratch org NUTs', () => {
         assignPermissionSet(username, islandUser, 'PS_Nut_Zeta');
         assignUntil(username, created.id, 'PS_Nut_Eta', seededExpiration);
 
+        // Theta is the admin's, so the export specs never see it, and it goes in already
+        // expiring so that declaring a different instant is an update and not an addition.
+        assignUntil(username, userId(username, username), 'PS_Nut_Theta', seededExpiration);
+
         undeclaredFile = writeAssignmentFile(session.dir, islandUser, 'PS_Nut_Delta');
         unchangedFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Epsilon');
+        groupFile = writeGroupFile(session.dir, username, 'PS_Nut_Group');
+        reExpiringFile = writeExpiringFile(session.dir, username, 'PS_Nut_Theta', laterExpiration);
     });
 
     after(async () => {
@@ -118,6 +138,13 @@ describe('scratch org NUTs', () => {
             const result = ps(`plan --file ${readOnlyPlanFile} --target-org ${username}`, 0);
 
             expect(result.shellOutput.stdout).to.contain('PS_Nut_Alpha');
+        });
+
+        it('plans a permission set group the same way it plans a permission set', () => {
+            const result = ps(`plan --file ${groupFile} --target-org ${username}`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update. 1 users affected.');
+            expect(result.shellOutput.stdout).to.contain('PS_Nut_Group');
         });
 
         it('reports the org it planned against in --json', () => {
@@ -535,6 +562,19 @@ describe('scratch org NUTs', () => {
             );
 
             expect(result.shellOutput.stdout).to.contain('listed twice under permissionSets');
+        });
+
+        it('reports an expiration change as an update rather than an addition', () => {
+            const result = ps<PsApplyResult>(
+                `apply --file ${reExpiringFile} --target-org ${username} --no-prompt --json`,
+                0,
+            );
+
+            expect(result.jsonOutput?.result).to.deep.include({
+                added: 0,
+                updated: 1,
+                removed: 0,
+            });
         });
 
         it('adds the assignment and leaves the org matching the file', () => {

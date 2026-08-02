@@ -345,13 +345,10 @@ export default defineConfig([
     },
 
     // Specs only (see CLAUDE.md): a branch in a test body can skip every assertion and
-    // still report green. Both runners are specs, so both are covered. Helpers under
-    // test/ are exempt: they are ordinary code.
+    // still report green. test/nut/run.ts is exempt: it is ordinary code, and the one loop
+    // the suite needs lives there for exactly that reason.
     {
-        files: [
-            "test/**/*.test.js",
-            "test/**/*.nut.ts",
-        ],
+        files: ["test/**/*.nut.ts"],
         rules: {
             "no-restricted-syntax": [
                 "error",

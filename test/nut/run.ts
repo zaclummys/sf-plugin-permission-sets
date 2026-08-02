@@ -108,6 +108,32 @@ export function createUser(dir: string, orgUsername: string): CreateUserOutput['
 }
 
 /**
+ * The org's id for a username. Needed because an assignment is inserted by id, and the one
+ * user a scratch org starts with is only ever named.
+ */
+export function userId(orgUsername: string, username: string): string {
+    const query = execCmd<{
+        records: {
+            Id: string;
+            Username: string;
+        }[];
+    }>(
+        `data:query --query 'SELECT Id, Username FROM User' --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+    const found = query.jsonOutput?.result.records.find((record) => record.Username === username);
+
+    if (!found) {
+        throw new Error(`no user named ${username} in ${orgUsername}`);
+    }
+
+    return found.Id;
+}
+
+/**
  * Give the org an assignment that expires, which `sf org assign permset` cannot do: it has
  * no expiration flag, so the assignment is inserted as the plain sObject it is.
  *
@@ -166,6 +192,32 @@ export function deactivateUser(orgUsername: string, userId: string): void {
  * the org's admin, which only exists once the org does, so this cannot be a committed
  * fixture the way test/fixtures/*.yml are.
  */
+/** The same, for the scope the plugin calls permissionSetGroups rather than permissionSets. */
+export function writeGroupFile(dir: string, username: string, group: string): string {
+    const file = path.join(dir, `${group}--group.yml`);
+
+    writeFileSync(file, `users:\n  ${username}:\n    permissionSetGroups:\n      - ${group}\n`);
+
+    return file;
+}
+
+/** The expiring form of an entry, which is what the update path in a diff is made of. */
+export function writeExpiringFile(
+    dir: string,
+    username: string,
+    permissionSet: string,
+    expiration: string,
+): string {
+    const file = path.join(dir, `${permissionSet}--expiring.yml`);
+
+    writeFileSync(
+        file,
+        `users:\n  ${username}:\n    permissionSets:\n      - name: ${permissionSet}\n        expiration: ${expiration}\n`,
+    );
+
+    return file;
+}
+
 export function writeAssignmentFile(dir: string, username: string, permissionSet: string): string {
     // Both halves are in the name because two tests can declare the same permission set
     // for different users, and naming the file after the target alone had one silently

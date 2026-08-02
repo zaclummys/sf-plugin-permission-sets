@@ -573,35 +573,25 @@ Commands are slices of one pipeline. `check` runs the **load** stage only, with 
 
 ```bash
 npm ci
-npm run build     # compile and lint
-npm test          # compile, then run the suite
-npm run test:nuts # compile, then run the NUTs
+npm run build    # compile and lint
+npm test         # the tests that need no org
+npm run test:org # the tests that create a scratch org
 ```
 
-The suite is black-box: every spec spawns the real `sf ps ...` binary. Install the Salesforce CLI first (`npm install -g @salesforce/cli`). The test run links this plugin into `sf` before the first spec and unlinks it at the end.
+The tests are NUTs, the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/**/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit). They are black box throughout. Nothing imports `src/`, every assertion is on what a command printed and the code it exited with, and the plugin is driven through its own `bin/run.js`, which is what every plugin in `salesforcecli/*` does.
 
-### NUTs
-
-The NUTs are the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit).
-
-```bash
-npm run test:nuts
-```
-
-They run the plugin through its own `bin/run.js`, which is what every plugin in `salesforcecli/*` does, rather than through the copy `npm test` links into your `sf`. So they need no `sf` install and no org, and they cover all five commands: exit codes, the `--json` envelope, the flags, and the `--help` text. Set `DEBUG=testkit:*` to see every command the testkit runs.
-
-What they deliberately do not cover is the validation rules. Those are the vitest suite's, and restating them in a second runner would double the maintenance without adding a signal. Nor do they prove anything about the published package: like `npm test`, they read the working tree's `lib/` and `messages/`.
-
-The half that needs an org lives in `test/nut/org/`, runs separately, and needs a Dev Hub:
+`npm test` covers all five commands without touching an org: exit codes, the `--json` envelope, the flags, and the `--help` text. It needs no Salesforce CLI installed and no credentials, which is why it also runs on a fork's pull request.
 
 ```bash
 # Set TESTKIT_HUB_USERNAME or TESTKIT_AUTH_URL first (see .env.example)
-npm run test:nuts:org
+npm run test:org
 ```
 
-That follows the official pattern: the Dev Hub is authenticated into the session's throwaway home, a scratch org is created there from `test/nut/project`, its three permission sets are deployed into it, and the org is deleted when the session is cleaned. It never reads `PS_TARGET_ORG`, so it cannot collide with the vitest suite, and it costs one scratch org and about a minute per run.
+`npm run test:org` is the other half, and it needs a Dev Hub. The Dev Hub is authenticated into a throwaway home, a scratch org is created there from `test/nut/project`, that project's permission sets are deployed into it, and the org is deleted when the session is cleaned. Give it a hub nobody uses by hand: the scratch org allocation is daily and per hub, so sharing one means a busy afternoon can block a release.
 
-That scratch org is what makes `apply` safe to exercise end to end. It is the one command that writes, and there it writes into an org that exists for the length of the test and is deleted after, rather than into anything you rely on. Each test claims a permission set of its own, so no test can see what another one did to the org.
+Building the org rather than borrowing one is what makes the assertions exact. Drift, a removal in sync mode, an expiring assignment: none of that exists in a fresh org, so the setup seeds each one deliberately, one permission set per job so no test can observe what another did. It is also what makes `apply` safe to exercise end to end, because the org it writes into lives only as long as the test.
+
+Set `DEBUG=testkit:*` to see every command the testkit runs.
 
 ### Coverage
 
@@ -609,30 +599,28 @@ That scratch org is what makes `apply` safe to exercise end to end. It is the on
 npm run coverage
 ```
 
-Writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs all three suites, so it needs both an org and a Dev Hub, and it spends one scratch org.
+Writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs both suites, so it needs a Dev Hub and spends one scratch org.
 
-Getting a number out of a black-box suite takes a detour, because nothing under test runs in the test process. `NODE_V8_COVERAGE` makes every `sf` and `bin/run.js` child write its own V8 dump, `scripts/prune-coverage.js` throws away everything that is not this plugin, and `c8` merges what is left and maps it back through the source maps to `src/`. The pruning is not optional: the raw dumps are 1.3 GB of Salesforce CLI internals around 17 MB of ours, and `c8` loads all of it into one heap before its own filters run.
+Getting a number out of a black-box suite takes a detour, because nothing under test runs in the test process. `NODE_V8_COVERAGE` makes every `bin/run.js` child write its own V8 dump, `scripts/prune-coverage.js` throws away everything that is not this plugin, and `c8` merges what is left and maps it back through the source maps to `src/`. The pruning is not optional: the raw dumps are over a gigabyte of Salesforce CLI internals around a few megabytes of ours, and `c8` loads all of it into one heap before its own filters run.
 
 Treat the number as a diagnostic, never a target. Nothing gates on it, there is no threshold, and a line that ran is not a line that was verified. What it is good for is spotting a file nothing reaches at all.
 
 ### Test environment
 
-Tests take their parameters from the environment, never from a committed file. Copy the template and fill it in:
+`npm test` needs nothing. `npm run test:org` takes its Dev Hub from the environment, never from a committed file. Copy the template and fill in one of the two:
 
 ```bash
 cp .env.example .env
 ```
 
-| Variable | Required | What it is |
-| --- | --- | --- |
-| `PS_TARGET_ORG` | yes | Username or alias of an already-authenticated org. The `plan`, `apply`, and `export` specs run against it. |
-| `TESTKIT_HUB_USERNAME` | for `test:nuts:org` | An already-authenticated Dev Hub. The scratch org NUTs create their org from it. |
-| `TESTKIT_AUTH_URL` | for `test:nuts:org` | An sfdx auth url for that Dev Hub, as an alternative to the above. What CI passes in, from a repository secret of the same name. |
+| Variable | What it is |
+| --- | --- |
+| `TESTKIT_HUB_USERNAME` | An already-authenticated Dev Hub. |
+| `TESTKIT_AUTH_URL` | An sfdx auth url for that Dev Hub, as an alternative. What CI passes in, from a repository secret of the same name. |
 
-Keep the two orgs apart. `PS_TARGET_ORG` is long-lived and `test/fixtures/org.js` names users and permission sets that exist in it, so pointing it at a Dev Hub breaks every vitest spec. The Dev Hub is only ever asked for a fresh scratch org. Giving the NUTs their own hub also keeps them from spending the scratch org allocation you are using by hand:
+Set the CI secret without the credential passing through a terminal:
 
 ```bash
-# Set the CI secret without the credential passing through a terminal
 sf org display --verbose --json --target-org <your-devhub> \
   | jq -r '.result.sfdxAuthUrl' \
   | gh secret set TESTKIT_AUTH_URL

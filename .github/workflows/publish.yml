@@ -14,9 +14,8 @@ jobs:
     # push-to-main snapshot and the release triggers.
     ci:
         uses: ./.github/workflows/ci.yml
-        # Reusable workflows do not inherit secrets; pass the ones the org jobs need.
+        # Reusable workflows do not inherit secrets; pass the one the org job needs.
         secrets:
-            SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
             TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
 
     publish:

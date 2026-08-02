@@ -2,29 +2,22 @@ name: ci
 
 # Runs on PRs and manual dispatch, and is callable by the publish workflow as
 # its release gate (workflow_call), so build + test are defined once here.
-# Split into parallel jobs: build typechecks and lints, test compiles lib (a
-# wireit dependency of test) then runs the black-box plugin tests, which
-# drive `sf ps ...`. The sf CLI is installed here and the vitest globalSetup
-# links the built plugin into it.
+# Three parallel jobs: build typechecks and lints, test runs the NUTs that need
+# no org, and test-org runs the ones that create a scratch org. Only the last
+# needs a secret, which is what lets a fork's pull request still be tested.
 on:
     pull_request:
     workflow_dispatch:
     workflow_call:
         # Reusable workflows do not inherit the caller's secrets, so the release gate
-        # (publish.yml) must pass these in. Optional: on triggers without them (fork PRs)
-        # the auth step just fails, same as running ci directly without the secret.
+        # (publish.yml) must pass this in. Optional: on a trigger without it, such as a
+        # fork's pull request, only the job that needs an org fails.
         secrets:
-            SFDX_AUTH_URL:
-                description: Auth URL for the org the real-org tests authenticate against.
-                required: false
             TESTKIT_AUTH_URL:
                 description: >-
-                    Auth URL for the Dev Hub the org NUTs create their scratch org from.
-                    Deliberately a different org from SFDX_AUTH_URL: that one is a
-                    long-lived org whose users and permission sets test/fixtures/org.js
-                    names, and pointing it at a Dev Hub would break every vitest spec.
-                    Keeping them apart also stops the NUTs competing for scratch org
-                    allocation with whoever is using the other hub by hand.
+                    Auth URL for the Dev Hub that test-org creates its scratch org from.
+                    Give it a hub nobody uses by hand: a scratch org allocation is daily
+                    and per hub, so sharing one means a busy afternoon can block a release.
                 required: false
 
 concurrency:
@@ -45,6 +38,8 @@ jobs:
             - run: npm ci
             - run: npm run build
 
+    # Drives the plugin's own bin/run.js, so it needs neither the sf CLI nor an org and
+    # runs on a fork's pull request, where no secret is available.
     test:
         runs-on: ubuntu-latest
         steps:
@@ -54,35 +49,12 @@ jobs:
                   node-version: '24'
                   cache: npm
             - run: npm ci
-            - run: npm install --global @salesforce/cli
-              # Authenticate the org the real-org suites target and hand its alias to the
-              # tests via PS_TARGET_ORG. --sfdx-url-stdin must come last: the parser eats the
-              # token after it as the flag's value before reading stdin.
-            - name: Authenticate the test org
-              run: |
-                  echo "$SFDX_AUTH_URL" | sf org login sfdx-url --alias ci-target-org --sfdx-url-stdin
-                  echo "PS_TARGET_ORG=ci-target-org" >> "$GITHUB_ENV"
-              env:
-                  SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
             - run: npm test
 
-    # The NUTs drive the plugin's own bin/run.js, so this job needs neither the sf CLI
-    # nor an org, and runs on fork PRs where the auth secret is absent.
-    nuts:
-        runs-on: ubuntu-latest
-        steps:
-            - uses: actions/checkout@v7
-            - uses: actions/setup-node@v7
-              with:
-                  node-version: '24'
-                  cache: npm
-            - run: npm ci
-            - run: npm run test:nuts
-
-    # The org NUTs create a scratch org of their own, so unlike the job above they need a
-    # Dev Hub. The same auth url the test job uses names one. Scratch org creation is the
-    # flaky part of any plugin's CI, which is why the official nut.yml retries three times.
-    org-nuts:
+    # Creates a scratch org of its own, so unlike the job above it needs a Dev Hub and the
+    # sf CLI that the setup shells out to. Scratch org creation is the flaky part of any
+    # plugin's CI, which is why the official nut.yml retries three times.
+    test-org:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -92,6 +64,6 @@ jobs:
                   cache: npm
             - run: npm ci
             - run: npm install --global @salesforce/cli
-            - run: npm run test:nuts:org
+            - run: npm run test:org
               env:
                   TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
