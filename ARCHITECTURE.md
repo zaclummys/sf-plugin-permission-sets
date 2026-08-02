@@ -1,6 +1,6 @@
 # Architecture
 
-The plugin is layered so every command reuses the same core. The dependency direction is strict: commands depend on services, services depend on core, and nothing depends the other way.
+The plugin is layered so every command reuses the same core. The dependency direction is strict: commands depend on services and on ui, both depend on core, and nothing depends the other way.
 
 ## Layers
 
@@ -8,6 +8,7 @@ The plugin is layered so every command reuses the same core. The dependency dire
 - **Services** (`src/services/`): one per command (`check`, `validate`, `export`, `plan`, and `apply`), plus `resolution`, which the org-facing ones share. Each is a class whose constructor takes only its dependencies (the org client, a confirmation callback), while the per-invocation inputs are `run()` parameters, so one instance serves any number of runs. A service also declares the ports it needs from the outside, like the `OrgClient` interface its adapter implements.
 - **Core** (`src/core/`): the reusable building blocks. Pure, with no `@salesforce/*` imports, so every piece is testable on its own.
 - **Adapters** (`src/adapters/`): the boundary to the outside world. `ConnectionOrgClient` implements the `OrgClient` port with a Salesforce `Connection`, and owns all the SOQL and SObject detail: the query text in `soql`, the Collections API grouping and chunking in `dml`. Services depend on the port, not the SDK.
+- **UI** (`src/ui/`): the terminal's side of that boundary, and the only place that knows about colour. Commands call it, it calls nothing. Whether colour is wanted depends on a TTY and on `NO_COLOR`/`FORCE_COLOR`, which is exactly what core may not know about, so `formatDiff` keeps returning plain lines and `ui` paints them by the marker (`+`, `~`, `-`, `=`) each line already carries.
 
 Where one command's work contains another's, the service composes rather than repeats it: `apply` runs `plan`, and `plan` runs `check`. Each stage of the pipeline is owned in exactly one place, which is why `apply --dry-run` and `plan` cannot drift apart.
 

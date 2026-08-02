@@ -3,7 +3,8 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { formatDiff, Findings, ReconcileMode, ScopedChange } from '../../core/index.js';
+import { Diff, formatDiff, Findings, ReconcileMode, ScopedChange } from '../../core/index.js';
+import { colourDiff, colourFindings } from '../../ui/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.apply');
@@ -90,9 +91,7 @@ export default class Apply extends SfCommand<PsApplyResult> {
 
     /** Log findings, print the diff body, and report the outcome. Shared by both sources. */
     private report(result: ApplyResult, options: ReportOptions): PsApplyResult {
-        for (const line of result.findings.format()) {
-            this.log(line);
-        }
+        this.logFindings(result.findings);
 
         const outcomes = result.outcomes;
 
@@ -115,20 +114,36 @@ export default class Apply extends SfCommand<PsApplyResult> {
             return summary;
         }
 
-        this.log('');
-        for (const line of formatDiff(result.diff, {
-            mode: options.mode,
-            showUnchanged: options.showUnchanged,
-        })) {
-            this.log(line);
-        }
-        this.log('');
+        this.logDiffBody(result.diff, options);
 
         const scoped = result.diff.scopeTo(options.mode);
 
         this.reportOutcome(result, summary, scoped, options);
 
         return summary;
+    }
+
+    /** Every finding the run raised, with the level label coloured by how loud it is. */
+    private logFindings(findings: Findings): void {
+        const lines = colourFindings(findings.format());
+
+        for (const line of lines) {
+            this.log(line);
+        }
+    }
+
+    /** The diff itself, scoped to the mode and coloured by operation. */
+    private logDiffBody(diff: Diff, options: ReportOptions): void {
+        const body = colourDiff(formatDiff(diff, {
+            mode: options.mode,
+            showUnchanged: options.showUnchanged,
+        }));
+
+        this.log('');
+        for (const line of body) {
+            this.log(line);
+        }
+        this.log('');
     }
 
     /** Report the outcome of a completed (non-invalid) apply, setting the exit code as needed. */

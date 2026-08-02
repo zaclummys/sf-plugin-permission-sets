@@ -3,7 +3,8 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ValidateService } from '../../services/index.js';
-import { distinctAssignees, Finding } from '../../core/index.js';
+import { distinctAssignees, Finding, Findings } from '../../core/index.js';
+import { colourFindings } from '../../ui/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.validate');
@@ -38,9 +39,7 @@ export default class Validate extends SfCommand<PsValidateResult> {
         const service = new ValidateService(orgClient);
         const result = await service.run(flags.file);
 
-        for (const line of result.findings.format()) {
-            this.log(line);
-        }
+        this.logFindings(result.findings);
 
         const assignees = distinctAssignees(result.assignments);
 
@@ -60,6 +59,15 @@ export default class Validate extends SfCommand<PsValidateResult> {
             assignments: result.assignments.length,
             findings: result.findings.toJSON(),
         };
+    }
+
+    /** Every finding the run raised, with the level label coloured by how loud it is. */
+    private logFindings(findings: Findings): void {
+        const lines = colourFindings(findings.format());
+
+        for (const line of lines) {
+            this.log(line);
+        }
     }
 
     private logSummaryCounts(errors: number, warnings: number): void {

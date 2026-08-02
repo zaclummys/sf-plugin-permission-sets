@@ -3,6 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { PlanService } from '../../services/index.js';
+import { colourDiff, colourFindings } from '../../ui/index.js';
 import {
     formatDiff,
     ActualAssignment,
@@ -82,9 +83,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
         const service = new PlanService(orgClient);
         const result = await service.run(flags.file, flags.strict);
 
-        for (const line of result.findings.format()) {
-            this.log(line);
-        }
+        this.logFindings(result.findings);
 
         const diff = result.diff;
         const scoped = diff.scopeTo(mode);
@@ -160,10 +159,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
 
         if (diff.changeCount() === 0) {
             if (showUnchanged && diff.unchanged.length > 0) {
-                this.logBody(formatDiff(diff, {
-                    mode,
-                    showUnchanged: true,
-                }));
+                this.logDiffBody(diff, mode, true);
             } else {
                 this.log('');
             }
@@ -171,10 +167,7 @@ export default class Plan extends SfCommand<PsPlanResult> {
             return;
         }
 
-        this.logBody(formatDiff(diff, {
-            mode,
-            showUnchanged,
-        }));
+        this.logDiffBody(diff, mode, showUnchanged);
 
         if (scoped.count() === 0) {
             this.logEmptyNothingToApply(mode);
@@ -190,7 +183,22 @@ export default class Plan extends SfCommand<PsPlanResult> {
         }
     }
 
-    private logBody(body: string[]): void {
+    /** Every finding the run raised, with the level label coloured by how loud it is. */
+    private logFindings(findings: Findings): void {
+        const lines = colourFindings(findings.format());
+
+        for (const line of lines) {
+            this.log(line);
+        }
+    }
+
+    /** The diff itself, scoped to the mode and coloured by operation. */
+    private logDiffBody(diff: Diff, mode: ReconcileMode, showUnchanged: boolean): void {
+        const body = colourDiff(formatDiff(diff, {
+            mode,
+            showUnchanged,
+        }));
+
         this.log('');
         for (const line of body) {
             this.log(line);

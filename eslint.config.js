@@ -286,6 +286,7 @@ export default defineConfig([
                                 "**/services/**",
                                 "**/commands/**",
                                 "**/adapters/**",
+                                "**/ui/**",
                             ],
                             message: "core/ must not import from outer layers (commands -> services -> core).",
                         },
@@ -304,8 +305,11 @@ export default defineConfig([
                 {
                     patterns: [
                         {
-                            group: ["**/commands/**"],
-                            message: "services/ must not import commands (commands -> services -> core).",
+                            group: [
+                                "**/commands/**",
+                                "**/ui/**",
+                            ],
+                            message: "services/ must not import commands or ui (commands -> services -> core).",
                         },
                         {
                             group: [
@@ -355,6 +359,44 @@ export default defineConfig([
                                 "!**/adapters/index.js",
                             ],
                             message: "Import adapters through its index.js barrel.",
+                        },
+                        {
+                            group: [
+                                "**/ui/*",
+                                "!**/ui/index.js",
+                            ],
+                            message: "Import ui through its index.js barrel.",
+                        },
+                    ],
+                },
+            ],
+        },
+    },
+
+    // Layering: ui/ is the terminal's side of the boundary, so it may reach core and
+    // nothing else. Colour depends on a TTY and on the environment, which is exactly
+    // what core/ may not know about.
+    {
+        files: ["src/ui/**/*.ts"],
+        rules: {
+            "no-restricted-imports": [
+                "error",
+                {
+                    patterns: [
+                        {
+                            group: [
+                                "**/commands/**",
+                                "**/services/**",
+                                "**/adapters/**",
+                            ],
+                            message: "ui/ must not import from outer layers (commands -> ui -> core).",
+                        },
+                        {
+                            group: [
+                                "**/core/*",
+                                "!**/core/index.js",
+                            ],
+                            message: "Import core through its index.js barrel.",
                         },
                     ],
                 },

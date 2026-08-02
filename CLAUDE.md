@@ -14,6 +14,7 @@ Guidelines for working in this repo (an `sf` CLI plugin). These override default
 - `src/core/` stays pure: no `@salesforce/*` imports, no I/O, no CLI concerns. Plain data, functions, and the domain classes below.
 - `src/services/` may use `@salesforce/core` and talk to the org (through an injected client).
 - `src/commands/` is the thin `SfCommand` layer: parse flags, construct a service, call `run()`, format output.
+- `src/ui/` is the terminal's side of that boundary, and the one place that knows about colour: **commands → ui → core**, never a service and never `core/`. Colour depends on a TTY and on `NO_COLOR`/`FORCE_COLOR`, which is exactly the kind of thing `core/` may not know, so `formatDiff` keeps returning plain lines and `ui/` paints them by the marker they already carry. A command calls it from a named private method (`logFindings`, `logDiffBody`) rather than inline, like every other sink.
 - Prefer official `@salesforce/*` libraries (especially types) over hand-rolled abstractions.
 
 ## Domain classes in `core/`
@@ -31,7 +32,7 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Barrels (`index.ts`)
 
-- Each layer/dir has an `index.ts` barrel: `core/`, `services/`, `adapters/`, `services/adapters/`.
+- Each layer/dir has an `index.ts` barrel: `core/`, `services/`, `adapters/`, `services/adapters/`, `ui/`.
 - A barrel re-exports **only** the symbols used *outside* that dir, not everything. Add a symbol when an external importer needs it, drop it when none do.
 - Consumers import from the barrel (`../../core/index.js`), never from individual files.
 - Same-dir imports stay direct (a file in `core/` imports another `core/` file directly, not via the barrel) to avoid cycles.
@@ -102,6 +103,7 @@ Scope and shape
 - Name the test after the behavior it asserts (`fails cleanly when the org cannot be resolved`), not after the function or flag it touches. CI shows the name, not the body.
 - No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs give each case its own `it` so it is named and reported on its own, and keep a known gap visible as an `it` with no body, which mocha reports as pending. ESLint enforces this over `test/**/*.nut.ts`. A helper that does not end in `.nut.ts` (`run.ts`, `org-session.ts`, `check/helpers.ts`, `export/org/helpers.ts`) is ordinary code and exempt, which is where the one loop the suite needs lives.
 - The size caps apply to specs too, and in a spec file they land on the `describe` callback, so the cap is really on the file. That is the point: it keeps one file from accumulating every case for a command. When a file trips it, split it by theme within the command's directory (`plan/org/changes`, `plan/org/drift`, `plan/org/errors`) rather than raising the cap, and give each new file a `describe` named for the theme. Shared setup moves to a sibling helper, not into a fixture the specs then have to be read together to understand.
+- `execCmd` runs everything it captures through `strip-ansi`, so colour is invisible to it by design. A spec that asserts on colour therefore spawns `bin/run.js` itself (`psInColour` in `run.ts`), which is the same black box minus that filter, and raises the same diagnosable failure when the exit code is not the expected one. Everything else stays on `execCmd`, where the stripping cannot hide anything.
 - In a NUT, always pass `ensureExitCode` to `execCmd` rather than asserting the code afterwards: it fails at the call with the command's stdout and stderr attached, which is the difference between a diagnosable CI failure and a bare number. Use `'nonZero'` where the exact code is not the point. Clean the `TestSession` in an `after()` that always runs, and never use double quotes inside an `execCmd` string, because they do not survive Windows.
 - Spell out the state a test depends on instead of growing a shared fixture. Fixtures under `test/fixtures/` stay minimal and single-purpose (one valid file, one schema error, one malformed file), and anything a test needs to be specific about it builds itself.
 - Prefer static data, files, and values in a fixture over state derived at run time. Naming users and targets literally makes the expected diff known up front, which turns a loose assertion (`/Plan: [1-9]\d* to add/`) into an exact one (`Plan: 1 to add, 0 to update. 1 users affected.`). Derive from the org only where the derivation is the behavior under test, as in the export round-trips, and keep anything the org decides at run time (the second user, the licence) inside the one hook in `org-session.ts`, so a spec never has to ask the org a question of its own.

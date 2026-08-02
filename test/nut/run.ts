@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -318,6 +319,48 @@ export function writeExpiringFile(
  * 2 through sf, and an invalid --mode value is the other way round. Where the number is
  * oclif's rather than the plugin's, prefer 'nonZero' and assert the message.
  */
+/**
+ * The same command with colour forced on. A child of execCmd never has a TTY, so the plugin
+ * prints plain text unless asked otherwise: FORCE_COLOR turns the detection back on, and
+ * NO_COLOR has to be dropped alongside it, because NO_COLOR wins wherever both are set. That
+ * variable comes from the suite's own env block, which is what keeps every other spec
+ * asserting against plain text.
+ */
+export function psInColour(args: string[], ensureExitCode: number): string {
+    // FORCE_COLOR turns the detection back on for a child that has no TTY, and NO_COLOR has to
+    // go with it, because its mere presence beats FORCE_COLOR in ansis, which is what oclif
+    // paints with. The suite's own env block sets NO_COLOR, which is what keeps every other
+    // spec asserting plain text.
+    // Annotated because spreading process.env into a literal drops its index signature,
+    // and without one the delete below has no key to remove.
+    const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        FORCE_COLOR: '1',
+    };
+
+    delete env.NO_COLOR;
+
+    const run = spawnSync(process.execPath, [
+        path.join(repoRoot, 'bin', 'run.js'),
+        'ps',
+        ...args,
+    ], {
+        encoding: 'utf8',
+        cwd: tmpdir(),
+        env,
+    });
+
+    // The same failure execCmd's ensureExitCode raises, and for the same reason: a bare
+    // number afterwards is not diagnosable, so the command's own output comes with it.
+    if (run.status !== ensureExitCode) {
+        throw new Error(
+            `expected exit ${ensureExitCode}, got ${run.status}\nstdout=${run.stdout}\nstderr=${run.stderr}`,
+        );
+    }
+
+    return run.stdout;
+}
+
 export function ps<T>(args: string, ensureExitCode: number | 'nonZero') {
     return execCmd<T>(`ps ${args}`, {
         ensureExitCode,

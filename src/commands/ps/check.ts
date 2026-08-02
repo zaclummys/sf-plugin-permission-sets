@@ -2,7 +2,8 @@ import { SfCommand, Flags } from '@salesforce/sf-plugins-core';
 import { Messages } from '@salesforce/core';
 
 import { CheckService } from '../../services/index.js';
-import { distinctAssignees, Finding } from '../../core/index.js';
+import { distinctAssignees, Finding, Findings } from '../../core/index.js';
+import { colourFindings } from '../../ui/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
 const messages = Messages.loadMessages('sf-plugin-permission-sets', 'ps.check');
@@ -35,9 +36,7 @@ export default class Check extends SfCommand<PsCheckResult> {
         const service = new CheckService();
         const result = await service.run(flags.file, flags.strict);
 
-        for (const line of result.findings.format()) {
-            this.log(line);
-        }
+        this.logFindings(result.findings);
 
         const assignees = distinctAssignees(result.assignments);
 
@@ -57,6 +56,15 @@ export default class Check extends SfCommand<PsCheckResult> {
             assignments: result.assignments.length,
             findings: result.findings.toJSON(),
         };
+    }
+
+    /** Every finding the run raised, with the level label coloured by how loud it is. */
+    private logFindings(findings: Findings): void {
+        const lines = colourFindings(findings.format());
+
+        for (const line of lines) {
+            this.log(line);
+        }
     }
 
     private logSummaryCounts(errors: number, warnings: number): void {
