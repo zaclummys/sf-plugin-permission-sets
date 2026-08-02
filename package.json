@@ -19,10 +19,14 @@
     },
     "devDependencies": {
         "@eslint/js": "^10",
+        "@salesforce/cli-plugins-testkit": "^5",
         "@stylistic/eslint-plugin": "^5",
+        "@types/mocha": "^10",
+        "chai": "^6",
         "eslint": "^10",
         "execa": "^10",
         "globals": "^17",
+        "mocha": "^11",
         "ts-node": "^10",
         "typescript": "^6",
         "typescript-eslint": "^8",
@@ -70,6 +74,8 @@
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
+        "test:nuts": "wireit",
+        "test:nuts:org": "wireit",
         "version": "oclif readme"
     },
     "publishConfig": {
@@ -100,6 +106,7 @@
             "files": [
                 "src/**/*.ts",
                 "test/**/*.js",
+                "test/**/*.ts",
                 "bin/**",
                 "messages/**",
                 "eslint.config.js",
@@ -123,6 +130,50 @@
                 "test/**",
                 "vitest.config.js",
                 ".env"
+            ],
+            "output": []
+        },
+        "test:nuts": {
+            "command": "mocha \"test/nut/*.nut.ts\"",
+            "dependencies": [
+                "compile"
+            ],
+            "env": {
+                "FORCE_COLOR": "0",
+                "NO_COLOR": "1",
+                "SF_DISABLE_TELEMETRY": "true"
+            },
+            "files": [
+                "test/nut/*.nut.ts",
+                "test/nut/run.ts",
+                "test/fixtures/**",
+                "test/tsconfig.json",
+                ".mocharc.json"
+            ],
+            "output": []
+        },
+        "test:nuts:org": {
+            "command": "mocha \"test/nut/org/*.nut.ts\"",
+            "dependencies": [
+                "compile"
+            ],
+            "env": {
+                "FORCE_COLOR": "0",
+                "NO_COLOR": "1",
+                "TESTKIT_AUTH_URL": {
+                    "external": true
+                },
+                "TESTKIT_HUB_USERNAME": {
+                    "external": true
+                },
+                "SF_DISABLE_TELEMETRY": "true"
+            },
+            "files": [
+                "test/nut/org/*.nut.ts",
+                "test/nut/run.ts",
+                "test/nut/project/**",
+                "test/tsconfig.json",
+                ".mocharc.json"
             ],
             "output": []
         }

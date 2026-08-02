@@ -78,14 +78,25 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Testing
 
-> Vitest, `test/**/*.test.js`. Every spec spawns the real `sf ps ...` binary through `runPs` (`test/helpers/run-plugin.js`), so there are no module mocks, no fake timers, and no in-process imports of `src/`.
+> Two runners, one philosophy. **Vitest**, `test/**/*.test.js`, is the suite: every spec spawns the real `sf ps ...` binary through `runPs` (`test/helpers/run-plugin.js`), so there are no module mocks, no fake timers, and no in-process imports of `src/`. **Mocha plus `@salesforce/cli-plugins-testkit`**, `test/nut/**/*.nut.ts`, is the NUT layer the Salesforce CLI team standardizes on, run by `npm run test:nuts`. Everything below applies to both unless it names a runner.
+>
+> The runners differ in how they reach the plugin, not in what they believe. Vitest links this working copy into an installed `sf`, so it needs the CLI and, for most specs, an org. A NUT calls the plugin's own `bin/run.js`, so it needs neither. Neither one sees the published package: both read the working tree's `lib/` and `messages/`.
+>
+> Reach for `TestSession` only when a command touches the home directory, the way `plugin-settings` does for `config list`. None of ours do, so the offline NUTs create no session: an unresolvable `--target-org` fails the same on every machine without one, and a session per file is five throwaway directories bought for nothing.
+>
+> A NUT covers the command contract only: exit codes, the `--json` envelope, flags, and `--help`. Validation rules belong to the vitest suite, and restating them in a second runner doubles the maintenance for no new signal. The one import a NUT may take from `src/` is a **type** (`import type { PsCheckResult }`), erased before anything runs and part of the published `--json` contract rather than an internal.
+>
+> The NUTs are split by whether they need an org, because that decides where they can run. `test/nut/*.nut.ts` needs none and runs on every pull request including forks (`npm run test:nuts`). `test/nut/org/*.nut.ts` needs a Dev Hub, creates its own scratch org from `test/nut/project`, and runs separately (`npm run test:nuts:org`). An org NUT never reads `PS_TARGET_ORG`: it builds the org it asserts against and deletes it with the session, which is what keeps it from colliding with the vitest suite.
+>
+> One scratch org serves the whole org file, because creating one costs a slot in the Dev Hub's daily allocation and about a minute. Independence comes from the fixture project instead: it deploys one permission set per test that touches the org, so no test can observe what another did. Add a test that writes, add a permission set. Never make one test depend on the org state another left behind.
 
 Scope and shape
 
 - Black-box the plugin: drive `sf ps ...` and assert only on observable output (stdout, stderr, exit code, files written). Never import `src/` into a test or assert on internal structure: tests coupled to internals fail on every refactor, and those false alarms train us to ignore red builds.
 - One behavior per test, written as arrange, act, assert. A failure should point at exactly one cause; when a test asserts five things the first failure masks the rest.
 - Name the test after the behavior it asserts (`fails cleanly when the org cannot be resolved`), not after the function or flag it touches. CI shows the name, not the body.
-- No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs use `it.each` so each case is named and reported on its own, and keep known gaps visible with `it.todo` instead of a comment. ESLint enforces this over `test/**/*.test.js`; helpers elsewhere under `test/` are ordinary code and exempt.
+- No conditionals or loops in a test body: a branch can silently skip every assertion and still report green. For a table of inputs use `it.each` so each case is named and reported on its own, and keep known gaps visible with `it.todo` instead of a comment. ESLint enforces this over `test/**/*.test.js` and `test/**/*.nut.ts`; helpers elsewhere under `test/` are ordinary code and exempt.
+- In a NUT, always pass `ensureExitCode` to `execCmd` rather than asserting the code afterwards: it fails at the call with the command's stdout and stderr attached, which is the difference between a diagnosable CI failure and a bare number. Use `'nonZero'` where the exact code is not the point. Clean the `TestSession` in an `after()` that always runs, and never use double quotes inside an `execCmd` string, because they do not survive Windows.
 - Spell out the state a test depends on instead of growing a shared fixture. Fixtures under `test/fixtures/` stay minimal and single-purpose (one valid file, one schema error, one malformed file), and anything a test needs to be specific about it builds itself.
 - Prefer static data, files, and values in a fixture over state derived at run time. Naming users and targets literally makes the expected diff known up front, which turns a loose assertion (`/Plan: [1-9]\d* to add/`) into an exact one (`Plan: 1 to add, 0 to update. 1 users affected.`). Derive from the org only where the derivation is the behavior under test, as in the export round-trips, and keep org-specific values in `test/fixtures/org.js` so pointing the suite at another org stays a single edit.
 - Fix bugs test-first: write the failing spec that reproduces the report, then the fix. Otherwise there is no proof the test detects the bug.

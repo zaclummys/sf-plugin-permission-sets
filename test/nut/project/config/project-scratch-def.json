@@ -1,0 +1,10 @@
+{
+    "orgName": "sf-plugin-permission-sets NUT",
+    "edition": "Developer",
+    "features": [],
+    "settings": {
+        "lightningExperienceSettings": {
+            "enableS1DesktopEnabled": true
+        }
+    }
+}

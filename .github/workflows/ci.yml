@@ -56,3 +56,33 @@ jobs:
               env:
                   SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}
             - run: npm test
+
+    # The NUTs drive the plugin's own bin/run.js, so this job needs neither the sf CLI
+    # nor an org, and runs on fork PRs where the auth secret is absent.
+    nuts:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: npm
+            - run: npm ci
+            - run: npm run test:nuts
+
+    # The org NUTs create a scratch org of their own, so unlike the job above they need a
+    # Dev Hub. The same auth url the test job uses names one. Scratch org creation is the
+    # flaky part of any plugin's CI, which is why the official nut.yml retries three times.
+    org-nuts:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: npm
+            - run: npm ci
+            - run: npm install --global @salesforce/cli
+            - run: npm run test:nuts:org
+              env:
+                  TESTKIT_AUTH_URL: ${{ secrets.SFDX_AUTH_URL }}

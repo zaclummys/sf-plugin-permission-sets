@@ -1,0 +1,26 @@
+{
+    "extends": "../tsconfig.json",
+    "compilerOptions": {
+        // The NUTs are never emitted: node runs the .ts directly and tsc only ever
+        // typechecks them. rootDir and the incremental build outputs belong to the
+        // lib/ build and would fight a file that lives outside src/.
+        "noEmit": true,
+        "rootDir": "..",
+        "incremental": false,
+        // node runs these .ts files directly, and its type stripping does not rewrite a
+        // .js specifier back to the .ts on disk: a value import has to name the real
+        // file. Only legal alongside noEmit, which is why the NUTs are typechecked here
+        // and never built.
+        "allowImportingTsExtensions": true,
+        // describe/it/before/after are globals mocha injects, so without this the typed
+        // lint rules see an unresolved call and flag every block in the file.
+        "types": [
+            "node",
+            "mocha"
+        ]
+    },
+    // extends inherits exclude, and the root excludes **/*.nut.ts to keep the NUTs out
+    // of the lib/ build. Clearing it here is what lets this project own them.
+    "exclude": [],
+    "include": ["./nut/**/*.ts"]
+}

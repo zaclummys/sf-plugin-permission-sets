@@ -573,11 +573,35 @@ Commands are slices of one pipeline. `check` runs the **load** stage only, with 
 
 ```bash
 npm ci
-npm run build   # compile and lint
-npm test        # compile, then run the suite
+npm run build     # compile and lint
+npm test          # compile, then run the suite
+npm run test:nuts # compile, then run the NUTs
 ```
 
 The suite is black-box: every spec spawns the real `sf ps ...` binary. Install the Salesforce CLI first (`npm install -g @salesforce/cli`). The test run links this plugin into `sf` before the first spec and unlinks it at the end.
+
+### NUTs
+
+The NUTs are the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit).
+
+```bash
+npm run test:nuts
+```
+
+They run the plugin through its own `bin/run.js`, which is what every plugin in `salesforcecli/*` does, rather than through the copy `npm test` links into your `sf`. So they need no `sf` install and no org, and they cover all five commands: exit codes, the `--json` envelope, the flags, and the `--help` text. Set `DEBUG=testkit:*` to see every command the testkit runs.
+
+What they deliberately do not cover is the validation rules. Those are the vitest suite's, and restating them in a second runner would double the maintenance without adding a signal. Nor do they prove anything about the published package: like `npm test`, they read the working tree's `lib/` and `messages/`.
+
+The half that needs an org lives in `test/nut/org/`, runs separately, and needs a Dev Hub:
+
+```bash
+# Set TESTKIT_HUB_USERNAME or TESTKIT_AUTH_URL first (see .env.example)
+npm run test:nuts:org
+```
+
+That follows the official pattern: the Dev Hub is authenticated into the session's throwaway home, a scratch org is created there from `test/nut/project`, its three permission sets are deployed into it, and the org is deleted when the session is cleaned. It never reads `PS_TARGET_ORG`, so it cannot collide with the vitest suite, and it costs one scratch org and about a minute per run.
+
+That scratch org is what makes `apply` safe to exercise end to end. It is the one command that writes, and there it writes into an org that exists for the length of the test and is deleted after, rather than into anything you rely on. Each test claims a permission set of its own, so no test can see what another one did to the org.
 
 ### Test environment
 
@@ -590,6 +614,8 @@ cp .env.example .env
 | Variable | Required | What it is |
 | --- | --- | --- |
 | `PS_TARGET_ORG` | yes | Username or alias of an already-authenticated org. The `plan`, `apply`, and `export` specs run against it. |
+| `TESTKIT_HUB_USERNAME` | for `test:nuts:org` | An already-authenticated Dev Hub. The scratch org NUTs create their org from it. |
+| `TESTKIT_AUTH_URL` | for `test:nuts:org` | An sfdx auth url for that Dev Hub, as an alternative to the above. What CI passes in. |
 
 ## License
 
