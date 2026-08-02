@@ -3,13 +3,14 @@
 [![NPM](https://img.shields.io/npm/v/sf-plugin-permission-sets.svg?label=sf-plugin-permission-sets)](https://www.npmjs.com/package/sf-plugin-permission-sets) [![Downloads/week](https://img.shields.io/npm/dw/sf-plugin-permission-sets.svg)](https://npmjs.org/package/sf-plugin-permission-sets) [![Stability: experimental](https://img.shields.io/badge/stability-experimental-orange.svg)](https://semver.org/#spec-item-4) [![License](https://img.shields.io/badge/License-BSD%203--Clause-brightgreen.svg)](https://raw.githubusercontent.com/zaclummys/sf-plugin-permission-sets/main/LICENSE.md)
 
 > Declarative, GitOps-style management of **permission set assignments** for Salesforce orgs.
+> Permission sets, permission set groups, and permission set licenses, all in one file.
 > Define who gets what in version-controlled YAML. The plugin reconciles your org to match it: `plan` then `apply`, just like Terraform.
 
 > ⚠️ **Under active development.** This plugin is `0.x`. Per [semver's major-version-zero rule](https://semver.org/#spec-item-4), anything (commands, flags, the YAML schema) may change in a breaking way between `0.x` releases. Pin a version in CI. The public API stabilizes at `v1.0.0`.
 
-Stop clicking through Setup to grant access. Commit a YAML file, open a pull request, let CI show the diff, and merge to apply. Your git history becomes the audit log of who had access and when.
+Stop clicking through Setup to grant access. Commit a YAML file, open a pull request, let CI show the diff, and merge to apply. Your git history becomes the audit log: who had what access, and when.
 
-If you're looking for an alternative to [`sf org assign permset`](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_assign_permset.htm), please give it a try. We'd love your feedback.
+If you're looking for an alternative to [`sf org assign permset`](https://developer.salesforce.com/docs/atlas.en-us.sfdx_dev.meta/sfdx_dev/sfdx_dev_assign_permset.htm), please give it a try. We'd love your feedback!
 
 ---
 
@@ -33,11 +34,12 @@ If you're looking for an alternative to [`sf org assign permset`](https://develo
 
 ## Why
 
-Permission set assignments drift. Access granted for one project is never revoked, offboarding misses a set, and nobody can answer "who can see this and why?" without a SOQL session. In higher environments those grants happen by hand in Setup, with no review and no trail.
+Permission set assignments drift: access granted for one project is never revoked, offboarding misses a set, and nobody can answer "who can see this, and why?" without a SOQL session. In higher environments those grants happen by hand in Setup, with no review and no trail.
 
 This plugin makes the desired state declarative and reviewable:
 
 - **Single source of truth:** the YAML in git is authoritative, and the org is reconciled to it.
+- **Scales past the click:** granting one permission set to 40 users is one line per user in a file, not 40 trips through Setup.
 - **Plan before apply:** see every add, update, and removal before anything changes.
 - **Safe by default:** removals are opt-in, capped by `--max-deletes`, and confirmed before they run.
 - **CI-native:** `check` needs no org, every command exits non-zero on failure, and every command speaks `--json`.
@@ -202,7 +204,7 @@ A run performs three operations: **add** missing assignments, **update** changed
 
 ## Validations
 
-Every run checks the files first. `check` runs the file checks with no org, `validate` adds the org-side checks, and `plan` and `apply` run both before they touch anything. When files merge, most overlaps are unions rather than errors.
+Every run checks the files first: `check` runs the file checks with no org, `validate` adds the org-side checks, and `plan` and `apply` run both before they touch anything. When files merge, most overlaps are unions rather than errors.
 
 | Situation | Checked by | Severity | Result |
 | --- | --- | :---: | --- |
@@ -355,7 +357,7 @@ DML goes through the sObject Collections API, so a partial failure is reported p
 
 ## Org permissions
 
-What the user behind `--target-org` needs:
+What does the user behind `--target-org` need?
 
 | Command | API Enabled | View Setup and Configuration | View Roles and Role Hierarchy | Assign Permission Sets |
 | --- | :---: | :---: | :---: | :---: |
@@ -416,7 +418,7 @@ jobs:
         run: sf ps plan --file "permissions/*.yml" --target-org prod --mode sync
 ```
 
-Drop the last three steps and you have a check that needs no org and no secrets, which also runs on a fork's pull request.
+Want a review that needs no org and no secrets? Drop the last three steps: what's left is the file check, and it runs on a fork's pull request too.
 
 **2. Apply on merge to main:**
 
@@ -474,7 +476,7 @@ Every published version carries the `latest` dist-tag, so `sf plugins install sf
 
 ## Architecture
 
-Commands are thin oclif classes, services hold the orchestration, core holds the pure primitives, and an adapter isolates the Salesforce SDK. The commands are also slices of one pipeline: `apply` runs `plan`, and `plan` runs `check`, so the three can never disagree about what a set of files means.
+The plugin is layered: commands are thin oclif classes, services hold the orchestration, core holds the pure primitives, and an adapter isolates the Salesforce SDK. The commands are also slices of one pipeline: `apply` runs `plan`, and `plan` runs `check`, so the three can never disagree about what a set of files means.
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the layers, the core modules, and how each command composes that pipeline.
 
