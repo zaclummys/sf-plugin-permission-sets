@@ -603,6 +603,18 @@ That follows the official pattern: the Dev Hub is authenticated into the session
 
 That scratch org is what makes `apply` safe to exercise end to end. It is the one command that writes, and there it writes into an org that exists for the length of the test and is deleted after, rather than into anything you rely on. Each test claims a permission set of its own, so no test can see what another one did to the org.
 
+### Coverage
+
+```bash
+npm run coverage
+```
+
+Writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs all three suites, so it needs both an org and a Dev Hub, and it spends one scratch org.
+
+Getting a number out of a black-box suite takes a detour, because nothing under test runs in the test process. `NODE_V8_COVERAGE` makes every `sf` and `bin/run.js` child write its own V8 dump, `scripts/prune-coverage.js` throws away everything that is not this plugin, and `c8` merges what is left and maps it back through the source maps to `src/`. The pruning is not optional: the raw dumps are 1.3 GB of Salesforce CLI internals around 17 MB of ours, and `c8` loads all of it into one heap before its own filters run.
+
+Treat the number as a diagnostic, never a target. Nothing gates on it, there is no threshold, and a line that ran is not a line that was verified. What it is good for is spotting a file nothing reaches at all.
+
 ### Test environment
 
 Tests take their parameters from the environment, never from a committed file. Copy the template and fill it in:

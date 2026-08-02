@@ -1,0 +1,7 @@
+{
+    "temp-directory": ".v8-coverage",
+    "reports-dir": "coverage",
+    "include": ["lib/**"],
+    "reporter": ["text", "lcov"],
+    "check-coverage": false
+}

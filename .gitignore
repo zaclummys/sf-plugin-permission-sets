@@ -56,3 +56,6 @@ scratchpad/
 # all env files, except the committed template that documents them
 .env*
 !.env.example
+
+# raw v8 coverage dumps, merged by `npm run coverage` into coverage/
+.v8-coverage
