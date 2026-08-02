@@ -312,6 +312,97 @@ describe('scratch org NUTs', () => {
             expect(payload?.added).to.equal(0);
         });
 
+        it('applies nothing when the org already satisfies the file', () => {
+            const result = ps(`apply --file ${unchangedFile} --target-org ${username} --no-prompt`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Applied: 0 added, 0 updated, 0 removed.');
+        });
+
+        it('reports nothing to do on a dry run of a file the org satisfies', () => {
+            const result = ps(`apply --file ${unchangedFile} --target-org ${username} --dry-run`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Dry run: 0 to add, 0 to update, 0 to remove.');
+        });
+
+        it('applies a file with no warnings under --strict', () => {
+            const result = ps(`apply --file ${unchangedFile} --target-org ${username} --strict --no-prompt`, 0);
+
+            expect(result.shellOutput.stdout).to.contain('Applied: 0 added, 0 updated, 0 removed.');
+        });
+
+        // The guard tests all end in a refusal, so none of them removes the seeded Delta
+        // assignment that the plan specs above read.
+        it('refuses a destructive run that would remove more than --max-deletes', () => {
+            const result = ps(
+                `apply --file ${undeclaredFile} --target-org ${username} --mode destructive --max-deletes 0 --no-prompt`,
+                1,
+            );
+
+            expect(result.shellOutput.stderr).to.contain('over the --max-deletes limit of 0');
+        });
+
+        it('leaves the org unchanged when the --max-deletes guard trips', () => {
+            ps(
+                `apply --file ${undeclaredFile} --target-org ${username} --mode destructive --max-deletes 0 --no-prompt`,
+                1,
+            );
+
+            const after = ps(`plan --file ${undeclaredFile} --target-org ${username} --mode sync`, 0);
+
+            expect(after.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update, 1 to remove. 2 users affected.');
+        });
+
+        it('refuses to delete in a --json run without --no-prompt', () => {
+            const result = ps(
+                `apply --file ${undeclaredFile} --target-org ${username} --mode destructive --json`,
+                1,
+            );
+
+            expect(result.shellOutput.stdout).to.contain('Re-run with --no-prompt');
+        });
+
+        it('requires --file', () => {
+            const result = ps(`apply --target-org ${username}`, 2);
+
+            expect(result.shellOutput.stderr).to.contain('Missing required flag file');
+        });
+
+        it('fails a schema violation with exit 1', () => {
+            const result = ps(
+                `apply --file ${fixture('schema-error.yml')} --target-org ${username} --no-prompt`,
+                1,
+            );
+
+            expect(result.shellOutput.stderr).to.contain('do not resolve cleanly against the org');
+        });
+
+        it('fails malformed YAML with exit 1', () => {
+            const result = ps(
+                `apply --file ${fixture('malformed.yml')} --target-org ${username} --no-prompt`,
+                1,
+            );
+
+            expect(result.shellOutput.stdout).to.contain('error:');
+        });
+
+        it('refuses a file with warnings under --strict', () => {
+            const result = ps(
+                `apply --file ${fixture('warnings.yml')} --target-org ${username} --strict --no-prompt`,
+                1,
+            );
+
+            expect(result.shellOutput.stderr).to.contain('Nothing was applied');
+        });
+
+        it('names the warnings that --strict refused to apply', () => {
+            const result = ps(
+                `apply --file ${fixture('warnings.yml')} --target-org ${username} --strict --no-prompt`,
+                1,
+            );
+
+            expect(result.shellOutput.stdout).to.contain('listed twice under permissionSets');
+        });
+
         it('adds the assignment and leaves the org matching the file', () => {
             const applied = ps(
                 `apply --file ${appliedFile} --target-org ${username} --no-prompt`,

@@ -12,17 +12,11 @@ export { declaredUser, declaredUserOtherCase, islandUser } from './org.js';
 /** Parses and resolves cleanly against no org: no findings expected. */
 export const validPath = 'test/fixtures/valid.yml';
 
-/** Warnings only, no errors: one duplicate target and one empty scope list. */
-export const warningsPath = 'test/fixtures/warnings.yml';
-
 /** A schema violation: the object form of a license, which the schema rejects. */
 export const schemaErrorPath = 'test/fixtures/schema-error.yml';
 
 /** Invalid YAML: an unclosed flow sequence the parser rejects. */
 export const malformedPath = 'test/fixtures/malformed.yml';
-
-/** Leaves one of the org's own assignments undeclared: one addition and one removal. */
-export const undeclaredPath = 'test/fixtures/undeclared-assignment.yml';
 
 /**
  * A target org that resolves nowhere, so the specs that use it fail identically on any
