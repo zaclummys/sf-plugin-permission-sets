@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { expect } from 'chai';
-import { ps } from '../../run.ts';
-import { exportIsland, org } from '../../org-session.ts';
+import { org } from '../../org-session.ts';
+import { exportIsland } from './helpers.ts';
 import type { PsExportResult } from '../../../../src/commands/ps/export.js';
 
 describe('ps export to stdout', () => {
@@ -19,7 +19,7 @@ describe('ps export to stdout', () => {
     });
 
     it('emits the same document to stdout as it writes to a file', () => {
-        const exported = path.join(org.dir, 'both.yml');
+        const exported = path.join(org.dir(), 'both.yml');
         const toStdout = exportIsland('', 0);
 
         exportIsland(`--output-file ${exported}`, 0);
@@ -36,19 +36,14 @@ describe('ps export to stdout', () => {
     });
 
     it('matches a requested --user whose case differs from the org', () => {
-        const result = ps<PsExportResult>(
-            `export --target-org ${org.username} --user ${org.islandUser.toUpperCase()} --json`,
-            0,
-        );
+        const island = org.islandUser();
+        const result = org.runPs<PsExportResult>(`export --user ${island.toUpperCase()} --json`, 0);
 
         expect(result.jsonOutput?.result.users).to.equal(1);
     });
 
     it('warns and continues when a requested --user matches nothing', () => {
-        const result = ps<PsExportResult>(
-            `export --target-org ${org.username} --user nobody@nut.invalid --json`,
-            0,
-        );
+        const result = org.runPs<PsExportResult>('export --user nobody@nut.invalid --json', 0);
 
         expect(result.jsonOutput?.result.unmatchedUsers).to.deep.equal(['nobody@nut.invalid']);
     });

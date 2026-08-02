@@ -51,10 +51,17 @@ function byLikelihood(names: string[]): string[] {
     ];
 }
 
-/** Give the org an assignment, so a spec can diff a file against state it did not declare. */
-export function assignPermissionSet(orgUsername: string, assignee: string, permissionSet: string): void {
+/**
+ * Give the org assignments, so a spec can diff a file against state it did not declare.
+ *
+ * Takes every permission set one assignee gets rather than one at a time, because --name is
+ * repeatable and each call is a whole `sf` process in the seeding hook.
+ */
+export function assignPermissionSets(orgUsername: string, assignee: string, permissionSets: string[]): void {
+    const names = permissionSets.map((permissionSet) => `--name ${permissionSet}`).join(' ');
+
     execCmd(
-        `org:assign:permset --name ${permissionSet} --on-behalf-of ${assignee} --target-org ${orgUsername} --json`,
+        `org:assign:permset ${names} --on-behalf-of ${assignee} --target-org ${orgUsername} --json`,
         {
             ensureExitCode: 0,
             cli: 'sf',
@@ -249,6 +256,17 @@ export function deactivateUser(orgUsername: string, userId: string): void {
  * the org's admin, which only exists once the org does, so this cannot be a committed
  * fixture the way test/fixtures/*.yml are.
  */
+export function writeAssignmentFile(dir: string, username: string, permissionSet: string): string {
+    // Both halves are in the name because two tests can declare the same permission set
+    // for different users, and naming the file after the target alone had one silently
+    // overwrite the other.
+    const file = path.join(dir, `${permissionSet}--${username.replace(/[^\w.-]/g, '_')}.yml`);
+
+    writeFileSync(file, `users:\n  ${username}:\n    permissionSets:\n      - ${permissionSet}\n`);
+
+    return file;
+}
+
 /** The same, for the scope the plugin calls permissionSetLicenses. */
 export function writeLicenseFile(dir: string, username: string, license: string): string {
     const file = path.join(dir, `${license}--license.yml`);
@@ -280,17 +298,6 @@ export function writeExpiringFile(
         file,
         `users:\n  ${username}:\n    permissionSets:\n      - name: ${permissionSet}\n        expiration: ${expiration}\n`,
     );
-
-    return file;
-}
-
-export function writeAssignmentFile(dir: string, username: string, permissionSet: string): string {
-    // Both halves are in the name because two tests can declare the same permission set
-    // for different users, and naming the file after the target alone had one silently
-    // overwrite the other.
-    const file = path.join(dir, `${permissionSet}--${username.replace(/[^\w.-]/g, '_')}.yml`);
-
-    writeFileSync(file, `users:\n  ${username}:\n    permissionSets:\n      - ${permissionSet}\n`);
 
     return file;
 }
