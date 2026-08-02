@@ -1,11 +1,20 @@
 import { ok } from 'node:assert';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
 import { expect } from 'chai';
-import { assignPermissionSet, createUser, deactivateUser, fixture, projectDir, ps, writeAssignmentFile } from '../run.ts';
+import { parse } from 'yaml';
+import { assignPermissionSet, assignUntil, createUser, deactivateUser, fixture, projectDir, ps, writeAssignmentFile } from '../run.ts';
 import type { PsApplyResult } from '../../../src/commands/ps/apply.js';
 import type { PsExportResult } from '../../../src/commands/ps/export.js';
 import type { PsPlanResult } from '../../../src/commands/ps/plan.js';
+import type { PsValidateResult } from '../../../src/commands/ps/validate.js';
+
+// Far enough out that the assignment never lapses mid-run. Seeded with milliseconds and
+// asserted without them, because the canonical form Expiration.toString writes drops them:
+// putting the same spelling in and out would pass even if nothing normalised anything.
+const seededExpiration = '2099-12-31T23:59:59.000Z';
+const canonicalExpiration = '2099-12-31T23:59:59Z';
 
 /**
  * The org-backed NUTs, in the shape every salesforcecli plugin uses: a Dev Hub
@@ -45,6 +54,10 @@ describe('scratch org NUTs', () => {
     let undeclaredFile: string;
     let unchangedFile: string;
 
+    // A second user, holding only what the export specs read, so scoping every export to it
+    // keeps them blind to whatever the apply specs did to the admin.
+    let islandUser: string;
+
     before(async () => {
         session = await TestSession.create({
             project: { sourceDir: projectDir },
@@ -74,12 +87,19 @@ describe('scratch org NUTs', () => {
         missingTargetFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Never_Deployed');
         missingUserFile = writeAssignmentFile(session.dir, 'nobody@nut.invalid', 'PS_Nut_Alpha');
 
-        const islandUser = createUser(session.dir, username);
+        const created = createUser(session.dir, username);
+
+        islandUser = created.username;
 
         assignPermissionSet(username, username, 'PS_Nut_Delta');
         assignPermissionSet(username, username, 'PS_Nut_Epsilon');
 
-        undeclaredFile = writeAssignmentFile(session.dir, islandUser.username, 'PS_Nut_Delta');
+        // What the export specs read. They scope every command to --user islandUser, so
+        // they see exactly these two and nothing the other specs do to the admin.
+        assignPermissionSet(username, islandUser, 'PS_Nut_Zeta');
+        assignUntil(username, created.id, 'PS_Nut_Eta', seededExpiration);
+
+        undeclaredFile = writeAssignmentFile(session.dir, islandUser, 'PS_Nut_Delta');
         unchangedFile = writeAssignmentFile(session.dir, username, 'PS_Nut_Epsilon');
     });
 
@@ -238,6 +258,37 @@ describe('scratch org NUTs', () => {
             expect(result.shellOutput.stdout).to.contain('nobody@nut.invalid: user not found in org');
         });
 
+        it('returns the resolved counts in the --json envelope', () => {
+            const result = ps<PsValidateResult>(
+                `validate --file ${readOnlyPlanFile} --target-org ${username} --json`,
+                0,
+            );
+
+            expect(result.jsonOutput?.result).to.deep.include({
+                files: 1,
+                users: 1,
+                assignments: 1,
+            });
+        });
+
+        it('rejects a missing required --file flag', () => {
+            const result = ps(`validate --target-org ${username}`, 2);
+
+            expect(result.shellOutput.stderr).to.contain('Missing required flag file');
+        });
+
+        it('fails a schema violation with exit 1', () => {
+            const result = ps(`validate --file ${fixture('schema-error.yml')} --target-org ${username}`, 1);
+
+            expect(result.shellOutput.stdout).to.contain('error:');
+        });
+
+        it('fails malformed YAML with exit 1', () => {
+            const result = ps(`validate --file ${fixture('malformed.yml')} --target-org ${username}`, 1);
+
+            expect(result.shellOutput.stdout).to.contain('error:');
+        });
+
         // Creating a user is the most failure-prone thing here: it needs a profile whose
         // name the org decides, and a licence to be free for it. Its own hook keeps a
         // failure to this one test rather than the file.
@@ -265,27 +316,110 @@ describe('scratch org NUTs', () => {
     });
 
     describe('ps export', () => {
-        // Whatever the org holds, exporting it has to produce a file the plugin accepts.
-        // Asserting the round trip rather than a count is what keeps this independent of
-        // the apply test above, which changes what there is to export.
+        // Everything here scopes to --user islandUser, which holds Zeta and an expiring Eta
+        // and nothing else. That is what makes the counts exact rather than "whatever the
+        // org happens to have", and what keeps the apply specs from moving them.
+        function exportIsland(args: string, ensureExitCode: number | 'nonZero') {
+            return ps<PsExportResult>(`export --target-org ${username} --user ${islandUser} ${args}`, ensureExitCode);
+        }
+
+        it('returns the exported counts in the --json envelope', () => {
+            const result = exportIsland('--json', 0);
+
+            expect(result.jsonOutput?.result).to.deep.include({
+                users: 1,
+                assignments: 2,
+            });
+        });
+
+        it('writes a user-keyed document to --output-file', () => {
+            const exported = path.join(session?.dir ?? '', 'keyed.yml');
+
+            exportIsland(`--output-file ${exported}`, 0);
+
+            const document = parse(readFileSync(exported, 'utf8')) as { users: Record<string, unknown> };
+
+            expect(Object.keys(document.users)).to.deep.equal([islandUser]);
+        });
+
+        it('reports the file it wrote in --json', () => {
+            const exported = path.join(session?.dir ?? '', 'exported-json.yml');
+            const result = exportIsland(`--output-file ${exported} --json`, 0);
+
+            expect(result.jsonOutput?.result.outputFile).to.equal(exported);
+        });
+
         it('writes a document that ps check accepts', () => {
             const exported = path.join(session?.dir ?? '', 'exported.yml');
 
-            ps(`export --target-org ${username} --output-file ${exported}`, 0);
+            exportIsland(`--output-file ${exported}`, 0);
 
             const checked = ps(`check --file ${exported}`, 0);
 
             expect(checked.shellOutput.stdout).to.contain('0 errors');
         });
 
-        it('reports the file it wrote in --json', () => {
-            const exported = path.join(session?.dir ?? '', 'exported-json.yml');
+        it('writes an org expiration in canonical ISO form', () => {
+            const exported = path.join(session?.dir ?? '', 'expiring.yml');
+
+            exportIsland(`--output-file ${exported}`, 0);
+
+            expect(readFileSync(exported, 'utf8')).to.contain(canonicalExpiration);
+        });
+
+        it('scopes the document to the requested --kind only', () => {
+            const exported = path.join(session?.dir ?? '', 'kinded.yml');
+
+            exportIsland(`--kind permissionSetLicenses --output-file ${exported}`, 0);
+
+            expect(readFileSync(exported, 'utf8')).to.not.contain('PS_Nut_Zeta');
+        });
+
+        it('writes the document to stdout when --output-file is omitted', () => {
+            const result = exportIsland('', 0);
+
+            expect(result.shellOutput.stdout).to.contain('PS_Nut_Zeta');
+        });
+
+        it('keeps stdout free of the summary line when it carries the document', () => {
+            const result = exportIsland('', 0);
+
+            expect(result.shellOutput.stdout).to.not.contain('assignment(s) exported');
+        });
+
+        it('emits the same document to stdout as it writes to a file', () => {
+            const exported = path.join(session?.dir ?? '', 'both.yml');
+            const toStdout = exportIsland('', 0);
+
+            exportIsland(`--output-file ${exported}`, 0);
+
+            expect(toStdout.shellOutput.stdout.trim()).to.equal(readFileSync(exported, 'utf8').trim());
+        });
+
+        it('returns the document in the --json envelope with a null outputFile', () => {
+            const result = exportIsland('--json', 0);
+            const payload = result.jsonOutput?.result;
+
+            expect(payload?.outputFile).to.equal(null);
+            expect(payload?.content).to.contain('PS_Nut_Zeta');
+        });
+
+        it('matches a requested --user whose case differs from the org', () => {
             const result = ps<PsExportResult>(
-                `export --target-org ${username} --output-file ${exported} --json`,
+                `export --target-org ${username} --user ${islandUser.toUpperCase()} --json`,
                 0,
             );
 
-            expect(result.jsonOutput?.result.outputFile).to.equal(exported);
+            expect(result.jsonOutput?.result.users).to.equal(1);
+        });
+
+        it('warns and continues when a requested --user matches nothing', () => {
+            const result = ps<PsExportResult>(
+                `export --target-org ${username} --user nobody@nut.invalid --json`,
+                0,
+            );
+
+            expect(result.jsonOutput?.result.unmatchedUsers).to.deep.equal(['nobody@nut.invalid']);
         });
     });
 

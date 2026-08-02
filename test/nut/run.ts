@@ -107,6 +107,49 @@ export function createUser(dir: string, orgUsername: string): CreateUserOutput['
     return created;
 }
 
+/**
+ * Give the org an assignment that expires, which `sf org assign permset` cannot do: it has
+ * no expiration flag, so the assignment is inserted as the plain sObject it is.
+ *
+ * The permission set id has to be looked up, and the query asks for all of them and filters
+ * here rather than carrying a WHERE clause: the name would need quoting inside an argument
+ * that is already quoted, and that is the shape that does not survive Windows.
+ */
+export function assignUntil(
+    orgUsername: string,
+    assigneeId: string,
+    permissionSet: string,
+    expiration: string,
+): void {
+    const query = execCmd<{
+        records: {
+            Id: string;
+            Name: string;
+        }[];
+    }>(
+        `data:query --query 'SELECT Id, Name FROM PermissionSet' --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+    const found = query.jsonOutput?.result.records.find((record) => record.Name === permissionSet);
+
+    if (!found) {
+        throw new Error(`${permissionSet} is not deployed to ${orgUsername}`);
+    }
+
+    execCmd(
+        `data:create:record --sobject PermissionSetAssignment --values `
+        + `"AssigneeId=${assigneeId} PermissionSetId=${found.Id} ExpirationDate=${expiration}" `
+        + `--target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+}
+
 /** Switch a user off, so a spec can assert what the plugin says about an inactive assignee. */
 export function deactivateUser(orgUsername: string, userId: string): void {
     execCmd(
