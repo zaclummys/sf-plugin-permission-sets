@@ -1,11 +1,13 @@
 name: ci
 
-# Runs on PRs and manual dispatch, and is callable by the publish workflow as
-# its release gate (workflow_call), so build + test are defined once here.
-# Three parallel jobs: build typechecks and lints, test runs the NUTs that need
-# no org, and test-org runs the ones that create a scratch org. Only the last
+# Runs on pushes to main and on PRs and manual dispatch, and is callable by the
+# publish workflow as its release gate (workflow_call), so build + test are defined
+# once here. Three parallel jobs: build typechecks and lints, test runs the NUTs that
+# need no org, and test-org runs the ones that create a scratch org. Only the last
 # needs a secret, which is what lets a fork's pull request still be tested.
 on:
+    push:
+        branches: [main]
     pull_request:
     workflow_dispatch:
     workflow_call:
@@ -54,7 +56,12 @@ jobs:
     # Creates a scratch org of its own, so unlike the job above it needs a Dev Hub and the
     # sf CLI that the setup shells out to. Scratch org creation is the flaky part of any
     # plugin's CI, which is why the official nut.yml retries three times.
+    #
+    # Skipped on a push, because an allocation is daily and per hub: a run of commits
+    # straight to main would spend it before the release that needs it. A pull request, a
+    # manual dispatch, and the release gate still get it.
     test-org:
+        if: github.event_name != 'push'
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7

@@ -511,11 +511,10 @@ Want the diff on the PR before merging? Add a `sf ps plan --file "permissions/*.
 
 ## Versioning
 
-Releases follow [semantic versioning](https://semver.org). Snapshots are automatic, real releases are a manual decision.
+Releases follow [semantic versioning](https://semver.org). Publishing is a manual decision: a push to `main` builds and tests, and nothing reaches npm until a release exists.
 
 **Automatic, no action needed:**
 
-- Every push to `main` publishes a snapshot `0.0.0-dev.<run>` to the `dev` dist-tag.
 - Creating a release triggers CI to build, stamp the version from the tag, publish it with provenance, and smoke-test the result.
 
 **Manual, you decide and trigger:**
@@ -537,10 +536,7 @@ Cut a release with a tag off `main`:
 gh release create v0.2.0 --target main --title v0.2.0 --notes "Add ps export"
 ```
 
-| dist-tag | Published by | Install |
-| --- | --- | --- |
-| `latest` | manual release with a normal tag like `v1.2.0` | `sf plugins install sf-plugin-permission-sets` |
-| `dev` | automatic on every push to `main` | `sf plugins install sf-plugin-permission-sets@dev` |
+Every published version carries the `latest` dist-tag, so `sf plugins install sf-plugin-permission-sets` installs the newest release. There is no rolling `dev` channel: the release gate creates a scratch org, and a Dev Hub's allocation is daily and per hub, so publishing a snapshot on every push spent it on commits nobody was going to install.
 
 ## Architecture
 

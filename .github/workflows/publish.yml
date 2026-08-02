@@ -1,8 +1,10 @@
 name: publish
 
+# Release only. A push to main used to publish a 0.0.0-dev.<run> snapshot, which meant
+# every commit ran the release gate below and spent a scratch org from a daily, per-hub
+# allocation on a version nobody installed. Pushes now stop at ci.yml, which runs the
+# jobs that need no org.
 on:
-    push:
-        branches: [main]
     release:
         types: [published]
 
@@ -10,8 +12,8 @@ permissions:
     contents: read
 
 jobs:
-    # Gate: build and test must pass before anything is published, on both the
-    # push-to-main snapshot and the release triggers.
+    # Gate: build and test must pass before anything is published, including the org
+    # specs, which is the one place a scratch org is worth a slot.
     ci:
         uses: ./.github/workflows/ci.yml
         # Reusable workflows do not inherit secrets; pass the one the org job needs.
@@ -37,23 +39,15 @@ jobs:
                   node-version: '24'
                   registry-url: 'https://registry.npmjs.org'
 
-            - name: Determine version and dist-tag
+            - name: Determine version
               id: ver
               run: |
-                  if [ "${{ github.event_name }}" = "release" ]; then
-                    # Real release: version comes from the git tag (the single source of truth).
-                    VERSION="${{ github.event.release.tag_name }}"
-                    VERSION="${VERSION#v}"
-                    TAG=latest
-                  else
-                    # Snapshot on every push to main, for client testing. Unique and increasing.
-                    VERSION="0.0.0-dev.${{ github.run_number }}"
-                    TAG=dev
-                  fi
+                  # The git tag is the single source of truth for the version.
+                  VERSION="${{ github.event.release.tag_name }}"
+                  VERSION="${VERSION#v}"
 
-                  echo "Resolved version $VERSION for dist-tag $TAG"
+                  echo "Resolved version $VERSION"
                   echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-                  echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
             - name: Update
               run: npm install -g npm@latest
@@ -68,7 +62,7 @@ jobs:
               run: npm pkg set version="${{ steps.ver.outputs.version }}"
 
             - name: Publish
-              run: npm publish --provenance --access public --tag "${{ steps.ver.outputs.tag }}"
+              run: npm publish --provenance --access public --tag latest
 
     smoke-test:
         needs: publish
