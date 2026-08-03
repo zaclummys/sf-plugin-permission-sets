@@ -53,17 +53,16 @@ jobs:
             - run: npm ci
             - run: npm test
               env:
-                  NODE_V8_COVERAGE: .v8-coverage
+                  NODE_V8_COVERAGE: coverage-dumps
             - id: prune
               continue-on-error: true
               run: node scripts/prune-coverage.js
             - uses: actions/upload-artifact@v4
               if: steps.prune.outcome == 'success'
               with:
-                  name: v8-coverage-offline
-                  path: .v8-coverage
+                  name: coverage-dumps-offline
+                  path: coverage-dumps
                   retention-days: 1
-                  include-hidden-files: true
                   if-no-files-found: error
 
     # Creates a scratch org of its own, so unlike the job above it needs a Dev Hub and the
@@ -87,15 +86,14 @@ jobs:
             - run: npm run test:org
               env:
                   TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
-                  NODE_V8_COVERAGE: .v8-coverage
+                  NODE_V8_COVERAGE: coverage-dumps
             - id: prune
               continue-on-error: true
               run: node scripts/prune-coverage.js
             - uses: actions/upload-artifact@v4
               if: steps.prune.outcome == 'success'
               with:
-                  name: v8-coverage-org
-                  path: .v8-coverage
+                  name: coverage-dumps-org
+                  path: coverage-dumps
                   retention-days: 1
-                  include-hidden-files: true
                   if-no-files-found: error

@@ -1,5 +1,5 @@
 {
-    "temp-directory": ".v8-coverage",
+    "temp-directory": "coverage-dumps",
     "reports-dir": "coverage",
     "include": ["lib/**"],
     "reporter": ["text", "lcov"],

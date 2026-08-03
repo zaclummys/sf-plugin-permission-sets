@@ -58,4 +58,4 @@ scratchpad/
 !.env.example
 
 # raw v8 coverage dumps, merged by `npm run coverage` into coverage/
-.v8-coverage
+coverage-dumps

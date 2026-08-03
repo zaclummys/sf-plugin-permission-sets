@@ -71,7 +71,7 @@
         "build": "wireit",
         "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
-        "coverage": "npm run compile && rm -rf .v8-coverage coverage && NODE_V8_COVERAGE=.v8-coverage npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
+        "coverage": "npm run compile && rm -rf coverage-dumps coverage && NODE_V8_COVERAGE=coverage-dumps npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
         "coverage:collect": "mocha \"test/nut/*/*.nut.ts\" && mocha \"test/nut/*/org/*.nut.ts\"",
         "lint": "wireit",
         "prepack": "npm run compile",

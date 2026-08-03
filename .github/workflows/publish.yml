@@ -112,22 +112,22 @@ jobs:
             - run: npm run compile
             - uses: actions/download-artifact@v4
               with:
-                  name: v8-coverage-offline
-                  path: .v8-coverage-offline
+                  name: coverage-dumps-offline
+                  path: coverage-dumps-offline
             - uses: actions/download-artifact@v4
               with:
-                  name: v8-coverage-org
-                  path: .v8-coverage-org
+                  name: coverage-dumps-org
+                  path: coverage-dumps-org
             - name: Merge the dumps
               run: |
                   shopt -s nullglob
-                  mkdir -p .v8-coverage
+                  mkdir -p coverage-dumps
                   for half in offline org; do
-                      for file in ".v8-coverage-$half"/*.json; do
-                          cp "$file" ".v8-coverage/$half-$(basename "$file")"
+                      for file in "coverage-dumps-$half"/*.json; do
+                          cp "$file" "coverage-dumps/$half-$(basename "$file")"
                       done
                   done
-                  ls .v8-coverage/*.json >/dev/null
+                  ls coverage-dumps/*.json >/dev/null
             - run: npx c8 report
             - uses: codecov/codecov-action@v5
               with:

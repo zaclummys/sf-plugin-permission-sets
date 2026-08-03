@@ -10,7 +10,7 @@
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
-const tempDirectory = '.v8-coverage';
+const tempDirectory = 'coverage-dumps';
 const ours = `${path.resolve('lib')}/`;
 
 let kept = 0;
