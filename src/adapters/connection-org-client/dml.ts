@@ -1,5 +1,6 @@
 import {
     ActualAssignment,
+    AssignmentOperation,
     AssignmentOutcome,
     AssignmentUpdate,
     Kind,
@@ -46,6 +47,23 @@ type RemovalBatch = {
     removals: ActualAssignment[]
 };
 
+/** What an outcome needs to name the record it reports on. Every DML input carries these. */
+type AssignmentRef = {
+    assignee: Username;
+    kind: Kind;
+    target: TargetName
+};
+
+/**
+ * One DML call: the assignments it sends, and the call itself as a thunk. The adapter
+ * supplies the thunk because the Connection is its business, and the pairing of a result
+ * back to the assignment that produced it is this module's.
+ */
+export type DmlJob<Item extends AssignmentRef> = {
+    items: Item[];
+    send: () => Promise<DmlResult[]>
+};
+
 /** SObject + foreign-key field to set per kind when assigning. */
 const assignmentObjects: Record<Kind, AssignmentObject> = {
     permissionSet: {
@@ -90,13 +108,9 @@ function groupBySobject<T extends { kind: Kind }>(items: T[]): Map<string, T[]> 
 }
 
 /** Turn a per-record DML result into a domain outcome, capturing the error message on failure. */
-export function deriveOutcome(
-    assignment: {
-        assignee: Username;
-        kind: Kind;
-        target: TargetName
-    },
-    operation: 'add' | 'update' | 'remove',
+function deriveOutcome(
+    assignment: AssignmentRef,
+    operation: AssignmentOperation,
     result: DmlResult | undefined,
 ): AssignmentOutcome {
     const success = result?.success ?? false;
@@ -110,6 +124,39 @@ export function deriveOutcome(
         success,
         message,
     };
+}
+
+/**
+ * Run every job in parallel and pair each record's result back to the assignment it came
+ * from, by position: the Collections API answers in the order it was sent, which is what
+ * lets a partial success name the records the org rejected rather than just count them.
+ */
+export async function runJobs<Item extends AssignmentRef>(
+    jobs: DmlJob<Item>[],
+    operation: AssignmentOperation,
+): Promise<AssignmentOutcome[]> {
+    const settled = await Promise.all(
+        jobs.map(async (job) => {
+            const results = await job.send();
+
+            return {
+                job,
+                results,
+            };
+        }),
+    );
+
+    const outcomes: AssignmentOutcome[] = [];
+
+    for (const {
+        job,
+        results,
+    } of settled) {
+        job.items.forEach((item, index) => {
+            outcomes.push(deriveOutcome(item, operation, results[index]));
+        });
+    }
+    return outcomes;
 }
 
 /** Group additions by sObject and chunk them for the Collections API, keeping each record's source. */

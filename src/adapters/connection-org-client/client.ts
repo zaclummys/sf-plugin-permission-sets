@@ -16,7 +16,7 @@ import {
     Username,
 } from '../../core/index.js';
 import { OrgClient } from '../../services/adapters/index.js';
-import { buildAdditionBatches, buildRemovalBatches, buildUpdateBatches, deriveOutcome } from './dml.js';
+import { buildAdditionBatches, buildRemovalBatches, buildUpdateBatches, runJobs } from './dml.js';
 import {
     MembershipScope,
     buildCurrentLicenseQuery,
@@ -261,83 +261,38 @@ export class ConnectionOrgClient implements OrgClient {
         }));
     }
 
-    public async addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]> {
+    public addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]> {
         const batches = buildAdditionBatches(additions);
-        const settled = await Promise.all(
-            batches.map(async (batch) => {
-                const results = await this.connection.create(batch.sobject, batch.records, { allOrNone: false });
+        const jobs = batches.map((batch) => ({
+            items: batch.additions,
+            send: () => this.connection.create(batch.sobject, batch.records, { allOrNone: false }),
+        }));
 
-                return {
-                    batch,
-                    results,
-                };
-            }),
-        );
-
-        const outcomes: AssignmentOutcome[] = [];
-
-        for (const {
-            batch,
-            results,
-        } of settled) {
-            batch.additions.forEach((addition, index) => {
-                outcomes.push(deriveOutcome(addition, 'add', results[index]));
-            });
-        }
-        return outcomes;
+        return runJobs(jobs, 'add');
     }
 
-    public async updateAssignments(updates: AssignmentUpdate[]): Promise<AssignmentOutcome[]> {
+    public updateAssignments(updates: AssignmentUpdate[]): Promise<AssignmentOutcome[]> {
         const batches = buildUpdateBatches(updates);
-        const settled = await Promise.all(
-            batches.map(async (batch) => {
-                const results = await this.connection.update(batch.sobject, batch.records, { allOrNone: false });
+        const jobs = batches.map((batch) => ({
+            items: batch.updates,
+            send: () => this.connection.update(batch.sobject, batch.records, { allOrNone: false }),
+        }));
 
-                return {
-                    batch,
-                    results,
-                };
-            }),
-        );
-
-        const outcomes: AssignmentOutcome[] = [];
-
-        for (const {
-            batch,
-            results,
-        } of settled) {
-            batch.updates.forEach((update, index) => {
-                outcomes.push(deriveOutcome(update, 'update', results[index]));
-            });
-        }
-        return outcomes;
+        return runJobs(jobs, 'update');
     }
 
-    public async removeAssignments(removals: ActualAssignment[]): Promise<AssignmentOutcome[]> {
+    public removeAssignments(removals: ActualAssignment[]): Promise<AssignmentOutcome[]> {
         const batches = buildRemovalBatches(removals);
-        const settled = await Promise.all(
-            batches.map(async (batch) => {
+        const jobs = batches.map((batch) => ({
+            items: batch.removals,
+            send: () => {
                 const recordIds = batch.removals.map((removal) => removal.recordId);
-                const results = await this.connection.destroy(batch.sobject, recordIds, { allOrNone: false });
 
-                return {
-                    batch,
-                    results,
-                };
-            }),
-        );
+                return this.connection.destroy(batch.sobject, recordIds, { allOrNone: false });
+            },
+        }));
 
-        const outcomes: AssignmentOutcome[] = [];
-
-        for (const {
-            batch,
-            results,
-        } of settled) {
-            batch.removals.forEach((removal, index) => {
-                outcomes.push(deriveOutcome(removal, 'remove', results[index]));
-            });
-        }
-        return outcomes;
+        return runJobs(jobs, 'remove');
     }
 
     private async query<T>(soql: string): Promise<T[]> {
