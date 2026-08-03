@@ -54,10 +54,12 @@ jobs:
             - run: npm test
               env:
                   NODE_V8_COVERAGE: coverage-dumps
+                  
             - id: prune
               continue-on-error: true
               run: node scripts/prune-coverage.js
             - uses: actions/upload-artifact@v4
+              continue-on-error: true
               if: steps.prune.outcome == 'success'
               with:
                   name: coverage-dumps-offline
@@ -91,6 +93,7 @@ jobs:
               continue-on-error: true
               run: node scripts/prune-coverage.js
             - uses: actions/upload-artifact@v4
+              continue-on-error: true
               if: steps.prune.outcome == 'success'
               with:
                   name: coverage-dumps-org
