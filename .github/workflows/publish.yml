@@ -96,14 +96,12 @@ jobs:
             - name: Dry-run Plugin
               run: sf help ps
 
-    # The one number that describes a published version, measured where a scratch org is
-    # already paid for. It runs after the gate rather than inside it, because coverage is a
-    # diagnostic and never a gate: continue-on-error keeps a Codecov outage, or a hub with
-    # no allocation left, from failing a release that already passed its tests.
+    # The one number that describes a published version, merged from the dumps the gate
+    # already collected. It holds nothing back: publish depends on ci rather than on this,
+    # so a failed upload turns the run red and the version still ships.
     coverage:
         needs: ci
         runs-on: ubuntu-latest
-        continue-on-error: true
         steps:
             - uses: actions/checkout@v7
             - uses: actions/setup-node@v7
@@ -111,13 +109,29 @@ jobs:
                   node-version: '24'
                   cache: npm
             - run: npm ci
-            # Both suites run here, and the org one shells out to the sf CLI.
-            - run: npm install --global @salesforce/cli
-            - run: npm run coverage
-              env:
-                  TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
+            - run: npm run compile
+            - uses: actions/download-artifact@v4
+              with:
+                  name: v8-coverage-offline
+                  path: .v8-coverage-offline
+            - uses: actions/download-artifact@v4
+              with:
+                  name: v8-coverage-org
+                  path: .v8-coverage-org
+            - name: Merge the dumps
+              run: |
+                  shopt -s nullglob
+                  mkdir -p .v8-coverage
+                  for half in offline org; do
+                      for file in ".v8-coverage-$half"/*.json; do
+                          cp "$file" ".v8-coverage/$half-$(basename "$file")"
+                      done
+                  done
+                  ls .v8-coverage/*.json >/dev/null
+            - run: npx c8 report
             - uses: codecov/codecov-action@v5
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: ./coverage/lcov.info
-                  fail_ci_if_error: false
+                  disable_search: true
+                  fail_ci_if_error: true

@@ -523,7 +523,7 @@ sf org display --verbose --json --target-org <your-devhub> \
 
 `npm run coverage` writes `coverage/lcov.info` and a browsable `coverage/lcov-report/`. It runs both suites, so it needs a Dev Hub and spends one scratch org. Nothing under test runs in the test process, so the number comes from the `NODE_V8_COVERAGE` dumps that `scripts/prune-coverage.js` trims down to this plugin before `c8` merges them.
 
-The badge at the top is that same command, run once per release by the `coverage` job in [publish.yml](.github/workflows/publish.yml) and uploaded to Codecov with the `CODECOV_TOKEN` repository secret. Releases are the one trigger that already creates a scratch org, so the number describes the version you can install, and it costs no extra allocation on a push. It gates nothing: an upload that fails, or a hub with no allocation left, leaves the release alone. Treat the number the same way, a diagnostic and never a target, because a line that ran is not a line that was verified.
+The badge at the top is measured by the release gate itself. Both test jobs run under `NODE_V8_COVERAGE` and hand their pruned dumps to the `coverage` job in [publish.yml](.github/workflows/publish.yml), which merges them and uploads to Codecov with the `CODECOV_TOKEN` repository secret. The number therefore describes the version you can install, taken from the run that approved it, and a release spends one scratch org rather than two. It holds nothing back: `publish` depends on the tests and not on coverage, so a failed upload turns the run red and the version still ships. Treat the number the same way, a diagnostic and never a target, because a line that ran is not a line that was verified.
 
 ### Running the org tests without creating a scratch org
 

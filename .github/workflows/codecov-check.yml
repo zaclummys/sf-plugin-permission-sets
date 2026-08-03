@@ -1,19 +1,5 @@
 name: codecov-check
 
-# Temporary, and only on this branch. It answers two questions without spending a scratch
-# org from the hub's daily allocation, which is what a release gate and the coverage job
-# each cost today.
-#
-# First, whether the CODECOV_TOKEN secret works from Actions at all. The one release that
-# ever ran the coverage job failed its upload with "Got unexpected extra arguments", because
-# the secret held the command that sets it rather than the token it prints.
-#
-# Second, whether wireit forwards NODE_V8_COVERAGE to the mocha it spawns. The coverage
-# script calls mocha directly and so never had to know, and the plan is for the test jobs
-# to carry the instrumentation themselves.
-#
-# Push-triggered rather than workflow_dispatch, which GitHub only offers for a workflow
-# already on the default branch. Delete this file once the coverage plumbing is settled.
 on:
     push:
         branches: [ci/codecov-offline-check]
@@ -22,7 +8,7 @@ permissions:
     contents: read
 
 jobs:
-    coverage-offline:
+    test:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v7
@@ -31,33 +17,48 @@ jobs:
                   node-version: '24'
                   cache: npm
             - run: npm ci
-
-            # The suite that needs no org, so no Dev Hub and no secret but the one under
-            # test. The number it produces covers only half the plugin.
             - run: npm test
               env:
                   NODE_V8_COVERAGE: .v8-coverage
+            - id: prune
+              continue-on-error: true
+              run: node scripts/prune-coverage.js
+            - uses: actions/upload-artifact@v4
+              if: steps.prune.outcome == 'success'
+              with:
+                  name: v8-coverage-offline
+                  path: .v8-coverage
+                  retention-days: 1
 
-            # NODE_V8_COVERAGE records every script the process loaded, and these processes
-            # are the whole Salesforce CLI. c8 reads all of it into one heap before its own
-            # filter runs, so pruning first is the difference between a report and an
-            # out-of-memory abort.
-            - run: node scripts/prune-coverage.js
+    coverage:
+        needs: test
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: npm
+            - run: npm ci
+            - run: npm run compile
+            - uses: actions/download-artifact@v4
+              with:
+                  name: v8-coverage-offline
+                  path: .v8-coverage-offline
+            - name: Merge the dumps
+              run: |
+                  shopt -s nullglob
+                  mkdir -p .v8-coverage
+                  for half in offline; do
+                      for file in ".v8-coverage-$half"/*.json; do
+                          cp "$file" ".v8-coverage/$half-$(basename "$file")"
+                      done
+                  done
+                  ls .v8-coverage/*.json >/dev/null
             - run: npx c8 report
-
-            # An empty lcov would upload cleanly and report nothing, which is the failure
-            # this run exists to rule out.
-            - name: Fail if the dumps produced nothing
-              run: test -s coverage/lcov.info
-
             - uses: codecov/codecov-action@v5
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: ./coverage/lcov.info
-                  # The uploader searches for coverage files of its own accord, finds
-                  # .v8-coverage, and ships megabytes of dumps Codecov never reads. Seen on
-                  # the local upload that proved the new token.
                   disable_search: true
-                  # The opposite of the release job, deliberately: here a failed upload is
-                  # the result rather than a diagnostic.
                   fail_ci_if_error: true
