@@ -24,7 +24,7 @@ describe('ps apply guards', () => {
 
         const after = org.runPs(`plan --file ${org.useJobFile('undeclared')} --mode sync`, 0);
 
-        expect(after.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update, 1 to remove. 2 users affected.');
+        expect(after.shellOutput.stdout).to.contain('Plan: 1 to add, 0 to update, 3 to remove. 2 users affected.');
     });
 
     it('refuses to delete in a --json run without --no-prompt', () => {

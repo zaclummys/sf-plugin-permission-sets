@@ -1,7 +1,7 @@
 import { ok } from 'node:assert';
 import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
-import { assignPermissionSets, assignUntil, createUser, projectDir, ps, unassignedLicense, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile, writeLicenseFile } from './run.ts';
+import { assignPermissionSetGroups, assignPermissionSets, assignUntil, createUser, projectDir, ps, unassignedLicense, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile, writeLicenseFile } from './run.ts';
 
 // Far enough out that the assignment never lapses mid-run. Seeded with milliseconds and
 // asserted without them, because the canonical form Expiration.toString writes drops them:
@@ -177,11 +177,14 @@ class OrgSession {
         ]);
         assignPermissionSets(this.admin, this.island, ['PS_Nut_Zeta']);
 
-        // Kappa is declared and Iota is not, which is the shape of deleting a line from an
-        // exported file: the user stays in the file, the permission set leaves it entirely.
-        assignPermissionSets(this.admin, this.admin, [
-            'PS_Nut_Iota',
-            'PS_Nut_Kappa',
+        // Two groups on the admin, of which one file declares one: the shape of deleting a
+        // line from an exported file, where the user stays and the target leaves. It uses
+        // groups rather than permission sets because the managed set now follows the users a
+        // file declares, and the admin's permission sets are shared by half the suite: their
+        // groups are not, so the count here is exactly one however the specs order.
+        assignPermissionSetGroups(this.admin, adminId, [
+            'PS_Nut_Group_Two',
+            'PS_Nut_Group_Three',
         ]);
         assignUntil(this.admin, islandId, 'PS_Nut_Eta', seededExpiration);
         assignUntil(this.admin, adminId, 'PS_Nut_Theta', seededExpiration);
@@ -216,10 +219,10 @@ class OrgSession {
         this.jobFiles.set('license', writeLicenseFile(dir, admin, license));
         this.jobFiles.set('reExpiring', writeExpiringFile(dir, admin, 'PS_Nut_Theta', movedExpiration));
 
-        // Declares Kappa and says nothing about Iota, which the admin also holds. Nothing else
-        // in the suite names Iota either, so it is a permission set the files have dropped
+        // Declares Group_Two and says nothing about Group_Three, which the admin also holds.
+        // No other file names Group_Three either, so it is a target the files have dropped
         // entirely rather than one another file still keeps in scope.
-        this.jobFiles.set('undeclaredTarget', writeAssignmentFile(dir, admin, 'PS_Nut_Kappa'));
+        this.jobFiles.set('undeclaredTarget', writeGroupFile(dir, admin, 'PS_Nut_Group_Two'));
     }
 }
 

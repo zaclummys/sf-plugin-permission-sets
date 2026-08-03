@@ -1,5 +1,6 @@
 import {
     ActualAssignment,
+    AssigneeRef,
     AssignmentFilter,
     AssignmentOutcome,
     AssignmentUpdate,
@@ -27,8 +28,12 @@ export interface OrgClient {
     findPermissionSetLicenses(names: TargetName[]): Promise<OrgTarget[]>;
     /** Every assignable permission set, group, and license assignment held by active users, narrowed by the filter. */
     listAssignments(filter?: AssignmentFilter): Promise<DesiredAssignment[]>;
-    /** The current assignments of the given managed targets, with their record ids. */
-    listCurrentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]>;
+    /**
+     * The current assignments of the managed set, with their record ids: everything held on
+     * one of the given targets, plus everything of a given kind held by one of the given
+     * users. The union is what lets a target deleted from a file still be seen.
+     */
+    listCurrentAssignments(targets: TargetRef[], assignees: AssigneeRef[]): Promise<ActualAssignment[]>;
     /** Insert the given assignments, reporting per-record success or failure. */
     addAssignments(additions: ResolvedAddition[]): Promise<AssignmentOutcome[]>;
     /** Update the expiration of the given assignments, reporting per-record success or failure. */

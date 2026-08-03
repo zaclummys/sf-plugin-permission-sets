@@ -61,7 +61,13 @@ export class PlanService {
             return invalidResult(checked.files, findings);
         }
 
-        const actual = await this.org.listCurrentAssignments(resolution.managedTargets());
+        // The managed set is both halves: the targets the files name, and the users they name
+        // a kind for. Targets alone would miss a permission set deleted from a file, which is
+        // how access is revoked, and users alone would miss a target held by someone the file
+        // says nothing about.
+        const targets = resolution.managedTargets();
+        const assignees = resolution.managedAssignees(checked.assignments);
+        const actual = await this.org.listCurrentAssignments(targets, assignees);
         const diff = diffAssignments(checked.assignments, actual);
 
         return {

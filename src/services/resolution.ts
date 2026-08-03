@@ -1,4 +1,5 @@
 import {
+    AssigneeRef,
     DesiredAssignment,
     Kind,
     OrgTarget,
@@ -38,6 +39,33 @@ export class Resolution {
             for (const id of this.targetIds[kind].values()) {
                 refs.push({
                     kind,
+                    id,
+                });
+            }
+        }
+        return refs;
+    }
+
+    /**
+     * Every user the files manage a kind for, so the org's state can be read for them too.
+     *
+     * Without this the managed set is the declared targets alone, and a target deleted from a
+     * file leaves that set: its assignment is never read, so sync has nothing to remove and
+     * reports that the org already matches. Deleting a line is the ordinary way to revoke
+     * access, so the user has to carry scope of their own.
+     */
+    public managedAssignees(declared: DesiredAssignment[]): AssigneeRef[] {
+        const seen = new Set<string>();
+        const refs: AssigneeRef[] = [];
+
+        for (const assignment of declared) {
+            const id = this.userIds.get(assignment.assignee.asKey());
+            const key = `${assignment.kind}:${id ?? ''}`;
+
+            if (id && !seen.has(key)) {
+                seen.add(key);
+                refs.push({
+                    kind: assignment.kind,
                     id,
                 });
             }

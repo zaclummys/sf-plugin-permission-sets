@@ -62,6 +62,18 @@ export type TargetRef = {
     id: string;
 };
 
+/**
+ * A user the files manage one kind for, resolved to the org id of the user.
+ *
+ * Scoped by kind rather than by user alone, because a file declaring `permissionSets` for
+ * someone says nothing about their licences: managing every kind of a user the moment one
+ * kind is declared would read an omission as "remove them all".
+ */
+export type AssigneeRef = {
+    kind: Kind;
+    id: string;
+};
+
 /** A desired assignment resolved to the ids needed to insert it. */
 export type ResolvedAddition = DesiredAssignment & {
     assigneeId: string;

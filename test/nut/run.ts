@@ -116,6 +116,45 @@ export function createUser(dir: string, orgUsername: string): CreateUserOutput['
 }
 
 /**
+ * Give the org permission set group grants, which `sf org assign permset` cannot do: its
+ * --name is a permission set. A group grant is the same sObject carrying the group's id
+ * instead, so it goes in as the plain record it is, the way an expiring grant does.
+ */
+export function assignPermissionSetGroups(orgUsername: string, assigneeId: string, groups: string[]): void {
+    const query = execCmd<{
+        records: {
+            Id: string;
+            DeveloperName: string;
+        }[];
+    }>(
+        `data:query --query 'SELECT Id, DeveloperName FROM PermissionSetGroup' --target-org ${orgUsername} --json`,
+        {
+            ensureExitCode: 0,
+            cli: 'sf',
+        },
+    );
+    const records = query.jsonOutput?.result.records ?? [];
+
+    for (const group of groups) {
+        const found = records.find((record) => record.DeveloperName === group);
+
+        if (!found) {
+            throw new Error(`${group} is not deployed to ${orgUsername}`);
+        }
+
+        execCmd(
+            `data:create:record --sobject PermissionSetAssignment --values `
+            + `"AssigneeId=${assigneeId} PermissionSetGroupId=${found.Id}" `
+            + `--target-org ${orgUsername} --json`,
+            {
+                ensureExitCode: 0,
+                cli: 'sf',
+            },
+        );
+    }
+}
+
+/**
  * The org's id for a username. Needed because an assignment is inserted by id, and the one
  * user a scratch org starts with is only ever named.
  */

@@ -4,6 +4,7 @@ export { Finding, Findings } from './finding.js';
 export { loadFiles } from './load.js';
 export {
     ActualAssignment,
+    AssigneeRef,
     AssignmentFilter,
     AssignmentUpdate,
     DesiredAssignment,

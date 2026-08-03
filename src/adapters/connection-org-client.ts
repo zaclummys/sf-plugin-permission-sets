@@ -1,11 +1,13 @@
 import { Connection } from '@salesforce/core';
 import {
     ActualAssignment,
+    AssigneeRef,
     AssignmentFilter,
     AssignmentOutcome,
     AssignmentUpdate,
     DesiredAssignment,
     Expiration,
+    Kind,
     OrgTarget,
     OrgUser,
     ResolvedAddition,
@@ -16,6 +18,7 @@ import {
 import { OrgClient } from '../services/adapters/index.js';
 import { buildAdditionBatches, buildRemovalBatches, buildUpdateBatches, deriveOutcome } from './dml.js';
 import {
+    MembershipScope,
     buildCurrentLicenseQuery,
     buildCurrentMembershipQuery,
     buildLicenseQuery,
@@ -71,6 +74,16 @@ function classifyMembership(record: MembershipRecord): {
         kind: 'permissionSet',
         target: TargetName.of(record.PermissionSet.Name),
     };
+}
+
+/** The org ids of one kind, from a list of refs that mixes all three. */
+function idsOfKind(refs: {
+    kind: Kind;
+    id: string;
+}[], kind: Kind): string[] {
+    const matching = refs.filter((ref) => ref.kind === kind);
+
+    return matching.map((ref) => ref.id);
 }
 
 /** Adapter backing OrgClient with a Salesforce Connection. autoFetchQuery pages past 2000 rows. */
@@ -182,21 +195,32 @@ export class ConnectionOrgClient implements OrgClient {
         }));
     }
 
-    public async listCurrentAssignments(targets: TargetRef[]): Promise<ActualAssignment[]> {
-        const permissionSetIds = targets.filter((ref) => ref.kind === 'permissionSet').map((ref) => ref.id);
-        const groupIds = targets.filter((ref) => ref.kind === 'permissionSetGroup').map((ref) => ref.id);
-        const licenseIds = targets.filter((ref) => ref.kind === 'permissionSetLicense').map((ref) => ref.id);
+    public async listCurrentAssignments(targets: TargetRef[], assignees: AssigneeRef[]): Promise<ActualAssignment[]> {
+        const scope: MembershipScope = {
+            permissionSetIds: idsOfKind(targets, 'permissionSet'),
+            groupIds: idsOfKind(targets, 'permissionSetGroup'),
+            permissionSetAssigneeIds: idsOfKind(assignees, 'permissionSet'),
+            groupAssigneeIds: idsOfKind(assignees, 'permissionSetGroup'),
+        };
+        const membershipIds = [
+            ...scope.permissionSetIds,
+            ...scope.groupIds,
+            ...scope.permissionSetAssigneeIds,
+            ...scope.groupAssigneeIds,
+        ];
+        const licenseIds = idsOfKind(targets, 'permissionSetLicense');
+        const licenseAssigneeIds = idsOfKind(assignees, 'permissionSetLicense');
 
         const tasks: Promise<ActualAssignment[]>[] = [];
 
-        if (permissionSetIds.length > 0 || groupIds.length > 0) {
-            const soql = buildCurrentMembershipQuery(permissionSetIds, groupIds);
+        if (membershipIds.length > 0) {
+            const soql = buildCurrentMembershipQuery(scope);
 
             tasks.push(this.listMembershipAssignments(soql));
         }
 
-        if (licenseIds.length > 0) {
-            const soql = buildCurrentLicenseQuery(licenseIds);
+        if (licenseIds.length + licenseAssigneeIds.length > 0) {
+            const soql = buildCurrentLicenseQuery(licenseIds, licenseAssigneeIds);
 
             tasks.push(this.listLicenseAssignments(soql));
         }

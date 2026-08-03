@@ -49,17 +49,40 @@ export function buildMembershipQuery(
     `;
 }
 
+/**
+ * The managed set for the membership sObject: the declared targets, plus the users a file
+ * declares that kind for. Ids rather than names, because this runs after resolution.
+ */
+export type MembershipScope = {
+    permissionSetIds: string[];
+    groupIds: string[];
+    permissionSetAssigneeIds: string[];
+    groupAssigneeIds: string[];
+};
+
 /** Full membership SOQL for the current assignments of the given permission set and group ids. */
-export function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds: string[]): string {
+export function buildCurrentMembershipQuery(scope: MembershipScope): string {
     const clauses: string[] = [];
 
-    if (permissionSetIds.length > 0) {
-        clauses.push(`PermissionSetId IN(${buildInList(permissionSetIds)})`);
+    if (scope.permissionSetIds.length > 0) {
+        clauses.push(`PermissionSetId IN(${buildInList(scope.permissionSetIds)})`);
     }
-    if (groupIds.length > 0) {
-        clauses.push(`PermissionSetGroupId IN(${buildInList(groupIds)})`);
+    if (scope.groupIds.length > 0) {
+        clauses.push(`PermissionSetGroupId IN(${buildInList(scope.groupIds)})`);
+    }
+    // A user managed for one kind is not managed for the other, and one sObject holds both:
+    // the null test on the group id is what tells a permission set row from a group row.
+    if (scope.permissionSetAssigneeIds.length > 0) {
+        clauses.push(
+            `(AssigneeId IN(${buildInList(scope.permissionSetAssigneeIds)}) AND PermissionSetGroupId = null)`,
+        );
+    }
+    if (scope.groupAssigneeIds.length > 0) {
+        clauses.push(`(AssigneeId IN(${buildInList(scope.groupAssigneeIds)}) AND PermissionSetGroupId != null)`);
     }
 
+    // Every user carries the permission set behind their profile, and it is not assignable:
+    // reading a user's rows without excluding it would offer to remove their profile.
     return `
         SELECT
             Id,
@@ -69,7 +92,8 @@ export function buildCurrentMembershipQuery(permissionSetIds: string[], groupIds
             PermissionSetGroupId,
             ExpirationDate
         FROM PermissionSetAssignment
-        WHERE ${clauses.join(' OR ')}
+        WHERE PermissionSet.IsOwnedByProfile = false
+        AND (${clauses.join(' OR ')})
     `;
 }
 
@@ -92,14 +116,23 @@ export function buildLicenseQuery(usernames: Username[] | undefined): string {
 }
 
 /** Full license SOQL for the current assignments of the given license ids. */
-export function buildCurrentLicenseQuery(licenseIds: string[]): string {
+export function buildCurrentLicenseQuery(licenseIds: string[], assigneeIds: string[]): string {
+    const clauses: string[] = [];
+
+    if (licenseIds.length > 0) {
+        clauses.push(`PermissionSetLicenseId IN(${buildInList(licenseIds)})`);
+    }
+    if (assigneeIds.length > 0) {
+        clauses.push(`AssigneeId IN(${buildInList(assigneeIds)})`);
+    }
+
     return `
         SELECT
             Id,
             Assignee.Username,
             PermissionSetLicense.DeveloperName
         FROM PermissionSetLicenseAssign
-        WHERE PermissionSetLicenseId IN(${buildInList(licenseIds)})
+        WHERE ${clauses.join(' OR ')}
     `;
 }
 
