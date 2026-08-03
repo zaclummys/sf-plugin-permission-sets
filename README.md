@@ -202,6 +202,17 @@ A run performs three operations: **add** missing assignments, **update** changed
 
 `plan` and `apply` act on exactly what the mode covers, so what `plan` shows is what `apply` does. Anything the mode won't touch (an undeclared assignment under `additive`, a missing grant under `destructive`) is reported beneath the plan as **drift**, naming the mode that would include it. `sync` covers everything, so it never reports drift.
 
+### What "undeclared" is measured against
+
+Two things put an assignment in scope, and removal only ever considers what is in scope:
+
+- **Every target your files name.** If a file grants `Sales_Manager` to anyone, every holder of `Sales_Manager` is compared against the files, including users no file mentions.
+- **Every kind your files declare for a user they name.** Declaring `permissionSets` for `jdoe@acme.com` puts *all* of their permission sets in scope, which is what makes deleting a line the way to revoke a grant.
+
+The second half is scoped by kind on purpose. Declaring `permissionSets` for someone says nothing about their licenses, so a key you never write for a user is never touched: omitting `permissionSetLicenses` does not mean "take them all away". A user's profile-owned permission set is never in scope either.
+
+The practical consequence, worth knowing before your first `--mode sync`: a user in your files is fully managed for the kinds you declare for them. Anything granted to them by hand in Setup, under one of those keys, is undeclared and will be proposed for removal. That is the point of a declarative reconcile, and it is why removals are opt-in, capped by `--max-deletes`, and confirmed. Run `plan` first.
+
 ## Validations
 
 Every run checks the files first: `check` runs the file checks with no org, `validate` adds the org-side checks, and `plan` and `apply` run both before they touch anything. When files merge, most overlaps are unions rather than errors.
