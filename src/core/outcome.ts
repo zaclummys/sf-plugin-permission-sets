@@ -1,5 +1,8 @@
 import { Kind } from './model.js';
 
+/** Which half of the reconcile produced a record: the three operations apply can run. */
+export type AssignmentOperation = 'add' | 'update' | 'remove';
+
 /**
  * The per-record result of one add, update, or remove, for partial-success reporting. A
  * report record rather than a model record: its names are only ever displayed, never
@@ -9,7 +12,7 @@ export type AssignmentOutcome = {
     assignee: string;
     kind: Kind;
     target: string;
-    operation: 'add' | 'update' | 'remove';
+    operation: AssignmentOperation;
     success: boolean;
     message?: string;
 };
@@ -56,7 +59,7 @@ export class Outcomes {
         return this.items.some((outcome) => !outcome.success);
     }
 
-    private acceptedOf(operation: AssignmentOutcome['operation']): number {
+    private acceptedOf(operation: AssignmentOperation): number {
         const accepted = this.items.filter((outcome) => outcome.operation === operation && outcome.success);
 
         return accepted.length;

@@ -4,6 +4,7 @@ import { DesiredAssignment } from './model.js';
 import { kindKeys, ScopeKey } from './scope-key.js';
 import { distinctAssignees } from './resolve.js';
 import { TargetName } from './target-name.js';
+import { Username } from './username.js';
 
 /** A single serialized entry: a bare name, or a name with an expiration. */
 type SerializedEntry = string | {
@@ -11,11 +12,14 @@ type SerializedEntry = string | {
     expiration: string
 };
 
-/** The YAML shape we emit. A superset of FileShape: every scope accepts the object form. */
-type OutputFile = { users: Record<string, Partial<Record<ScopeKey, SerializedEntry[]>>> };
+/** One user's scopes as emitted. Every scope is optional, because an empty one is omitted. */
+type OutputEntry = Partial<Record<ScopeKey, SerializedEntry[]>>;
+
+/** The users block we emit. A superset of FileShape: every scope accepts the object form. */
+type OutputUsers = Record<string, OutputEntry>;
 
 /** Order identifiers by their text, matching the plain string sort the output relies on. */
-function byText(left: { toString(): string }, right: { toString(): string }): number {
+function byText(left: TargetName | Username, right: TargetName | Username): number {
     const leftText = left.toString();
     const rightText = right.toString();
 
@@ -69,10 +73,10 @@ function scopeEntries(assignments: DesiredAssignment[]): SerializedEntry[] {
 export function serializeAssignments(assignments: DesiredAssignment[]): string {
     const assignees = distinctAssignees(assignments);
     const usernames = assignees.sort(byText);
-    const users: OutputFile['users'] = {};
+    const users: OutputUsers = {};
 
     for (const username of usernames) {
-        const entry: OutputFile['users'][string] = {};
+        const entry: OutputEntry = {};
 
         for (const [
             kind,

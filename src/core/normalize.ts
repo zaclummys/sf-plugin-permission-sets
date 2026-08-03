@@ -1,4 +1,4 @@
-import { FileShape } from './schema.js';
+import { FileShape, UserEntry } from './schema.js';
 import { Expiration } from './expiration.js';
 import { DesiredAssignment, Kind } from './model.js';
 import { kindKeys, ScopeKey } from './scope-key.js';
@@ -78,7 +78,7 @@ function normalizeScope(list: ScopeItem[], context: ScopeContext): {
 
 function normalizeUser(
     username: Username,
-    entry: FileShape['users'][string],
+    entry: UserEntry,
     file: string,
 ): {
     assignments: DesiredAssignment[];

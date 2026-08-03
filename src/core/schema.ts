@@ -31,6 +31,9 @@ const fileSchema = z.strictObject({ users: z.record(z.string().min(1), userEntry
 
 export type FileShape = z.infer<typeof fileSchema>;
 
+/** One user's declared scopes, as the schema accepts them: every scope optional. */
+export type UserEntry = z.infer<typeof userEntrySchema>;
+
 /** Validate a parsed object against the file contract, turning issues into findings. */
 export function validateFile(data: unknown, file: string): {
     data?: FileShape;
