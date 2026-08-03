@@ -1,4 +1,4 @@
-import { TargetName, Username } from '../core/index.js';
+import { TargetName, Username } from '../../core/index.js';
 
 /** Escape a value for safe inclusion in a SOQL string literal. */
 function escapeSoqlLiteral(value: string): string {

@@ -1,1 +1,1 @@
-export { ConnectionOrgClient } from './connection-org-client.js';
+export { ConnectionOrgClient } from './connection-org-client/index.js';

@@ -14,8 +14,8 @@ import {
     TargetName,
     TargetRef,
     Username,
-} from '../core/index.js';
-import { OrgClient } from '../services/adapters/index.js';
+} from '../../core/index.js';
+import { OrgClient } from '../../services/adapters/index.js';
 import { buildAdditionBatches, buildRemovalBatches, buildUpdateBatches, deriveOutcome } from './dml.js';
 import {
     MembershipScope,

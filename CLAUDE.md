@@ -32,7 +32,8 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Barrels (`index.ts`)
 
-- Each layer/dir has an `index.ts` barrel: `core/`, `services/`, `adapters/`, `services/adapters/`, `ui/`.
+- Each layer/dir has an `index.ts` barrel: `core/`, `services/`, `adapters/`, `adapters/<adapter>/`, `services/adapters/`, `ui/`.
+- `adapters/` holds one directory per adapter, not the adapter's files. A module that exists only to serve one adapter (`soql`, `dml`) is not itself an adapter, so it lives inside that adapter's directory rather than beside it, where the layer's name would claim it is one.
 - A barrel re-exports **only** the symbols used *outside* that dir, not everything. Add a symbol when an external importer needs it, drop it when none do.
 - Consumers import from the barrel (`../../core/index.js`), never from individual files.
 - Same-dir imports stay direct (a file in `core/` imports another `core/` file directly, not via the barrel) to avoid cycles.
@@ -64,7 +65,7 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 - Every `if`, `else`, and loop body gets braces, and the body starts on the line after the opening brace: no `if (x) return`, no `if (x) { return }` folded onto one line. `} else {` stays on a single line.
 - Indentation is four spaces, matching `.editorconfig`, and no line ends in whitespace.
 
-- The complexity and file/function size/shape caps live in `eslint.config.js`, set just above today's largest functions to block future growth, not as targets: prefer smaller. When a function trips a cap, split it into cohesive helpers (e.g. a `collect*` phase and a `render*`/`report*` phase), or bundle params into an options object, rather than raising the cap. A file that trips `max-lines` is holding more than one responsibility: move a cohesive group of helpers into a sibling module (`soql`, `dml`) and import it directly, since a same-dir import does not go through the barrel. Tighten a cap once the outliers shrink.
+- The complexity and file/function size/shape caps live in `eslint.config.js`, set just above today's largest functions to block future growth, not as targets: prefer smaller. When a function trips a cap, split it into cohesive helpers (e.g. a `collect*` phase and a `render*`/`report*` phase), or bundle params into an options object, rather than raising the cap. A file that trips `max-lines` is holding more than one responsibility: move a cohesive group of helpers into a sibling module (`soql`, `dml`, siblings inside `adapters/connection-org-client/`) and import it directly, since a same-dir import does not go through the barrel. Tighten a cap once the outliers shrink.
 - `max-lines` and `max-lines-per-function` skip blank lines and comments, so the cap counts logic. The wrapping rules below and a comment explaining a rule must not be what pushes a file over.
 - No single-letter variable names, including arrow-fn params and loop vars: use descriptive names.
 - Module-level constants are `camelCase`, not `SCREAMING_SNAKE`.

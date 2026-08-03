@@ -6,7 +6,7 @@ import {
     ResolvedAddition,
     TargetName,
     Username,
-} from '../core/index.js';
+} from '../../core/index.js';
 
 /** SObject + id field per kind, for inserting and deleting assignments. */
 type AssignmentObject = {
