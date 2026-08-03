@@ -58,7 +58,7 @@ export function colourDiff(lines: string[]): string[] {
  * beside it keeps the terminal's own foreground and stays readable on any theme.
  */
 export function colourFindings(lines: string[]): string[] {
-    return lines.map((line) => colourFinding(line));
+    return lines.map(colourFinding);
 }
 
 function colourFinding(line: string): string {

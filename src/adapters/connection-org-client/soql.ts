@@ -11,7 +11,7 @@ function buildInList(values: string[]): string {
 }
 
 /** The same, for the identifiers the port speaks in. The org compares them case-insensitively. */
-function buildNameList(values: { toString(): string }[]): string {
+function buildNameList(values: (Username | TargetName)[]): string {
     return buildInList(values.map((value) => value.toString()));
 }
 
