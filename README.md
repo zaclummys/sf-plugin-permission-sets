@@ -506,6 +506,8 @@ The tests are NUTs, the Salesforce CLI team's convention for testing a plugin's 
 
 `npm run test:org` needs a Dev Hub. It creates one scratch org from `test/nut/project`, seeds the state the assertions expect (drift, a removal, an expiring assignment), and deletes it when the run ends. Building the org rather than borrowing one is what makes the counts exact and `apply` safe to exercise end to end. Give it a hub nobody uses by hand, because the scratch org allocation is daily and per hub.
 
+In CI those org tests are skipped on a push, so that a run of commits cannot spend the allocation the next release needs. They run on a pull request, on a manual dispatch, on the release gate, and every Monday at 06:00 UTC. The schedule is what keeps a break from waiting for a release to be found, since work here lands straight on `main` and there is no pull request to catch it.
+
 Copy `.env.example` to `.env` and fill in one of the two:
 
 | Variable | What it is |

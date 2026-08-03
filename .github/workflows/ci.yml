@@ -1,14 +1,16 @@
 name: ci
 
-# Runs on pushes to main and on PRs and manual dispatch, and is callable by the
-# publish workflow as its release gate (workflow_call), so build + test are defined
-# once here. Three parallel jobs: build typechecks and lints, test runs the NUTs that
-# need no org, and test-org runs the ones that create a scratch org. Only the last
-# needs a secret, which is what lets a fork's pull request still be tested.
+# Runs on pushes to main and on PRs and manual dispatch, weekly on a schedule, and is
+# callable by the publish workflow as its release gate (workflow_call), so build + test
+# are defined once here. Three parallel jobs: build typechecks and lints, test runs the
+# NUTs that need no org, and test-org runs the ones that create a scratch org. Only the
+# last needs a secret, which is what lets a fork's pull request still be tested.
 on:
     push:
         branches: [main]
     pull_request:
+    schedule:
+        - cron: '0 6 * * 1'
     workflow_dispatch:
     workflow_call:
         # Reusable workflows do not inherit the caller's secrets, so the release gate
@@ -73,7 +75,7 @@ jobs:
     #
     # Skipped on a push, because an allocation is daily and per hub: a run of commits
     # straight to main would spend it before the release that needs it. A pull request, a
-    # manual dispatch, and the release gate still get it.
+    # manual dispatch, the Monday schedule, and the release gate still get it.
     test-org:
         if: github.event_name != 'push'
         runs-on: ubuntu-latest
