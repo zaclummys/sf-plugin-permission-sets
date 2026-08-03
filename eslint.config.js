@@ -211,6 +211,35 @@ export default defineConfig([
             // Both type and interface are allowed: the two differ in declaration merging
             // and in what they can express, so the choice is the declaration's to make.
             "@typescript-eslint/consistent-type-definitions": "off",
+            // An annotation the compiler could infer is still the one place a reader sees
+            // the type without hovering, so writing it is the author's call.
+            "@typescript-eslint/no-inferrable-types": "off",
+            // A leading underscore is how a signature says "required here, deliberately
+            // unused", which is a claim the rule cannot make on its own.
+            "@typescript-eslint/no-unused-vars": [
+                "error",
+                {
+                    argsIgnorePattern: "^_",
+                    varsIgnorePattern: "^_",
+                    caughtErrorsIgnorePattern: "^_",
+                },
+            ],
+            // A private field never written outside the constructor is readonly, and
+            // saying so is what stops a later method from reassigning it.
+            "@typescript-eslint/prefer-readonly": "error",
+            // `import type` must not carry a side effect: whether the import is erased
+            // depends on a compiler flag, so the intent has to be written down.
+            "@typescript-eslint/no-import-type-side-effects": "error",
+            // A parameter property reassigned in the constructor body is either dead or
+            // a bug, and both read as if the assignment mattered.
+            "@typescript-eslint/no-unnecessary-parameter-property-assignment": "error",
+            // .sort() with no comparator compares as strings, so [10, 9] sorts to
+            // [10, 9]. String arrays are exempt by default, which covers the assignee
+            // sort in report.ts, where comparing as strings is the point.
+            "@typescript-eslint/require-array-sort-compare": "error",
+            // A switch over a union has to handle every member, or adding a Kind falls
+            // through the gap it opened instead of failing the build.
+            "@typescript-eslint/switch-exhaustiveness-check": "error",
         },
     },
 
