@@ -33,11 +33,7 @@ export type PsPlanResult = {
         usersAffected: number
     };
     /** What the chosen mode would not act on (surfaced as drift). */
-    drift: {
-        adds: number;
-        updates: number;
-        removes: number
-    };
+    drift: Drift;
     /** The full diff, regardless of mode, so machine consumers see everything the text scopes away. */
     changes: {
         toAdd: DesiredAssignment[];

@@ -3,7 +3,7 @@ import { Messages } from '@salesforce/core';
 
 import { ConnectionOrgClient } from '../../adapters/index.js';
 import { ApplyService, ConfirmDeletions, ApplyResult } from '../../services/index.js';
-import { Diff, formatDiff, Findings, ReconcileMode, ScopedChange } from '../../core/index.js';
+import { Diff, Drift, formatDiff, Findings, ReconcileMode, ScopedChange } from '../../core/index.js';
 import { colourDiff, colourFindings } from '../../ui/index.js';
 
 Messages.importMessagesDirectoryFromMetaUrl(import.meta.url);
@@ -143,7 +143,9 @@ export default class Apply extends SfCommand<PsApplyResult> {
         for (const line of body) {
             this.log(line);
         }
-        this.log('');
+        if (body.length > 0) {
+            this.log('');
+        }
     }
 
     /** Report the outcome of a completed (non-invalid) apply, setting the exit code as needed. */
@@ -188,19 +190,16 @@ export default class Apply extends SfCommand<PsApplyResult> {
         }
     }
 
-    private reportDrift(drift: {
-        adds: number;
-        updates: number;
-        removes: number
-    }, mode: string): void {
-        if (drift.adds > 0) {
-            this.logDriftNote(drift.adds, mode);
-        }
-        if (drift.updates > 0) {
-            this.logDriftNote(drift.updates, mode);
-        }
-        if (drift.removes > 0) {
-            this.logDriftNote(drift.removes, mode);
+    /**
+     * One note for the whole drift, whatever it is made of. A mode leaves only one half
+     * behind, but destructive leaves both adds and updates, and reporting those separately
+     * printed the same sentence twice with two counts the reader then had to add up.
+     */
+    private reportDrift(drift: Drift, mode: string): void {
+        const skipped = drift.adds + drift.updates + drift.removes;
+
+        if (skipped > 0) {
+            this.logDriftNote(skipped, mode);
         }
     }
 
