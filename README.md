@@ -47,15 +47,15 @@ This plugin makes the desired state declarative and reviewable:
 
 ### Compared to `sf org assign permset`
 
-|                     | `sf org assign permset`                        | `sf ps apply`                                      |
-| ------------------- | ---------------------------------------------- | -------------------------------------------------- |
-| Model               | Imperative, one command per grant              | Declarative, a file in git                          |
-| Revoking access     | No command for it                              | `--mode destructive` or `--mode sync`               |
-| Preview             | None                                           | `sf ps plan`                                        |
-| Groups and licenses | A second command for licenses, none for groups | One file covers all three                           |
-| Timed access        | Not supported                                  | `expiration` on any grant                           |
-| Guardrails          | None                                           | `--max-deletes`, a confirmation prompt, `--strict`  |
-| Audit trail         | Your shell history                             | Your git history                                    |
+|                     | `sf org assign permset`                        | `sf ps apply`                                                    |
+| ------------------- | ---------------------------------------------- | ---------------------------------------------------------------- |
+| Model               | Imperative, run by hand                        | Declarative, a file in git                                       |
+| Review              | Applies when you run it                        | A pull request before it applies                                 |
+| Revoking access     | No command for it                              | `--mode destructive` or `--mode sync`, capped by `--max-deletes` |
+| Preview             | None                                           | `sf ps plan`                                                     |
+| Groups and licenses | A second command for licenses, none for groups | One file covers all three                                        |
+| Timed access        | Not supported                                  | `expiration` on any grant                                        |
+| Bulk writes         | One API call per assignment                    | One Collections API call per 200 records                         |
 
 The native command is still the right tool for a one-off grant in a scratch org. This plugin is for the access you want to keep true over time.
 
