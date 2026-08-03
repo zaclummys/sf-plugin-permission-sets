@@ -5,10 +5,6 @@ import { fixture, ps, psInColour } from '../run.ts';
  * Colour is asserted on `check` because it is the one command that reaches findings with no
  * org, so the rule is testable on a fork's pull request. The contract under test is "a
  * terminal gets colour and a pipe does not", which is what keeps `sf ps ... | jq` working.
- *
- * The coloured cases spawn bin/run.js directly rather than through execCmd, which runs
- * everything it captures through strip-ansi: colour is invisible to it by design. The plain
- * case stays on execCmd, because there the stripping cannot hide a failure.
  */
 describe('ps check colouring its findings', () => {
     it('colours the warning label when the terminal takes colour', () => {

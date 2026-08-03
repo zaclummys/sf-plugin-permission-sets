@@ -82,7 +82,6 @@ class OrgSession {
     private island = '';
     private readonly jobFiles = new Map<Job, string>();
 
-    /** Create the org, deploy the project into it, and seed everything a spec reads. */
     public async open(): Promise<void> {
         const session = await TestSession.create({
             project: { sourceDir: projectDir },
@@ -244,7 +243,6 @@ class OrgSession {
     }
 }
 
-/** What every org spec reads, and what the hooks below fill. */
 export const org = new OrgSession();
 
 before(async () => {

@@ -26,7 +26,6 @@ export const unresolvableOrg = 'no-such-org-alias-xyz';
  */
 export const projectDir = path.join(repoRoot, 'test', 'nut', 'project');
 
-/** A profile the org ships with, which is what a new user has to be given one of. */
 type Profile = {
     Id: string;
     Name: string;
@@ -47,7 +46,6 @@ const likelyProfile = /admin|standard/i;
 /** Kept off the admin's own address, so creating a user cannot mail a real person. */
 const inactiveUserEmail = 'ps-nut-inactive@example.com';
 
-/** Those profiles first, then the rest. */
 function byLikelihood(profiles: Profile[]): Profile[] {
     const preferred = profiles.filter((profile) => likelyProfile.test(profile.Name));
     const rest = profiles.filter((profile) => !likelyProfile.test(profile.Name));
@@ -281,7 +279,6 @@ export class ScratchOrg {
         return record.Id;
     }
 
-    /** Insert a record. The columns go in as the object they already are, which is what the API takes. */
     private async createRecord(sobject: string, columns: Record<string, string>): Promise<void> {
         const connection = this.org.getConnection();
         const result = await connection.create(sobject, columns);

@@ -7,10 +7,6 @@ import { org } from '../../org-session.ts';
  * suite, which is what makes this different from the Delta case in drift.nut.ts, where
  * another file still names the target and so keeps it in scope on its own.
  *
- * Groups rather than permission sets, because the managed set follows the users a file
- * declares and the admin's permission sets are shared by half the suite. Their groups are
- * this file's alone, so the count stays exact however the specs are ordered.
- *
  * `sync` is documented as a full reconcile that removes undeclared assignments, so a target
  * no file asks for is exactly what it exists to act on.
  */
