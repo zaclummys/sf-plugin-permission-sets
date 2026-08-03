@@ -44,10 +44,10 @@ describe('ps plan on the changes it would make', () => {
         expect(result.shellOutput.stdout).to.contain(`-f "${org.useJobFile('readOnlyPlan')}" --mode sync`);
     });
 
-    it('reports no changes when everything the file declares is already held', () => {
+    it('reports nothing to apply when everything the file declares is already held', () => {
         const result = org.runPs(`plan --file ${org.useJobFile('unchanged')}`, 0);
 
-        expect(result.shellOutput.stdout).to.contain('No changes.');
+        expect(result.shellOutput.stdout).to.contain('Nothing to apply in additive mode.');
     });
 
     it('lists unchanged assignments under --show-unchanged', () => {

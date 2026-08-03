@@ -34,6 +34,6 @@ describe('ps plan on a file it cannot use', () => {
     it('plans a file with no warnings under --strict', () => {
         const result = org.runPs(`plan --file ${org.useJobFile('unchanged')} --strict`, 0);
 
-        expect(result.shellOutput.stdout).to.contain('No changes.');
+        expect(result.shellOutput.stdout).to.contain('Nothing to apply in additive mode.');
     });
 });

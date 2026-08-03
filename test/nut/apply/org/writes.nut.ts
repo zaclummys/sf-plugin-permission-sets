@@ -14,14 +14,14 @@ describe('ps apply writing to the org', () => {
         });
     });
 
-    it('adds the assignment and leaves the org matching the file', () => {
+    it('adds the assignment and stops proposing it', () => {
         const applied = org.runPs(`apply --file ${org.useJobFile('applied')} --no-prompt`, 0);
 
         expect(applied.shellOutput.stdout).to.contain('Applied: 1 added, 0 updated, 0 removed.');
 
-        // Applying twice is what proves the write landed rather than being reported.
+        // Planning after the apply is what proves the write landed rather than being reported.
         const after = org.runPs(`plan --file ${org.useJobFile('applied')}`, 0);
 
-        expect(after.shellOutput.stdout).to.contain('No changes.');
+        expect(after.shellOutput.stdout).to.contain('Nothing to apply in additive mode.');
     });
 });

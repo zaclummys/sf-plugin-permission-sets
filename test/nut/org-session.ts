@@ -148,7 +148,15 @@ class OrgSession {
         return required(this.seed, 'getScratchOrg');
     }
 
-    /** The org's admin, who holds every seeded assignment except islandUser's two. */
+    /**
+     * The org's admin, who holds every seeded assignment except islandUser's two.
+     *
+     * A declared user is managed for the kinds declared for them, so a file naming one of the
+     * admin's permission sets leaves the rest of them undeclared. No file of theirs can reach
+     * an empty diff: a plan the org already satisfies says "Nothing to apply", never "No
+     * changes". The licence is the exception, and the one place that phrase is still asserted,
+     * because the admin holds no licence but the one that file declares.
+     */
     public getUsername(): string {
         return required(this.admin, 'getUsername');
     }
