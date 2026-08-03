@@ -72,6 +72,10 @@ export default defineConfig([
             // an early return, or a lookup table. The two typed rules that replace a
             // ternary with ?? and ?. come from stylisticTypeChecked below, already on.
             "no-nested-ternary": "error",
+            // A ternary whose branches are `true` and `false` is the condition itself,
+            // and one that repeats its test (`x ? x : y`) is a default. Both spell out
+            // in three parts what one already says.
+            "no-unneeded-ternary": "error",
             // The body starts on the line after the opening brace, and `} else {` stays
             // on one line, so every branch body reads at the same indent.
             "@stylistic/brace-style": [
