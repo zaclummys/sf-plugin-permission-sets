@@ -1,9 +1,5 @@
 name: publish
 
-# Release only. A push to main used to publish a 0.0.0-dev.<run> snapshot, which meant
-# every commit ran the release gate below and spent a scratch org from a daily, per-hub
-# allocation on a version nobody installed. Pushes now stop at ci.yml, which runs the
-# jobs that need no org.
 on:
     release:
         types: [published]
@@ -12,11 +8,8 @@ permissions:
     contents: read
 
 jobs:
-    # Gate: build and test must pass before anything is published, including the org
-    # specs, which is the one place a scratch org is worth a slot.
     ci:
         uses: ./.github/workflows/ci.yml
-        # Reusable workflows do not inherit secrets; pass the one the org job needs.
         secrets:
             TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
 
@@ -42,7 +35,6 @@ jobs:
             - name: Determine version
               id: ver
               run: |
-                  # The git tag is the single source of truth for the version.
                   VERSION="${{ github.event.release.tag_name }}"
                   VERSION="${VERSION#v}"
 
@@ -84,21 +76,17 @@ jobs:
 
                   echo "Smoke-testing $PKG"
 
-                  # Wait for the just-published version to be installable (registry propagation).
                   for i in 1 2 3 4 5 6; do
                     if npm view "$PKG" version >/dev/null 2>&1; then echo "available on registry"; break; fi
                     echo "waiting for npm propagation ($i)"; sleep 10
                   done
 
-                  # Auto-answer the unsigned-plugin prompt with a single y (no broken-pipe noise from yes).
+                  # A single y, not yes, which floods the closed pipe with broken-pipe noise.
                   echo y | sf plugins install "$PKG"
 
             - name: Dry-run Plugin
               run: sf help ps
 
-    # The one number that describes a published version, merged from the dumps the gate
-    # already collected. It holds nothing back: publish depends on ci rather than on this,
-    # so a failed upload turns the run red and the version still ships.
     coverage:
         needs: ci
         runs-on: ubuntu-latest
