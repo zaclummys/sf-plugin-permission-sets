@@ -60,9 +60,14 @@ export class Resolution {
 
         for (const assignment of declared) {
             const id = this.userIds.get(assignment.assignee.asKey());
-            const key = `${assignment.kind}:${id ?? ''}`;
 
-            if (id && !seen.has(key)) {
+            if (!id) {
+                continue;
+            }
+
+            const key = `${assignment.kind}:${id}`;
+
+            if (!seen.has(key)) {
                 seen.add(key);
                 refs.push({
                     kind: assignment.kind,
@@ -157,7 +162,7 @@ export class ResolutionService {
 
     // No default case on purpose: a new Kind then fails to compile here, which is a
     // better guard than a runtime throw the type system already proves unreachable.
-    findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {
+    private findTargetsOfKind(kind: Kind, names: TargetName[]): Promise<OrgTarget[]> {
         switch (kind) {
             case 'permissionSet':
                 return this.org.findPermissionSets(names);

@@ -38,7 +38,7 @@ function invalidResult(files: string[], findings: Findings): ApplyResult {
         files,
         findings,
         diff: Diff.empty(),
-        outcomes: Outcomes.of([]),
+        outcomes: Outcomes.empty(),
         status: 'invalid',
     };
 }
