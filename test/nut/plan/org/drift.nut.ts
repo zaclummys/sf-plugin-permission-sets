@@ -22,7 +22,7 @@ describe('ps plan against an undeclared assignment', () => {
         const result = org.runPs(`plan --file ${org.useJobFile('undeclared')} --mode sync`, 0);
 
         expect(result.shellOutput.stdout).to.contain('PS_Nut_Delta');
-        expect(result.shellOutput.stdout).to.contain(`- ${org.username()}`);
+        expect(result.shellOutput.stdout).to.contain(`- ${org.getUsername()}`);
     });
 
     it('reports undeclared assignments as drift in additive mode', () => {

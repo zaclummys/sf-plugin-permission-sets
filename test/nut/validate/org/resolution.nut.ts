@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import { createUser, deactivateUser, fixture, writeAssignmentFile } from '../../run.ts';
+import { fixture, writeAssignmentFile } from '../../run.ts';
 import { org } from '../../org-session.ts';
 import type { PsValidateResult } from '../../../../src/commands/ps/validate.js';
 
@@ -61,13 +61,13 @@ describe('ps validate resolving a file against the org', () => {
 describe('ps validate against a user the org deactivated', () => {
     let inactiveUserFile: string;
 
-    before(() => {
-        const dir = org.dir();
-        const admin = org.username();
-        const inactive = createUser(dir, admin);
+    before(async () => {
+        const dir = org.getDir();
+        const seed = org.getScratchOrg();
+        const inactive = await seed.createUser();
 
-        deactivateUser(admin, inactive.id);
-        inactiveUserFile = writeAssignmentFile(dir, inactive.username, 'PS_Nut_Alpha');
+        await seed.deactivateUser(inactive);
+        inactiveUserFile = writeAssignmentFile(dir, inactive, 'PS_Nut_Alpha');
     });
 
     it('names it as inactive rather than missing', () => {

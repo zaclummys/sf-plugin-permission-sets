@@ -17,24 +17,24 @@ describe('ps export to a file', () => {
     });
 
     it('writes a user-keyed document to --output-file', () => {
-        const exported = path.join(org.dir(), 'keyed.yml');
+        const exported = path.join(org.getDir(), 'keyed.yml');
 
         exportIsland(`--output-file ${exported}`, 0);
 
         const document = parse(readFileSync(exported, 'utf8')) as { users: Record<string, unknown> };
 
-        expect(Object.keys(document.users)).to.deep.equal([org.islandUser()]);
+        expect(Object.keys(document.users)).to.deep.equal([org.getIslandUser()]);
     });
 
     it('reports the file it wrote in --json', () => {
-        const exported = path.join(org.dir(), 'exported-json.yml');
+        const exported = path.join(org.getDir(), 'exported-json.yml');
         const result = exportIsland(`--output-file ${exported} --json`, 0);
 
         expect(result.jsonOutput?.result.outputFile).to.equal(exported);
     });
 
     it('writes a document that ps check accepts', () => {
-        const exported = path.join(org.dir(), 'exported.yml');
+        const exported = path.join(org.getDir(), 'exported.yml');
 
         exportIsland(`--output-file ${exported}`, 0);
 
@@ -45,7 +45,7 @@ describe('ps export to a file', () => {
     });
 
     it('writes an org expiration in canonical ISO form', () => {
-        const exported = path.join(org.dir(), 'expiring.yml');
+        const exported = path.join(org.getDir(), 'expiring.yml');
 
         exportIsland(`--output-file ${exported}`, 0);
 
@@ -53,7 +53,7 @@ describe('ps export to a file', () => {
     });
 
     it('scopes the document to the requested --kind only', () => {
-        const exported = path.join(org.dir(), 'kinded.yml');
+        const exported = path.join(org.getDir(), 'kinded.yml');
 
         exportIsland(`--kind permissionSetLicenses --output-file ${exported}`, 0);
 

@@ -26,7 +26,7 @@ describe('ps plan on the changes it would make', () => {
         const result = org.runPs<PsPlanResult>(`plan --file ${org.useJobFile('readOnlyPlan')} --json`, 0);
         const payload = result.jsonOutput?.result;
 
-        expect(payload?.org.username).to.equal(org.username());
+        expect(payload?.org.username).to.equal(org.getUsername());
         expect(payload?.counts.toAdd).to.equal(1);
     });
 

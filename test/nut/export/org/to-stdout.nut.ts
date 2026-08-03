@@ -19,7 +19,7 @@ describe('ps export to stdout', () => {
     });
 
     it('emits the same document to stdout as it writes to a file', () => {
-        const exported = path.join(org.dir(), 'both.yml');
+        const exported = path.join(org.getDir(), 'both.yml');
         const toStdout = exportIsland('', 0);
 
         exportIsland(`--output-file ${exported}`, 0);
@@ -36,7 +36,7 @@ describe('ps export to stdout', () => {
     });
 
     it('matches a requested --user whose case differs from the org', () => {
-        const island = org.islandUser();
+        const island = org.getIslandUser();
         const result = org.runPs<PsExportResult>(`export --user ${island.toUpperCase()} --json`, 0);
 
         expect(result.jsonOutput?.result.users).to.equal(1);

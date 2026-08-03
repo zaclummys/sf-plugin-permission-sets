@@ -7,7 +7,7 @@ import type { PsExportResult } from '../../../../src/commands/ps/export.js';
  * keeps the apply specs from moving them.
  */
 export function exportIsland(args: string, ensureExitCode: number | 'nonZero') {
-    const island = org.islandUser();
+    const island = org.getIslandUser();
 
     return org.runPs<PsExportResult>(`export --user ${island} ${args}`, ensureExitCode);
 }

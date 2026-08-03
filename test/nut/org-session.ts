@@ -1,7 +1,8 @@
 import { ok } from 'node:assert';
 import path from 'node:path';
 import { execCmd, TestSession } from '@salesforce/cli-plugins-testkit';
-import { assignPermissionSetGroups, assignPermissionSets, assignUntil, createUser, projectDir, ps, unassignedLicense, userId, writeAssignmentFile, writeExpiringFile, writeGroupFile, writeLicenseFile } from './run.ts';
+import { Org } from '@salesforce/core';
+import { ScratchOrg, projectDir, ps, writeAssignmentFile, writeExpiringFile, writeGroupFile, writeLicenseFile } from './run.ts';
 
 // Far enough out that the assignment never lapses mid-run. Seeded with milliseconds and
 // asserted without them, because the canonical form Expiration.toString writes drops them:
@@ -38,7 +39,7 @@ type Job =
  * is empty until the hook fills it, so reading it at module level would hand the command an
  * empty string and fail somewhere else entirely.
  */
-function required(value: string | undefined, name: string): string {
+function required<T>(value: T | undefined, name: string): T {
     if (!value) {
         throw new Error(
             `org.${name} is empty: the session hook has not run yet, so read it inside an it() rather than at module level`,
@@ -75,6 +76,7 @@ function required(value: string | undefined, name: string): string {
  */
 class OrgSession {
     private session: TestSession | undefined;
+    private seed: ScratchOrg | undefined;
     private sessionDir = '';
     private admin = '';
     private island = '';
@@ -115,13 +117,18 @@ class OrgSession {
             cli: 'sf',
         });
 
-        const created = createUser(this.sessionDir, this.admin);
-        const adminId = userId(this.admin, this.admin);
+        // After the deploy, and never at module level, because the auth files this reads
+        // live under the home TestSession stubbed when it created the session above.
+        const orgInstance = await Org.create({ aliasOrUsername: scratchOrg.username });
 
-        this.island = created.username;
+        this.seed = new ScratchOrg(orgInstance);
 
-        this.seedAssignments(adminId, created.id);
-        this.writeJobFiles(adminId);
+        const seed = this.getScratchOrg();
+
+        this.island = await seed.createUser();
+
+        await this.seedAssignments();
+        await this.writeJobFiles();
     }
 
     /** Delete the scratch org, and with it everything every spec wrote. */
@@ -130,13 +137,21 @@ class OrgSession {
     }
 
     /** Where a spec writes a file of its own, made per run and removed when the org is. */
-    public dir(): string {
-        return required(this.sessionDir, 'dir');
+    public getDir(): string {
+        return required(this.sessionDir, 'getDir');
+    }
+
+    /**
+     * The org itself, for a spec that has to build state of its own. Never for asserting,
+     * because what a spec asserts on is what `ps` printed.
+     */
+    public getScratchOrg(): ScratchOrg {
+        return required(this.seed, 'getScratchOrg');
     }
 
     /** The org's admin, who holds every seeded assignment except islandUser's two. */
-    public username(): string {
-        return required(this.admin, 'username');
+    public getUsername(): string {
+        return required(this.admin, 'getUsername');
     }
 
     /**
@@ -144,8 +159,8 @@ class OrgSession {
      * counts exact rather than "whatever the org happens to hold", and what keeps the apply
      * specs from moving them.
      */
-    public islandUser(): string {
-        return required(this.island, 'islandUser');
+    public getIslandUser(): string {
+        return required(this.island, 'getIslandUser');
     }
 
     /** The file written for one job, which only that job's spec may plan or apply. */
@@ -159,7 +174,7 @@ class OrgSession {
      * a command that takes no --target-org, the way `ps check` does.
      */
     public runPs<T>(args: string, ensureExitCode: number | 'nonZero') {
-        const target = this.username();
+        const target = this.getUsername();
 
         return ps<T>(`${args} --target-org ${target}`, ensureExitCode);
     }
@@ -170,31 +185,34 @@ class OrgSession {
      * other specs do to the admin. Theta goes in already expiring, so that declaring a
      * different instant for it is an update rather than an addition.
      */
-    private seedAssignments(adminId: string, islandId: string): void {
-        assignPermissionSets(this.admin, this.admin, [
+    private async seedAssignments(): Promise<void> {
+        const seed = this.getScratchOrg();
+
+        await seed.assignPermissionSets(this.admin, [
             'PS_Nut_Delta',
             'PS_Nut_Epsilon',
         ]);
-        assignPermissionSets(this.admin, this.island, ['PS_Nut_Zeta']);
+        await seed.assignPermissionSets(this.island, ['PS_Nut_Zeta']);
 
         // Two groups on the admin, of which one file declares one: the shape of deleting a
         // line from an exported file, where the user stays and the target leaves. It uses
         // groups rather than permission sets because the managed set now follows the users a
         // file declares, and the admin's permission sets are shared by half the suite: their
         // groups are not, so the count here is exactly one however the specs order.
-        assignPermissionSetGroups(this.admin, adminId, [
+        await seed.assignPermissionSetGroups(this.admin, [
             'PS_Nut_Group_Two',
             'PS_Nut_Group_Three',
         ]);
-        assignUntil(this.admin, islandId, 'PS_Nut_Eta', seededExpiration);
-        assignUntil(this.admin, adminId, 'PS_Nut_Theta', seededExpiration);
+        await seed.assignUntil(this.island, 'PS_Nut_Eta', seededExpiration);
+        await seed.assignUntil(this.admin, 'PS_Nut_Theta', seededExpiration);
     }
 
     /** The file each job plans or applies, one per job so no two specs share one. */
-    private writeJobFiles(adminId: string): void {
+    private async writeJobFiles(): Promise<void> {
         const dir = this.sessionDir;
         const admin = this.admin;
-        const license = unassignedLicense(admin, adminId);
+        const seed = this.getScratchOrg();
+        const license = await seed.findUnassignedLicense(admin);
 
         // Declared but never held, so a plan against them always has exactly one thing to say.
         this.jobFiles.set('readOnlyPlan', writeAssignmentFile(dir, admin, 'PS_Nut_Alpha'));
