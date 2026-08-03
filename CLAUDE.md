@@ -57,7 +57,7 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 
 ## Code style
 
-> Layering, barrel imports, cyclomatic complexity, file and function size and shape caps, braces on every block, four-space indentation, no single-letter names, no `=== undefined`, no `.then()`, no `console`, no `get` accessor, no member access on a fresh `new` or `await`, the trailing comma rule below, and the blank line after a run of `const` declarations are enforced by ESLint (`eslint.config.js`), over the whole repo. The rest are by convention.
+> Layering, barrel imports, cyclomatic complexity, file and function size and shape caps, braces on every block, four-space indentation, no single-letter names, no `=== undefined`, no `.then()`, no nested ternary, no `console`, no `get` accessor, no member access on a fresh `new` or `await`, the trailing comma rule below, and the blank line after a run of `const` declarations are enforced by ESLint (`eslint.config.js`), over the whole repo. The rest are by convention.
 >
 > Formatting rules come from `@stylistic/eslint-plugin` rather than ESLint core, where they are deprecated and disappear in ESLint 11.
 
@@ -69,6 +69,7 @@ Report DTOs (`Finding`, `AssignmentOutcome`) are the exception, but not because 
 - No single-letter variable names, including arrow-fn params and loop vars: use descriptive names.
 - Module-level constants are `camelCase`, not `SCREAMING_SNAKE`.
 - Prefer `!x` (or `== null` for null-or-undefined) over `x === undefined`.
+- Never nest a ternary inside another: the cases stop reading as a list and become precedence to rebuild. Split it into an `if`, an early return, or a lookup table. Where a ternary only guards a null or undefined value, `??` and `?.` say it in less, and both are already enforced (`prefer-nullish-coalescing`, `prefer-optional-chain`).
 - Prefer `async`/`await` over `.then()`. Keep parallelism by pushing promises from `async` helpers or `async` map callbacks into a `tasks`/`Promise.all` array, not by awaiting inline.
 - Blank line after a run of `const` declarations before the next statement.
 - Don't export a symbol unless another file imports it.

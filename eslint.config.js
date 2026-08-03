@@ -67,6 +67,11 @@ export default defineConfig([
                 "error",
                 "all",
             ],
+            // A ternary inside a ternary hides which branch a reader is in: the cases
+            // stop being a list and become precedence to rebuild. Split it into an if,
+            // an early return, or a lookup table. The two typed rules that replace a
+            // ternary with ?? and ?. come from stylisticTypeChecked below, already on.
+            "no-nested-ternary": "error",
             // The body starts on the line after the opening brace, and `} else {` stays
             // on one line, so every branch body reads at the same indent.
             "@stylistic/brace-style": [
