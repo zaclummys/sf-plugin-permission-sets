@@ -24,6 +24,12 @@ export const kindKeys: [Kind, ScopeKey][] = [
     ],
 ];
 
+/**
+ * Every kind, in canonical order. Derived from the pairing above rather than written out
+ * again, so adding a scope is still one row and no second list can fall out of step with it.
+ */
+export const kinds: Kind[] = kindKeys.map(([kind]) => kind);
+
 /** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
 export function kindForScopeKey(key: ScopeKey): Kind {
     const pair = kindKeys.find(([

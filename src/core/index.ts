@@ -15,11 +15,10 @@ export {
     ResolvedAddition,
     TargetRef,
 } from './model.js';
-export { kindForScopeKey } from './scope-key.js';
-export { AssignmentOutcome, Outcomes } from './outcome.js';
+export { kindForScopeKey, kinds } from './scope-key.js';
+export { AssignmentOperation, AssignmentOutcome, Outcomes } from './outcome.js';
 export { formatDiff } from './report.js';
 export {
-    kinds,
     distinctAssignees,
     distinctTargets,
     evaluateUsers,

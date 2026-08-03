@@ -10,8 +10,6 @@ const kindLabels: Record<Kind, string> = {
     permissionSetLicense: 'permission set license',
 };
 
-export const kinds = Object.keys(kindLabels) as Kind[];
-
 /** De-duplicate identifiers by their comparison key, keeping the first spelling of each. */
 function distinct<Identifier extends { asKey(): string }>(values: Identifier[]): Identifier[] {
     const byKey = new Map<string, Identifier>();
