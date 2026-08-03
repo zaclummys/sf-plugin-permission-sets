@@ -63,6 +63,8 @@ jobs:
                   name: v8-coverage-offline
                   path: .v8-coverage
                   retention-days: 1
+                  include-hidden-files: true
+                  if-no-files-found: error
 
     # Creates a scratch org of its own, so unlike the job above it needs a Dev Hub and the
     # sf CLI that the setup shells out to. Scratch org creation is the flaky part of any
@@ -95,3 +97,5 @@ jobs:
                   name: v8-coverage-org
                   path: .v8-coverage
                   retention-days: 1
+                  include-hidden-files: true
+                  if-no-files-found: error
