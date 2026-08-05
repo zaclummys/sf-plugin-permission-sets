@@ -45,18 +45,25 @@ jobs:
             - run: npm ci
 
             - run: npm install --global @salesforce/cli
+              if: github.event_name != 'push'
 
             - run: npm run test
+              env:
+                  NODE_V8_COVERAGE: coverage-dumps
 
             - run: npm run test:org
               if: github.event_name != 'push'
               env:
                   TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
+                  NODE_V8_COVERAGE: coverage-dumps
+
+            - run: node scripts/prune-coverage.js
 
             - run: npx c8 report
 
             - uses: codecov/codecov-action@v5
               if: github.event_name != 'push'
+              continue-on-error: ${{ github.event_name == 'release' }}
               with:
                   token: ${{ secrets.CODECOV_TOKEN }}
                   files: ./coverage/lcov.info

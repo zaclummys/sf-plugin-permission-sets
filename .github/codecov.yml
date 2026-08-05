@@ -1,9 +1,8 @@
 # Coverage is a diagnostic here, never a gate.
 #
-# The upload happens once per release, from the coverage job in publish.yml, on the one
-# trigger that already pays for a scratch org. Informational statuses keep Codecov
-# reporting the number without ever failing a check, and there is no pull request to
-# comment on, so the comment is off.
+# The upload comes from the test job in ci.yml, on every trigger that pays for a scratch
+# org. Informational statuses keep Codecov reporting the number without ever failing a
+# check, and there is no pull request to comment on, so the comment is off.
 
 coverage:
     status:
