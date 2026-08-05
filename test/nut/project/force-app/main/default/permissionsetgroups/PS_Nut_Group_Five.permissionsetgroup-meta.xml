@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSetGroup xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>PS Nut Group Five</label>
+    <permissionSets>PS_Nut_Iota</permissionSets>
+    <status>Updated</status>
+</PermissionSetGroup>

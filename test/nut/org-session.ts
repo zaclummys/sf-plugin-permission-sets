@@ -16,6 +16,8 @@ export const canonicalExpiration = '2099-12-31T23:59:59Z';
 // and an update is a change of instant rather than a move forward.
 const movedExpiration = '2098-06-30T12:00:00Z';
 
+const timedExpiration = '2097-03-01T00:00:00Z';
+
 /**
  * The jobs the fixture project is built for: one permission set per job, so no spec can
  * observe what another did. Adding a spec that writes means adding a job here, a permission
@@ -32,7 +34,11 @@ type Job =
     | 'group'
     | 'license'
     | 'reExpiring'
-    | 'undeclaredTarget';
+    | 'undeclaredTarget'
+    | 'timedAddition'
+    | 'clearedExpiration'
+    | 'rejectedLicense'
+    | 'removedGroup';
 
 /**
  * The rule every spec used to have to remember, enforced rather than documented: the session
@@ -80,6 +86,10 @@ class OrgSession {
     private sessionDir = '';
     private admin = '';
     private island = '';
+    private write = '';
+    private exhaustedLicense = '';
+    private license = '';
+    private writeLicense = '';
     private readonly jobFiles = new Map<Job, string>();
 
     public async open(): Promise<void> {
@@ -125,6 +135,7 @@ class OrgSession {
         const seed = this.getScratchOrg();
 
         this.island = await seed.createUser();
+        this.write = await seed.createUser();
 
         await this.seedAssignments();
         await this.writeJobFiles();
@@ -170,6 +181,18 @@ class OrgSession {
         return required(this.island, 'getIslandUser');
     }
 
+    public getWriteUser(): string {
+        return required(this.write, 'getWriteUser');
+    }
+
+    public getExhaustedLicense(): string {
+        return required(this.exhaustedLicense, 'getExhaustedLicense');
+    }
+
+    public getWriteLicense(): string {
+        return required(this.writeLicense, 'getWriteLicense');
+    }
+
     /** The file written for one job, which only that job's spec may plan or apply. */
     public useJobFile(job: Job): string {
         return required(this.jobFiles.get(job), `useJobFile(${job})`);
@@ -210,8 +233,19 @@ class OrgSession {
             'PS_Nut_Group_Two',
             'PS_Nut_Group_Three',
         ]);
+        await seed.assignPermissionSetGroups(this.write, [
+            'PS_Nut_Group_Four',
+            'PS_Nut_Group_Five',
+        ]);
+
+        this.license = await seed.findUnassignedLicense(this.admin);
+        this.writeLicense = await seed.findUnassignedLicense(this.write, [this.license]);
+
+        await seed.assignLicense(this.write, this.writeLicense);
+
         await seed.assignUntil(this.island, 'PS_Nut_Eta', seededExpiration);
         await seed.assignUntil(this.admin, 'PS_Nut_Theta', seededExpiration);
+        await seed.assignUntil(this.admin, 'PS_Nut_Lambda', seededExpiration);
     }
 
     /** The file each job plans or applies, one per job so no two specs share one. */
@@ -219,7 +253,9 @@ class OrgSession {
         const dir = this.sessionDir;
         const admin = this.admin;
         const seed = this.getScratchOrg();
-        const license = await seed.findUnassignedLicense(admin);
+        const license = this.license;
+
+        this.exhaustedLicense = await seed.findExhaustedLicense(admin);
 
         // Declared but never held, so a plan against them always has exactly one thing to say.
         this.jobFiles.set('readOnlyPlan', writeAssignmentFile(dir, admin, 'PS_Nut_Alpha'));
@@ -248,6 +284,11 @@ class OrgSession {
         // No other file names Group_Three either, so it is a target the files have dropped
         // entirely rather than one another file still keeps in scope.
         this.jobFiles.set('undeclaredTarget', writeGroupFile(dir, admin, 'PS_Nut_Group_Two'));
+
+        this.jobFiles.set('timedAddition', writeExpiringFile(dir, admin, 'PS_Nut_Kappa', timedExpiration));
+        this.jobFiles.set('clearedExpiration', writeAssignmentFile(dir, admin, 'PS_Nut_Lambda'));
+        this.jobFiles.set('rejectedLicense', writeLicenseFile(dir, admin, this.exhaustedLicense));
+        this.jobFiles.set('removedGroup', writeGroupFile(dir, this.write, 'PS_Nut_Group_Four'));
     }
 }
 

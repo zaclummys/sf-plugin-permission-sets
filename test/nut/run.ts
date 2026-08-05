@@ -31,6 +31,13 @@ type Profile = {
     Name: string;
 };
 
+type LicenseSeat = {
+    DeveloperName: string;
+    Status: string;
+    TotalLicenses: number;
+    UsedLicenses: number;
+};
+
 /**
  * Structurally a jsforce SaveResult, declared here rather than imported, so setting up an
  * org for a test never reaches into src.
@@ -197,31 +204,57 @@ export class ScratchOrg {
      * makes a plan against it read as an addition, and the free seat is what lets an apply of
      * that plan succeed: an org carries plenty of licences with none left.
      */
-    public async findUnassignedLicense(username: string): Promise<string> {
+    public async findUnassignedLicense(username: string, excluding: string[] = []): Promise<string> {
+        const unheld = await this.unheldLicenses(username);
+        const skipped = new Set(excluding);
+        const free = unheld.find((record) => (
+            record.Status === 'Active'
+            && record.UsedLicenses < record.TotalLicenses
+            && !skipped.has(record.DeveloperName)
+        ));
+
+        if (!free) {
+            throw new Error(`no permission set licence in ${this.getUsername()} has a free seat for ${username}`);
+        }
+
+        return free.DeveloperName;
+    }
+
+    public async findExhaustedLicense(username: string): Promise<string> {
+        const unheld = await this.unheldLicenses(username);
+        const full = unheld.find((record) => record.UsedLicenses >= record.TotalLicenses);
+
+        if (!full) {
+            throw new Error(`every permission set licence in ${this.getUsername()} has a seat free for ${username}`);
+        }
+
+        return full.DeveloperName;
+    }
+
+    private async unheldLicenses(username: string): Promise<LicenseSeat[]> {
         const assigneeId = await this.findUserId(username);
-        const licenses = await this.query<{
-            DeveloperName: string;
-            TotalLicenses: number;
-            UsedLicenses: number;
-        }>(
-            `SELECT DeveloperName, TotalLicenses, UsedLicenses FROM PermissionSetLicense
-             WHERE Status = 'Active'`,
+        const licenses = await this.query<LicenseSeat>(
+            'SELECT DeveloperName, Status, TotalLicenses, UsedLicenses FROM PermissionSetLicense',
         );
         const held = await this.query<{ PermissionSetLicense: { DeveloperName: string } }>(
             `SELECT PermissionSetLicense.DeveloperName FROM PermissionSetLicenseAssign
              WHERE AssigneeId = '${assigneeId}'`,
         );
         const taken = new Set(held.map((record) => record.PermissionSetLicense.DeveloperName));
-        const free = licenses
-            .filter((record) => record.UsedLicenses < record.TotalLicenses)
-            .map((record) => record.DeveloperName)
-            .find((name) => !taken.has(name));
 
-        if (!free) {
-            throw new Error(`no permission set licence in ${this.getUsername()} has a free seat for ${username}`);
-        }
+        return licenses.filter((record) => !taken.has(record.DeveloperName));
+    }
 
-        return free;
+    public async assignLicense(username: string, license: string): Promise<void> {
+        const assigneeId = await this.findUserId(username);
+        const licenseId = await this.findId(
+            `SELECT Id FROM PermissionSetLicense WHERE DeveloperName = '${license}'`,
+        );
+
+        await this.createRecord('PermissionSetLicenseAssign', {
+            AssigneeId: assigneeId,
+            PermissionSetLicenseId: licenseId,
+        });
     }
 
     /** Switch a user off, so a spec can assert what the plugin says about an inactive assignee. */
