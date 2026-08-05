@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -52,6 +53,9 @@ const likelyProfile = /admin|standard/i;
 
 /** Kept off the admin's own address, so creating a user cannot mail a real person. */
 const inactiveUserEmail = 'ps-nut-inactive@example.com';
+
+const groupCalculationDeadline = 120000;
+const groupCalculationInterval = 3000;
 
 function byLikelihood(profiles: Profile[]): Profile[] {
     const preferred = profiles.filter((profile) => likelyProfile.test(profile.Name));
@@ -167,6 +171,8 @@ export class ScratchOrg {
         const assigneeId = await this.findUserId(username);
 
         for (const group of groups) {
+            await this.awaitUpdatedGroup(group);
+
             const groupId = await this.findId(
                 `SELECT Id FROM PermissionSetGroup WHERE DeveloperName = '${group}'`,
             );
@@ -176,6 +182,30 @@ export class ScratchOrg {
                 PermissionSetGroupId: groupId,
             });
         }
+    }
+
+    /**
+     * A group the deploy has just created is recalculated in the background, and the org
+     * refuses an assignment until that finishes. Deleting this wait makes the seeding fail
+     * against whichever group the org has not got to yet, which is a different one each run.
+     */
+    private async awaitUpdatedGroup(group: string): Promise<void> {
+        const deadline = Date.now() + groupCalculationDeadline;
+
+        while (Date.now() < deadline) {
+            const records = await this.query<{ Status: string }>(
+                `SELECT Status FROM PermissionSetGroup WHERE DeveloperName = '${group}'`,
+            );
+            const status = records[0]?.Status;
+
+            if (status === 'Updated') {
+                return;
+            }
+
+            await sleep(groupCalculationInterval);
+        }
+
+        throw new Error(`${group} never reached the Updated status, so it could not be assigned`);
     }
 
     /**
