@@ -3,6 +3,13 @@
 # The upload comes from the test job in ci.yml, on every trigger that pays for a scratch
 # org. Informational statuses keep Codecov reporting the number without ever failing a
 # check, and there is no pull request to comment on, so the comment is off.
+#
+# The branch is pinned because Codecov took its default from the first branch it ever
+# received an upload from, which was a short-lived ci one, and served that branch's number
+# on the badge long after the branch was gone.
+
+codecov:
+    branch: main
 
 coverage:
     status:
