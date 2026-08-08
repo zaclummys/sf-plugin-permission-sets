@@ -71,9 +71,9 @@
         "build": "wireit",
         "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
-        "coverage": "npm run compile && rm -rf coverage-dumps coverage && NODE_V8_COVERAGE=coverage-dumps npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
+        "coverage": "scripts/coverage.sh",
         "coverage:collect": "npm run coverage:unit && mocha \"test/nut/*/*.nut.ts\" && mocha \"test/nut/*/org/*.nut.ts\"",
-        "coverage:unit": "mocha \"test/unit/**/*.test.ts\"",
+        "coverage:unit": "mocha --config .mocharc.unit.json",
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
@@ -118,7 +118,7 @@
             "output": []
         },
         "test:unit": {
-            "command": "c8 --config .c8rc.services.json mocha \"test/unit/**/*.test.ts\" --timeout 5000",
+            "command": "c8 --config .c8rc.services.json mocha --config .mocharc.unit.json",
             "dependencies": [
                 "compile"
             ],
@@ -130,7 +130,7 @@
             "files": [
                 "test/unit/**",
                 "test/tsconfig.json",
-                ".mocharc.json",
+                ".mocharc.unit.json",
                 ".c8rc.services.json"
             ],
             "output": []

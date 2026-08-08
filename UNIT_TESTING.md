@@ -155,14 +155,25 @@ under the shared `NODE_V8_COVERAGE`, so the repo-wide lcov counts them alongside
 | File | What it holds |
 | --- | --- |
 | `package.json` | `test:unit` (wireit, depends on `compile`) and `coverage:unit` |
+| `.mocharc.unit.json` | the spec glob and the timeout, named once for both of those |
 | `.c8rc.services.json` | the gate |
 | `test/tsconfig.json` | `./unit/**/*.ts` in `include` |
 | `eslint.config.js` | the no-conditionals, no-loops rule extended to `test/**/*.test.ts` |
 | `.github/workflows/ci.yml` | `test:unit` first, before anything that needs the CLI or an org |
 
-`--timeout 5000` is passed on the command line, because `.mocharc.json` sets 600000 for the NUTs
-and a hung unit test should not burn ten minutes. `TZ=UTC` is pinned in the wireit `env`, because
-expirations are instants and a suite that passes in São Paulo has to pass in a UTC container.
+The unit run needs a config file of its own because it disagrees with `.mocharc.json` on the
+timeout: 600000 is right for a NUT that spawns the CLI and wrong for a spec that should finish in
+milliseconds. Having it also carry `spec` is what keeps the glob in one place, since the gate and
+`coverage:unit` both run the same files for different reasons. The two NUT globs stay as command
+line arguments, because those runs agree with `.mocharc.json` on everything but the glob.
+
+`TZ=UTC` is pinned in the wireit `env`, because expirations are instants and a suite that passes
+in São Paulo has to pass in a UTC container.
+
+`npm run coverage` is the other report and not this gate: `scripts/coverage.sh` runs all three
+suites under one `NODE_V8_COVERAGE` and merges them. It lives in a file rather than in
+`package.json` because it keeps the collection's exit status and re-raises it at the end, so a
+broken suite still renders a report and still fails.
 
 ## 3. Coverage map
 
