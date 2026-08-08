@@ -80,7 +80,7 @@ import type { OrgClient } from '../../lib/services/adapters/index.js';
 
 Consequences:
 
-- `test:unit` depends on `compile`, exactly like `test:nut` and `test:org` already do.
+- `test:unit` depends on `compile`, exactly like `test:nut` and `test:nut:org` already do.
 - Types come from the emitted `.d.ts`, which is the published contract, so a test cannot reach a
   symbol the barrel does not export. That is a feature.
 - c8 remaps the result back to `src/**/*.ts` through the source maps the build already emits, so

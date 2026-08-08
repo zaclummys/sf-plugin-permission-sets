@@ -495,11 +495,11 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the layers, the core modules, and how
 
 ```bash
 npm ci
-npm run build     # compile and lint
-npm test          # everything that needs no org
-npm run test:unit # the service specs alone, gated at 100% coverage
-npm run test:nut  # the command specs alone, no org needed
-npm run test:org  # the command specs that create a scratch org
+npm run build        # compile and lint
+npm test             # everything that needs no org
+npm run test:unit    # the core, service, and ui specs, gated at 100% coverage
+npm run test:nut     # the command specs that need no org
+npm run test:nut:org # the command specs that create a scratch org
 ```
 
 Two suites, split by what they drive. `npm test` is both of the ones that need no credentials, which is exactly what runs on a fork's pull request.
@@ -512,7 +512,7 @@ The rest are NUTs, the Salesforce CLI team's convention for testing a plugin's c
 
 `npm run test:nut` covers all five commands without touching an org, plus `src/commands/` and `src/adapters/`, the two layers the unit gate leaves alone: exit codes, the `--json` envelope, the flags, and the `--help` text.
 
-`npm run test:org` needs a Dev Hub. It creates one scratch org from `test/nut/project`, seeds the state the assertions expect (drift, a removal, an expiring assignment), and deletes it when the run ends. Building the org rather than borrowing one is what makes the counts exact and `apply` safe to exercise end to end. Give it a hub nobody uses by hand, because the scratch org allocation is daily and per hub.
+`npm run test:nut:org` needs a Dev Hub. It creates one scratch org from `test/nut/project`, seeds the state the assertions expect (drift, a removal, an expiring assignment), and deletes it when the run ends. Building the org rather than borrowing one is what makes the counts exact and `apply` safe to exercise end to end. Give it a hub nobody uses by hand, because the scratch org allocation is daily and per hub.
 
 In CI those org tests are skipped on a push, so that a run of commits cannot spend the allocation the next release needs. They run on a pull request, on a manual dispatch, on the release gate, and every Monday at 06:00 UTC. The schedule is what keeps a break from waiting for a release to be found, since work here lands straight on `main` and there is no pull request to catch it.
 
@@ -543,7 +543,7 @@ A hub's scratch org allocation is daily, so iterating on an org spec can run it 
 TESTKIT_ORG_USERNAME=<username> npx mocha "test/nut/plan/org/undeclared-target.nut.ts"
 ```
 
-Point it at an org you can throw away, and read what it does to it first. The setup deploys `test/nut/project` (ten `PS_Nut_*` permission sets), creates a user, and seeds assignments, and none of that is cleaned up, because the cleanup was the org being deleted. A second full run against the same org will also fail rather than pass: the `apply` specs assert on a grant landing, and it has already landed. Treat this as a way to watch one spec while working on it, never as a way to run the suite. CI and `npm run test:org` leave the variable unset and build the org they assert against.
+Point it at an org you can throw away, and read what it does to it first. The setup deploys `test/nut/project` (ten `PS_Nut_*` permission sets), creates a user, and seeds assignments, and none of that is cleaned up, because the cleanup was the org being deleted. A second full run against the same org will also fail rather than pass: the `apply` specs assert on a grant landing, and it has already landed. Treat this as a way to watch one spec while working on it, never as a way to run the suite. CI and `npm run test:nut:org` leave the variable unset and build the org they assert against.
 
 Set `DEBUG=testkit:*` to see every command the testkit runs.
 

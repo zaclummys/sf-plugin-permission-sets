@@ -78,7 +78,7 @@
         "prepack": "npm run compile",
         "test": "wireit",
         "test:nut": "wireit",
-        "test:org": "wireit",
+        "test:nut:org": "wireit",
         "test:unit": "wireit",
         "version": "oclif readme"
     },
@@ -161,7 +161,7 @@
             ],
             "output": []
         },
-        "test:org": {
+        "test:nut:org": {
             "command": "mocha \"test/nut/*/org/*.nut.ts\"",
             "dependencies": [
                 "compile"

@@ -55,7 +55,7 @@ jobs:
               env:
                   NODE_V8_COVERAGE: coverage-dumps
 
-            - run: npm run test:org
+            - run: npm run test:nut:org
               if: github.event_name != 'push'
               env:
                   TESTKIT_AUTH_URL: ${{ secrets.TESTKIT_AUTH_URL }}
