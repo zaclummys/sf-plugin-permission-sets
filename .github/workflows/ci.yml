@@ -44,16 +44,14 @@ jobs:
                   cache: npm
             - run: npm ci
 
-            - run: npm run test:unit
-
-            - run: npm run coverage:unit
-              env:
-                  NODE_V8_COVERAGE: coverage-dumps
-
             - run: npm install --global @salesforce/cli
               if: github.event_name != 'push'
 
             - run: npm run test
+              env:
+                  NODE_V8_COVERAGE: coverage-dumps
+
+            - run: npm run coverage:unit
               env:
                   NODE_V8_COVERAGE: coverage-dumps
 

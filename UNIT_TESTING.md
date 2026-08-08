@@ -78,7 +78,7 @@ import { Username, TargetName } from '../../lib/core/index.js';
 
 Consequences:
 
-- `test:unit` depends on `compile`, exactly like `test` and `test:org` already do.
+- `test:unit` depends on `compile`, exactly like `test:nut` and `test:org` already do.
 - Types come from the emitted `.d.ts`, which is the published contract, so a test cannot reach a
   symbol the barrel does not export. That is a feature.
 - c8 remaps the result back to `src/services/*.ts` through the source maps the build already
