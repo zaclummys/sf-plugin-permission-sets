@@ -59,3 +59,6 @@ scratchpad/
 
 # raw v8 coverage dumps, merged by `npm run coverage` into coverage/
 coverage-dumps
+
+# raw v8 coverage dumps of the unit run, owned and cleaned by `npm run test:unit`
+.unit-coverage

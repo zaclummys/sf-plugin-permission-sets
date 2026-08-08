@@ -72,11 +72,13 @@
         "clean": "rm -rf lib tmp *.tsbuildinfo .eslintcache .wireit",
         "compile": "wireit",
         "coverage": "npm run compile && rm -rf coverage-dumps coverage && NODE_V8_COVERAGE=coverage-dumps npm run coverage:collect; node scripts/prune-coverage.js && c8 report",
-        "coverage:collect": "mocha \"test/nut/*/*.nut.ts\" && mocha \"test/nut/*/org/*.nut.ts\"",
+        "coverage:collect": "npm run coverage:unit && mocha \"test/nut/*/*.nut.ts\" && mocha \"test/nut/*/org/*.nut.ts\"",
+        "coverage:unit": "mocha \"test/unit/**/*.test.ts\"",
         "lint": "wireit",
         "prepack": "npm run compile",
         "test": "wireit",
         "test:org": "wireit",
+        "test:unit": "wireit",
         "version": "oclif readme"
     },
     "publishConfig": {
@@ -112,6 +114,24 @@
                 "eslint.config.js",
                 "package.json",
                 "**/tsconfig.json"
+            ],
+            "output": []
+        },
+        "test:unit": {
+            "command": "c8 --config .c8rc.services.json mocha \"test/unit/**/*.test.ts\" --timeout 5000",
+            "dependencies": [
+                "compile"
+            ],
+            "env": {
+                "FORCE_COLOR": "0",
+                "NO_COLOR": "1",
+                "TZ": "UTC"
+            },
+            "files": [
+                "test/unit/**",
+                "test/tsconfig.json",
+                ".mocharc.json",
+                ".c8rc.services.json"
             ],
             "output": []
         },

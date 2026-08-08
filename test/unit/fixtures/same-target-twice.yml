@@ -1,0 +1,5 @@
+users:
+  alice@example.com:
+    permissionSets:
+      - PS_Alpha
+      - PS_Alpha

@@ -1,0 +1,5 @@
+users:
+  alice@example.com:
+    permissionSets:
+      - name: PS_Alpha
+        expiration: 2027-12-31T23:59:59Z

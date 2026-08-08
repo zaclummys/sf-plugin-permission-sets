@@ -22,5 +22,8 @@
     // extends inherits exclude, and the root excludes **/*.nut.ts to keep the NUTs out
     // of the lib/ build. Clearing it here is what lets this project own them.
     "exclude": [],
-    "include": ["./nut/**/*.ts"]
+    "include": [
+        "./nut/**/*.ts",
+        "./unit/**/*.ts"
+    ]
 }

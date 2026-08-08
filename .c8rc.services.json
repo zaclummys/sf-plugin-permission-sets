@@ -1,0 +1,13 @@
+{
+    "temp-directory": ".unit-coverage",
+    "reports-dir": "coverage/services",
+    "all": true,
+    "include": ["lib/services/**"],
+    "exclude": ["lib/services/adapters/**"],
+    "reporter": ["text"],
+    "check-coverage": true,
+    "statements": 100,
+    "branches": 100,
+    "functions": 100,
+    "lines": 100
+}
