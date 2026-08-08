@@ -30,15 +30,22 @@ export const kindKeys: [Kind, ScopeKey][] = [
  */
 export const kinds: Kind[] = kindKeys.map(([kind]) => kind);
 
+/**
+ * The pairing again, indexed the other way. Derived rather than written out, so adding a
+ * scope is still one row above, and a lookup rather than a search so there is no missing
+ * case to answer for: `ScopeKey` is closed, so every key has a row.
+ */
+const kindByScopeKey = Object.fromEntries(
+    kindKeys.map(([
+        kind,
+        scopeKey,
+    ]) => [
+        scopeKey,
+        kind,
+    ]),
+) as Record<ScopeKey, Kind>;
+
 /** Map a file scope key back to its internal kind, so the CLI never leaks SObject names. */
 export function kindForScopeKey(key: ScopeKey): Kind {
-    const pair = kindKeys.find(([
-        , scopeKey,
-    ]) => scopeKey === key);
-
-    if (!pair) {
-        throw new Error(`Unknown scope key: ${key}`);
-    }
-
-    return pair[0];
+    return kindByScopeKey[key];
 }

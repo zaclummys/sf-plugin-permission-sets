@@ -1,0 +1,4 @@
+users:
+  bob@example.com:
+    permissionSets:
+      - PS_Beta

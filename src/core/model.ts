@@ -1,5 +1,4 @@
 import { Expiration } from './expiration.js';
-import { Findings } from './finding.js';
 import { TargetName } from './target-name.js';
 import { Username } from './username.js';
 
@@ -78,10 +77,4 @@ export type AssigneeRef = {
 export type ResolvedAddition = DesiredAssignment & {
     assigneeId: string;
     targetId: string;
-};
-
-export type LoadResult = {
-    files: string[];
-    assignments: DesiredAssignment[];
-    findings: Findings;
 };

@@ -63,7 +63,7 @@ jobs:
 
             - run: node scripts/prune-coverage.js
 
-            - run: npx c8 report
+            - run: npx c8 report --config .c8rc.report.json
 
             - uses: codecov/codecov-action@v5
               if: github.event_name != 'push'

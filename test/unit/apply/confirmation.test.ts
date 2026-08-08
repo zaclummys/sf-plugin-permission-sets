@@ -1,7 +1,8 @@
 import { expect } from 'chai';
 import { ApplyService } from '../../../lib/services/index.js';
 import { Confirmations } from '../confirmations.ts';
-import { FakeOrgClient, accepted } from '../fake-org-client.ts';
+import { FakeOrgClient } from '../fake-org-client.ts';
+import { accepted } from '../builders.ts';
 import { jobFile } from '../job-file.ts';
 import { applyInput, holdingBoth, holdingNothing } from './helpers.ts';
 

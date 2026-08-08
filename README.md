@@ -504,13 +504,13 @@ npm run test:org  # the command specs that create a scratch org
 
 Two suites, split by what they drive. `npm test` is both of the ones that need no credentials, which is exactly what runs on a fork's pull request.
 
-`npm run test:unit` covers `src/services/` alone, at 100% statements, branches, functions, and lines: `test/unit/**/*.test.ts`, mocha, and chai. A service's only boundaries are the org, the confirmation prompt, and the filesystem, so the first two are hand-written fakes of the ports the service already takes, and the third is a real temp directory. Nothing is module-mocked. The gate is a c8 config of its own ([`.c8rc.services.json`](.c8rc.services.json)), so a service branch that no test reaches fails the run rather than showing up as a number nobody reads.
+`npm run test:unit` covers `src/core/`, `src/services/`, and `src/ui/`, at 100% statements, branches, functions, and lines: `test/unit/**/*.test.ts`, mocha, and chai. Those are the three layers a test can reach without spawning the CLI, which is what lets the gate run on every push, in under a second. Core and ui are pure and stay real. A service's only boundaries are the org, the confirmation prompt, and the filesystem, so the first two are hand-written fakes of the ports the service already takes, and the third is a real temp directory. Nothing is module-mocked. The gate is a c8 config of its own ([`.c8rc.gate.json`](.c8rc.gate.json)), so a branch no test reaches fails the run rather than showing up as a number nobody reads.
 
-See [UNIT_TESTING.md](UNIT_TESTING.md) for why the suite reads `lib/` rather than `src/`, what each service needs for 100%, and what the Salesforce CLI ecosystem does differently.
+See [UNIT_TESTING.md](UNIT_TESTING.md) for why the suite reads `lib/` rather than `src/`, what the gate changed in `src/` on its way to 100%, and what the Salesforce CLI ecosystem does differently.
 
 The rest are NUTs, the Salesforce CLI team's convention for testing a plugin's commands: `test/nut/**/*.nut.ts`, mocha, and [`@salesforce/cli-plugins-testkit`](https://github.com/salesforcecli/cli-plugins-testkit). They are black box throughout. The plugin is driven through its own `bin/run.js`, every assertion is on what a command printed and the code it exited with, and the only thing a test takes from `src/` is a type.
 
-`npm run test:nut` covers all five commands without touching an org: exit codes, the `--json` envelope, the flags, and the `--help` text.
+`npm run test:nut` covers all five commands without touching an org, plus `src/commands/` and `src/adapters/`, the two layers the unit gate leaves alone: exit codes, the `--json` envelope, the flags, and the `--help` text.
 
 `npm run test:org` needs a Dev Hub. It creates one scratch org from `test/nut/project`, seeds the state the assertions expect (drift, a removal, an expiring assignment), and deletes it when the run ends. Building the org rather than borrowing one is what makes the counts exact and `apply` safe to exercise end to end. Give it a hub nobody uses by hand, because the scratch org allocation is daily and per hub.
 

@@ -1,7 +1,7 @@
 export { diffAssignments, Diff, Drift, ScopedChange } from './diff.js';
 export { Expiration } from './expiration.js';
-export { Finding, Findings } from './finding.js';
-export { loadFiles } from './load.js';
+export { Finding, Findings, noFilesError } from './finding.js';
+export { CheckedFile, checkContent, mergeAssignments, mergeFindings } from './load.js';
 export {
     ActualAssignment,
     AssigneeRef,

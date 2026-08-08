@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { ValidateService } from '../../../lib/services/index.js';
-import { FakeOrgClient, orgUser } from '../fake-org-client.ts';
+import { FakeOrgClient } from '../fake-org-client.ts';
+import { orgUser } from '../builders.ts';
 import { jobFile } from '../job-file.ts';
 import { resolvedOrg } from '../org-fixtures.ts';
 

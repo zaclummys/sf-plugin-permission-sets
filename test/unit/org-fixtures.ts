@@ -1,4 +1,4 @@
-import { actualAssignment, desiredAssignment, orgTarget, orgUser } from './fake-org-client.ts';
+import { actualAssignment, desiredAssignment, orgTarget, orgUser } from './builders.ts';
 
 /** An org that answers for everything one-assignment.yml and expiring.yml declare. */
 export const resolvedOrg = {

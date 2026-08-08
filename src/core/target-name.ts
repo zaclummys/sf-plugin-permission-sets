@@ -17,10 +17,6 @@ export class TargetName {
         return this.raw.toLowerCase();
     }
 
-    public equals(other: TargetName): boolean {
-        return this.asKey() === other.asKey();
-    }
-
     /** The name as written, for display and for messages. */
     public toString(): string {
         return this.raw;

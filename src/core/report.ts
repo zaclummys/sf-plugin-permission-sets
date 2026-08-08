@@ -38,6 +38,11 @@ type ReportOptions = {
     showUnchanged: boolean;
 };
 
+/**
+ * The bucket for one target, created on first use. Every caller writes an entry immediately
+ * after, which is the invariant the render below rests on: a bucket that exists has content,
+ * so no heading can come out empty and nothing downstream has to check for one.
+ */
 function bucketFor(byKind: Map<Kind, Map<string, TargetBucket>>, kind: Kind, target: TargetName): DiffBucket {
     let byTarget = byKind.get(kind);
     if (!byTarget) {
@@ -134,18 +139,13 @@ function collectBuckets(diff: Diff, options: ReportOptions): Map<Kind, Map<strin
 
 /**
  * A group's entries ordered by assignee. Comparing the keys directly matches how `.sort()`
- * with no comparator orders the removes, so every group keeps the one ordering.
+ * with no comparator orders the removes, so every group keeps the one ordering. There is no
+ * equal case to answer for: the group is a Map, so no two rows share a key.
  */
 function sortedByAssignee<Value>(group: Map<string, Value>): [string, Value][] {
     const rows = [...group];
 
-    return rows.sort(([leftAssignee], [rightAssignee]) => {
-        if (leftAssignee < rightAssignee) {
-            return -1;
-        }
-
-        return leftAssignee > rightAssignee ? 1 : 0;
-    });
+    return rows.sort(([leftAssignee], [rightAssignee]) => (leftAssignee < rightAssignee ? -1 : 1));
 }
 
 /** The `+`/`~`/`-`/`=` lines for one target, each group sorted by assignee. Empty when nothing shows. */
@@ -205,15 +205,9 @@ export function formatDiff(diff: Diff, options: ReportOptions): string[] {
         } of sorted) {
             const entries = renderBucket(bucket);
 
-            if (entries.length === 0) {
-                continue;
-            }
             targetLines.push(`  ${target.toString()}`, ...entries);
         }
 
-        if (targetLines.length === 0) {
-            continue;
-        }
         lines.push(kindLabels[kind], ...targetLines);
     }
     return lines;

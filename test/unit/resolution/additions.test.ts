@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import { ResolutionService } from '../../../lib/services/resolution.js';
-import { FakeOrgClient, desiredAssignment, orgTarget, orgUser } from '../fake-org-client.ts';
+import { FakeOrgClient } from '../fake-org-client.ts';
+import { desiredAssignment, orgTarget, orgUser } from '../builders.ts';
 
 const alphaForAlice = desiredAssignment({
     assignee: 'alice@example.com',

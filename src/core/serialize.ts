@@ -18,14 +18,14 @@ type OutputEntry = Partial<Record<ScopeKey, SerializedEntry[]>>;
 /** The users block we emit. A superset of FileShape: every scope accepts the object form. */
 type OutputUsers = Record<string, OutputEntry>;
 
-/** Order identifiers by their text, matching the plain string sort the output relies on. */
+/**
+ * Order identifiers by their text, matching the plain string sort the output relies on. There
+ * is no equal case to answer for: both callers sort a set already de-duplicated by `asKey()`,
+ * and equal text folds to one key.
+ */
 function byText(left: TargetName | Username, right: TargetName | Username): number {
     const leftText = left.toString();
     const rightText = right.toString();
-
-    if (leftText === rightText) {
-        return 0;
-    }
 
     return leftText < rightText ? -1 : 1;
 }

@@ -304,7 +304,7 @@ export default defineConfig([
         },
     },
 
-    // Layering: core/ stays pure (no @salesforce, no outer layers).
+    // Layering: core/ stays pure (no I/O, no @salesforce, no outer layers).
     {
         files: ["src/core/**/*.ts"],
         rules: {
@@ -312,6 +312,13 @@ export default defineConfig([
                 "error",
                 {
                     patterns: [
+                        {
+                            group: [
+                                "node:*",
+                                "globby",
+                            ],
+                            message: "core/ must stay pure: it is handed text, and services/ owns the disk.",
+                        },
                         {
                             group: [
                                 "@salesforce/*",

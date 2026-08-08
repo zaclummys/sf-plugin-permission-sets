@@ -119,7 +119,7 @@
             "output": []
         },
         "test:unit": {
-            "command": "c8 --config .c8rc.services.json mocha --config .mocharc.unit.json",
+            "command": "c8 --config .c8rc.gate.json mocha --config .mocharc.unit.json",
             "dependencies": [
                 "compile"
             ],
@@ -132,7 +132,7 @@
                 "test/unit/**",
                 "test/tsconfig.json",
                 ".mocharc.unit.json",
-                ".c8rc.services.json"
+                ".c8rc.gate.json"
             ],
             "output": []
         },

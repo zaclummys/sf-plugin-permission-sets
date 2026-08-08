@@ -1,7 +1,0 @@
-{
-    "temp-directory": "coverage-dumps",
-    "reports-dir": "coverage",
-    "include": ["lib/**"],
-    "reporter": ["text", "lcov"],
-    "check-coverage": false
-}

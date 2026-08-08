@@ -1,19 +1,16 @@
-import {
-    Expiration,
+import type {
+    ActualAssignment,
+    AssigneeRef,
+    AssignmentFilter,
+    AssignmentOutcome,
+    AssignmentUpdate,
+    DesiredAssignment,
+    OrgTarget,
+    OrgUser,
+    ResolvedAddition,
     TargetName,
+    TargetRef,
     Username,
-    type ActualAssignment,
-    type AssigneeRef,
-    type AssignmentFilter,
-    type AssignmentOperation,
-    type AssignmentOutcome,
-    type AssignmentUpdate,
-    type DesiredAssignment,
-    type Kind,
-    type OrgTarget,
-    type OrgUser,
-    type ResolvedAddition,
-    type TargetRef,
 } from '../../lib/core/index.js';
 import type { OrgClient } from '../../lib/services/adapters/index.js';
 
@@ -52,6 +49,9 @@ export type OrgCalls = {
  * The org port, answering from data and recording what it was asked. Deliberately dumb: it
  * never filters by the argument it was handed, so what a spec puts in the state is exactly
  * what the service sees, and a count in an assertion is exact rather than derived.
+ *
+ * No parameter property: node runs these files by stripping types, which cannot emit the
+ * assignment one implies.
  */
 export class FakeOrgClient implements OrgClient {
     public readonly calls: OrgCalls = {
@@ -128,67 +128,4 @@ export class FakeOrgClient implements OrgClient {
 
         return Promise.resolve(this.state.removed ?? []);
     }
-}
-
-export function orgUser(id: string, username: string, isActive = true): OrgUser {
-    return {
-        id,
-        username: Username.of(username),
-        isActive,
-    };
-}
-
-export function orgTarget(id: string, name: string): OrgTarget {
-    return {
-        id,
-        name: TargetName.of(name),
-    };
-}
-
-type AssignmentInput = {
-    assignee: string;
-    kind: Kind;
-    target: string;
-    expiration?: string
-};
-
-export function desiredAssignment(input: AssignmentInput): DesiredAssignment {
-    return {
-        assignee: Username.of(input.assignee),
-        kind: input.kind,
-        target: TargetName.of(input.target),
-        expiration: input.expiration ? Expiration.of(input.expiration) : null,
-    };
-}
-
-export function actualAssignment(recordId: string, input: AssignmentInput): ActualAssignment {
-    const desired = desiredAssignment(input);
-
-    return {
-        recordId,
-        ...desired,
-    };
-}
-
-/** A record the org accepted. The names are display-only, so one spelling serves every spec. */
-export function accepted(operation: AssignmentOperation): AssignmentOutcome {
-    return {
-        assignee: 'alice@example.com',
-        kind: 'permissionSet',
-        target: 'PS_Alpha',
-        operation,
-        success: true,
-    };
-}
-
-/** A record the org rejected, which is what fails an otherwise applied run. */
-export function rejected(operation: AssignmentOperation): AssignmentOutcome {
-    return {
-        assignee: 'alice@example.com',
-        kind: 'permissionSet',
-        target: 'PS_Alpha',
-        operation,
-        success: false,
-        message: 'insufficient access rights on cross-reference id',
-    };
 }

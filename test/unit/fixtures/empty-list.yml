@@ -1,0 +1,5 @@
+users:
+  alice@example.com:
+    permissionSets: []
+    permissionSetGroups:
+      - PSG_Onboarding

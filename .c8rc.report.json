@@ -1,0 +1,13 @@
+{
+    "temp-directory": "coverage-dumps",
+    "reports-dir": "coverage",
+    "all": true,
+    "extension": [".js"],
+    "include": ["lib/**"],
+    "exclude": [
+        "lib/index.js",
+        "lib/core/model.js",
+        "lib/services/adapters/**"
+    ],
+    "reporter": ["text", "lcov"]
+}

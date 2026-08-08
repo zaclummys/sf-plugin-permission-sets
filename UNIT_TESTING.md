@@ -1,8 +1,10 @@
-# Unit testing the services layer
+# Unit testing
 
-How `test/unit/**/*.test.ts` works and why it is built this way. Scope: `src/services/` only,
-gated at 100% statements, branches, functions, and lines. The NUTs cover the commands and are
-documented in [README.md](README.md) and CLAUDE.md instead.
+How `test/unit/**/*.test.ts` works and why it is built this way. It covers `src/core/`,
+`src/services/`, and `src/ui/`, gated at 100% statements, branches, functions, and lines. Those
+are the three layers a test can reach without spawning the CLI or touching an org, which is what
+lets the gate run on every push. `src/commands/` and `src/adapters/` belong to the NUTs, which
+[README.md](README.md) and CLAUDE.md document.
 
 The survey in section 1 is the Salesforce CLI ecosystem as it stands in 2026. Every decision in
 section 2 was run in this repo before being written down.
@@ -19,7 +21,7 @@ tests, `*.nut.ts` for NUTs, so one mocha glob can pick either. Every plugin surv
 - `salesforcecli/plugin-org`: `test/shared/orgListUtil.test.ts`, `test/nut/**`.
 - `salesforcecli/plugin-data`: `test/api/**/*.test.ts` for the non-command API layer.
 
-The closest analogue to this repo's `services/` is `plugin-info/test/shared/` and
+The closest analogue to this repo's pure layers is `plugin-info/test/shared/` and
 `plugin-data/test/api/`: plain classes and functions, tested directly, no oclif involved.
 
 ### Stack
@@ -43,11 +45,12 @@ is a command-level unit test: `new TestContext()`, `stubSfCommandUx($$.SANDBOX)`
 ### What this repo does not take from it
 
 - **`TestContext` / `MockTestOrgData`.** Those exist to fake `AuthInfo`, `Org`, and `Connection`
-  for code that reaches `@salesforce/core` directly. Services here never import `@salesforce/*`:
-  they take an injected `OrgClient` port. The whole authentication fake is dead weight.
-- **`stubSfCommandUx`.** Command-layer only, and commands are out of scope.
+  for code that reaches `@salesforce/core` directly. Nothing in the three layers under test does:
+  services take an injected `OrgClient` port, and core and ui import nothing at all beyond `yaml`,
+  `zod`, and `@oclif/core`'s `ux`. The whole authentication fake is dead weight.
+- **`stubSfCommandUx`.** Command-layer only, and commands belong to the NUTs.
 - **`ts-node/esm`.** See 2.1, this repo already runs `.ts` natively.
-- **nyc.** This repo is on c8, driven by `NODE_V8_COVERAGE` and `.c8rc.json`.
+- **nyc.** This repo is on c8, driven by `NODE_V8_COVERAGE`.
 - **`@salesforce/ts-sinon`.** Still published (1.4.36, June 2026) but it declares `sinon: ^5.1.1`
   as a real dependency while current sinon is 22, so installing it drags a second sinon into
   `node_modules` whose `SinonStub` types are not the ones your sandbox produces. Its value is
@@ -67,13 +70,12 @@ Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../dep.js' imported from '...
 ```
 
 Every file under `src/` imports its neighbours as `'../core/index.js'`, so a test cannot import
-`src/services/plan.ts` without adding `ts-node/esm` or `tsx` back. The alternative is what the
-NUTs already do, and what `.c8rc.json` already measures: read the working tree's `lib/`.
+`src/core/diff.ts` without adding `ts-node/esm` or `tsx` back. The alternative is what the NUTs
+already do: read the working tree's `lib/`.
 
 ```ts
-import { PlanService } from '../../../lib/services/index.js';
+import { Diff, formatDiff } from '../../../lib/core/index.js';
 import type { OrgClient } from '../../lib/services/adapters/index.js';
-import { Username, TargetName } from '../../lib/core/index.js';
 ```
 
 Consequences:
@@ -81,11 +83,11 @@ Consequences:
 - `test:unit` depends on `compile`, exactly like `test:nut` and `test:org` already do.
 - Types come from the emitted `.d.ts`, which is the published contract, so a test cannot reach a
   symbol the barrel does not export. That is a feature.
-- c8 remaps the result back to `src/services/*.ts` through the source maps the build already
-  emits, so the report names the file you edit.
-- `ResolutionService` is the one exception to the barrel rule: it is not in
-  `services/index.ts`, because inside `src/` only its own directory uses it, so
-  `test/unit/resolution/*` imports `lib/services/resolution.js` directly.
+- c8 remaps the result back to `src/**/*.ts` through the source maps the build already emits, so
+  the report names the file you edit.
+- `ResolutionService` is the one exception to the barrel rule: it is not in `services/index.ts`,
+  because inside `src/` only its own directory uses it, so `test/unit/resolution/*` imports
+  `lib/services/resolution.js` directly.
 
 ### 2.2 Test files must use erasable syntax only
 
@@ -100,10 +102,10 @@ So no parameter properties (`constructor(private readonly x: T) {}`), no `enum`,
 with runtime content. Assign in the constructor body instead. `src/` is free of this because tsc
 compiles it, which is why the rule bites only in `test/`.
 
-### 2.3 Sociable units: fake the port, keep `core/` real
+### 2.3 Sociable units: fake the port, keep the pure layers real
 
-`core/` is pure, synchronous, and deterministic. Faking it would test the mock. A service has
-exactly three boundaries:
+`core/` and `ui/` are what the services are made of, and faking either would test the mock. A
+service has exactly three boundaries:
 
 | Boundary | Double |
 | --- | --- |
@@ -114,41 +116,49 @@ exactly three boundaries:
 No sinon. Official plugins reach for it because they stub modules and `@salesforce/core` classes,
 which is exactly what a hand-rolled port lets us avoid. `FakeOrgClient` is deliberately dumb: it
 never filters by the argument it was handed, so what a spec puts in the state is what the service
-sees, and a count in an assertion is exact rather than derived.
+sees, and a count in an assertion is exact rather than derived. `test/unit/builders.ts` is
+separate from it, so a `core/` spec can build a `DesiredAssignment` without pulling in the org.
 
 ### 2.4 Job files are files
 
-Every service except `ExportService` starts at `loadFiles(files)`, so the input is YAML on disk.
-It lives in `test/unit/fixtures/*.yml`, reached through `jobFile(name)`, never as a template
-literal inside a `.ts`. The fixtures are separate from `test/fixtures/`, which the NUTs own and
-assert exact counts against.
+`CheckService` reads YAML off disk, so the input is YAML on disk. It lives in
+`test/unit/fixtures/*.yml`, reached through `jobFile(name)`, never as a template literal inside a
+`.ts`. The fixtures are separate from `test/fixtures/`, which the NUTs own and pin exact counts
+against.
 
-`one-assignment.yml` doubles as the expected output of `serializeAssignments`, which is what makes
-the export assertion a round trip rather than a restatement of the serializer.
+`one-assignment.yml` and `expiring.yml` double as the expected output of `serializeAssignments`,
+read back through `jobFileText(name)`, which makes those assertions a round trip rather than a
+restatement of the serializer.
 
 `ExportService` is the other direction: it writes, so its specs assert on a real file under the
 workspace, including the `mkdir(..., { recursive: true })` branch for a path whose directory does
 not exist yet.
 
-### 2.5 The coverage gate
+### 2.5 The two c8 configs
 
-`.c8rc.services.json`, applied by `npm run test:unit`:
+There are two coverage artifacts with different jobs, so there are two configs and both are named
+on the command line. Neither is `.c8rc.json`, because that is the file c8 picks up implicitly, and
+an implicit config is one a stray `npx c8` inherits by accident.
 
-- `include: ["lib/services/**"]` filters the V8 dump **before** source-map remapping, which is why
-  it names `lib/` while the report prints `src/services/*.ts`.
-- `all: true` stops a service file that no test imports from vanishing from the report instead of
-  failing it.
-- `exclude: ["lib/services/adapters/**"]` is required once `all` is on: `org-client.ts` is a pure
-  interface and compiles to `export {};`, so it would report 0% forever.
-- `temp-directory: ".unit-coverage"`, cleaned on every run. Sharing `coverage-dumps` with the NUTs
-  was tried and rejected: a stale dump from a previous run kept the gate green after a spec was
-  deleted, which is a gate that cannot fail.
+| File | Job | Who reads it |
+| --- | --- | --- |
+| `.c8rc.gate.json` | fail the build under 100% over core, services, and ui | `npm run test:unit`, on every push |
+| `.c8rc.report.json` | merge every suite into one lcov, no threshold | `npm run coverage` and the codecov upload in CI |
 
-The gate has been seen to fail. Removing `test/unit/apply/dry-run.test.ts` exits 1 and names
-`apply.ts:97-101`.
+Both share three settings that took a while to get right:
 
-`npm run coverage` and the CI report are a separate artifact: `coverage:unit` runs the same specs
-under the shared `NODE_V8_COVERAGE`, so the repo-wide lcov counts them alongside the NUTs.
+- `all: true`. Without it c8 reports only the files that were loaded, so a file no test imports
+  shows 100% by absence rather than 0% by fact.
+- `extension: [".js"]`. With `all` on and no extension list, c8 walks the emitted `.d.ts` files
+  too and reports them as uncovered source. Restricting to `.js` measures what actually runs.
+- The exclusions are the modules with no runtime behaviour: `lib/core/model.js` and
+  `lib/services/adapters/org-client.js` are pure interfaces that compile to `export {};`, and
+  `lib/index.js` is the oclif entry stub. With `all` on they would each report 0% forever.
+
+The gate owns `.unit-coverage` and cleans it on every run. Sharing `coverage-dumps` with the NUTs
+was tried and rejected: a stale dump from a previous run kept the gate green after a spec was
+deleted, which is a gate that cannot fail. It has since been seen to fail: removing
+`test/unit/core/report/expirations.test.ts` exits 1 and names the lines it stopped reaching.
 
 ### 2.6 Wiring
 
@@ -156,83 +166,94 @@ under the shared `NODE_V8_COVERAGE`, so the repo-wide lcov counts them alongside
 | --- | --- |
 | `package.json` | `test:unit` (wireit, depends on `compile`) and `coverage:unit` |
 | `.mocharc.unit.json` | the spec glob and the timeout, named once for both of those |
-| `.c8rc.services.json` | the gate |
+| `.c8rc.gate.json`, `.c8rc.report.json` | see 2.5 |
 | `test/tsconfig.json` | `./unit/**/*.ts` in `include` |
 | `eslint.config.js` | the no-conditionals, no-loops rule extended to `test/**/*.test.ts` |
-| `.github/workflows/ci.yml` | `test:unit` first, before anything that needs the CLI or an org |
+| `.github/workflows/ci.yml` | `npm test` runs the gate and the NUTs together, before anything needing an org |
 
-The unit run needs a config file of its own because it disagrees with `.mocharc.json` on the
-timeout: 600000 is right for a NUT that spawns the CLI and wrong for a spec that should finish in
-milliseconds. Having it also carry `spec` is what keeps the glob in one place, since the gate and
-`coverage:unit` both run the same files for different reasons. The two NUT globs stay as command
-line arguments, because those runs agree with `.mocharc.json` on everything but the glob.
+The unit run needs a mocha config of its own because it disagrees with `.mocharc.json` on the
+timeout: 600000 is right for a NUT that spawns the CLI and wrong for a spec measured in
+milliseconds. Carrying `spec` there too keeps the glob in one place, since the gate and
+`coverage:unit` run the same files for different reasons. The two NUT globs stay as command line
+arguments, because those runs agree with `.mocharc.json` on everything but the glob.
 
 `TZ=UTC` is pinned in the wireit `env`, because expirations are instants and a suite that passes
 in São Paulo has to pass in a UTC container.
 
-`npm run coverage` is the other report and not this gate: `scripts/coverage.sh` runs all three
-suites under one `NODE_V8_COVERAGE` and merges them. It lives in a file rather than in
-`package.json` because it keeps the collection's exit status and re-raises it at the end, so a
-broken suite still renders a report and still fails.
+`scripts/coverage.sh` is the other report: it runs all three suites under one `NODE_V8_COVERAGE`
+and merges them. It lives in a file rather than in `package.json` because it keeps the
+collection's exit status and re-raises it after the report, so a broken suite still renders a
+report and still fails.
 
-## 3. Coverage map
+## 3. What the gate changed in `src/`
 
-What each service needs for 100%, read off the branches in the source.
+Chasing the last few percent is what the gate is for. Almost every line it could not reach turned
+out to be defensive code the pipeline cannot execute, and the rule that sorted them was this: a
+guard on a **local invariant the same function builds** comes out, a guard on **input a caller
+supplies** stays and gets a test.
 
-**`CheckService`** (`check/`)
+Removed:
 
-- clean file, `strict` defaulted: `failed` false, no findings.
-- a repeated target: one warning, `failed` false, the assignment kept once.
-- the same file with `strict` true: `failed` true.
-- a schema violation: `failed` true either way, no assignments read.
-- no file matched, and malformed YAML: `failed` true.
+- `TargetName.equals()` had no caller anywhere in `src/`.
+- `kindForScopeKey` searched `kindKeys` and threw on a miss, for a `ScopeKey` union that is closed.
+  It is a lookup table now, and there is no miss to answer for.
+- The `=== 0` arm of the comparators in `report.ts` and `serialize.ts`. Both sort a collection
+  already de-duplicated by key, so no two rows can compare equal.
+- The two empty-bucket guards in `formatDiff`. `bucketFor` is only ever called immediately before
+  a write, so a bucket that exists has content, and the invariant is stated there now.
 
-**`ValidateService`** (`validate/`)
+Kept and tested directly:
 
-- every reference resolves: `failed` false.
-- an unknown user, and an inactive one: `failed` true.
-- a file warning plus an org error: both present, file finding first.
+- `Expiration.of` throwing on text that is not a datetime.
+- `diffAssignments` de-duplicating a desired assignment it is handed twice.
+- `colourFindings` leaving a line alone when it has no `:` separator. That guard is not redundant:
+  without it, `errorX` slices to `error`, matches a level, and the function rebuilds the line as
+  `error:errorX`.
+- The `(root)` fallback in `schema.ts`, reachable with a YAML document that is a bare scalar.
 
-**`ExportService`** (`export/`)
+The gate also forced the layering fix that was overdue: `core/load.ts` did its own `readFile` and
+`globby` inside a layer CLAUDE.md documents as pure. The disk half moved into `CheckService`,
+which is where `ExportService` already writes from, `core/load.ts` is now `checkContent` and
+`mergeAssignments` over text, and eslint enforces it: `core/` may not import `node:*` or `globby`.
 
-- no output file: `outputFile` null, the document returned.
-- an output file whose directory does not exist: created, contents match.
-- two assignments for one user: `users` 1, `assignments` 2.
-- a filter naming a user with nothing: that name in `unmatchedUsers`, spelled as requested.
-- a filter naming a user whose case differs from the org: not unmatched, because comparison goes
-  through `asKey()`.
-- a filter naming no user at all, and no filter: `unmatchedUsers` empty. Two separate branches.
+## 4. Coverage map
 
-**`PlanService`** (`plan/`)
+`core/`
 
-- load errors, and load warnings under `strict`: status `invalid` before the org is touched.
-- resolution errors: status `invalid`, and `listCurrentAssignments` never called.
-- everything resolves: status `planned`, with the managed targets and the managed assignees both
-  read, plus an addition, an update, a removal, and a no-op.
+- `diff.ts` and the `Diff`/`ScopedChange` aggregates: add, update, remove, unchanged, the
+  duplicate-desired guard, case folding, and every mode through `scopeTo` including its drift.
+- `expiration.ts`: canonical form, offset spellings, sub-second truncation, `same` on each of the
+  four null combinations, and the throw.
+- `finding.ts`: the counts, `blocks` under both strictness values, `concat`, and `format` with and
+  without a line number.
+- `load.ts`: `checkContent` through all three stages, `mergeAssignments` union and de-duplication,
+  `mergeFindings` ordering.
+- `report.ts`: line shapes, expirations and transitions, assignee and target and kind ordering,
+  and the mode plus `showUnchanged` scoping.
+- `outcome.ts`, `resolve.ts`, `schema.ts`, `scope-key.ts`, `serialize.ts`, `username.ts`,
+  `target-name.ts`: their own contracts, directly.
 
-**`ResolutionService` and `Resolution`** (`resolution/`)
+`services/`
 
-- no assignments at all: `findUsers` never called.
-- one kind declared: the other two finders short-circuit on `targets.length === 0`.
-- all three kinds: every arm of `findTargetsOfKind`.
-- `managedAssignees`: a user that resolved, one that did not, the same kind twice, two kinds.
-- `resolveAdditions`: ids attached, and the `?? ''` fallback for an unresolved user, an unresolved
-  target, and a target whose name is not unique in the org.
+- `CheckService`: files matched, assignments read, warnings, errors, `strict` both ways, no match.
+- `ValidateService`: resolved, unknown user, inactive user, and the merge order of the two stages.
+- `ExportService`: to stdout, to a file, to a directory that does not exist, and every arm of the
+  filter.
+- `PlanService`: aborting before the org, aborting after resolution, and each of add, update,
+  remove, and no-op.
+- `ResolutionService` and `Resolution`: one lookup per kind, the empty short circuits, the managed
+  target and assignee sets, and the `?? ''` fallbacks.
+- `ApplyService`: invalid, the delete cap and its boundary, dry run, declined, applied, each of
+  the three operations, and each `ReconcileMode`.
 
-**`ApplyService`** (`apply/`)
+`ui/`
 
-- invalid plan: no DML, no outcomes.
-- removals over `maxDeletes`: `max-deletes-exceeded`, no confirmation asked. Exactly on the cap
-  goes ahead, which is the boundary the `>` is written at.
-- `dryRun`: no DML, no confirmation, the diff still reported.
-- removals present, declined: nothing written.
-- removals present, confirmed: asked with the count.
-- no removals: never asked.
-- `executeResolved` has six branches, one empty and one non-empty per operation. Additions,
-  updates, and removals each get a spec, and a mode run covers two at once.
-- one run per `ReconcileMode`.
+- `colourDiff` and `colourFindings` on every marker and level, plus the two lines they must pass
+  through untouched. The suite runs under `NO_COLOR`, where `ux.colorize` is the identity, so what
+  it pins is that painting never alters a line's text, which is the property every NUT assertion
+  rests on. The colour itself is `test/nut/check/colour.nut.ts`, which spawns the CLI.
 
-## 4. Traps
+## 5. Traps
 
 - A `.js` specifier in a spec must point at a real `.js` file. Under `lib/` it always does. A
   helper is imported by its real name, `'../workspace.ts'`.
@@ -242,8 +263,8 @@ What each service needs for 100%, read off the branches in the source.
   filter, so bind the result before asserting on it twice.
 - Narrowing a discriminated union in a spec needs chai's `assert(plan.status === 'planned')`,
   because `expect(...).to.equal(...)` does not narrow and an `if` is banned in a test body.
-- c8 without `all` only reports files that were loaded, so a new service nobody imports would show
-  100% by absence.
+- Excluding a file by its `.js` name is not enough when `all` is on and no `extension` list is
+  given, because the `.d.ts` beside it is picked up separately.
 - `execCmd` from the testkit has no place here. It spawns the CLI, which is what a NUT is for.
 - A unit test must not assert on text from `messages/`. That is the command layer's contract, and
   the NUTs already pin it.

@@ -24,6 +24,6 @@ NODE_V8_COVERAGE=coverage-dumps npm run coverage:collect
 collected=$?
 
 node scripts/prune-coverage.js || exit $?
-c8 report || exit $?
+c8 report --config .c8rc.report.json || exit $?
 
 exit $collected

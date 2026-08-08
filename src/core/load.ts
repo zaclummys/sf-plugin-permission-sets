@@ -1,16 +1,22 @@
-import { readFile } from 'node:fs/promises';
-import { globby } from 'globby';
 import { parseFile } from './parse.js';
 import { validateFile } from './schema.js';
 import { normalize } from './normalize.js';
-import { DesiredAssignment, LoadResult } from './model.js';
-import { Finding, Findings, noFilesError } from './finding.js';
+import { DesiredAssignment } from './model.js';
+import { Finding } from './finding.js';
 
-/** Process one file's text through parse, validate, and normalize. Pure, no disk. */
-function checkContent(text: string, file: string): {
+/** One file's text turned into the model, with everything the three stages had to say. */
+export type CheckedFile = {
     assignments: DesiredAssignment[];
     findings: Finding[]
-} {
+};
+
+/**
+ * Process one file's text through parse, validate, and normalize. Takes the text rather than
+ * the path, because reading a file is I/O and this layer does none: the caller in `services/`
+ * owns the disk, the same way it already owns the disk on the way back out through export.
+ * The file name is carried only so a finding can say where it came from.
+ */
+export function checkContent(text: string, file: string): CheckedFile {
     const parsed = parseFile(text, file);
 
     if (!parsed.data) {
@@ -44,27 +50,12 @@ function checkContent(text: string, file: string): {
     };
 }
 
-/** Expand the globs, read every matched file, and merge into one model by union. */
-export async function loadFiles(patterns: string[]): Promise<LoadResult> {
-    const files = await globby(patterns);
-
-    if (files.length === 0) {
-        return {
-            files,
-            assignments: [],
-            findings: Findings.of([noFilesError(patterns)]),
-        };
-    }
-
-    const checked = await Promise.all(
-        files.map(async (file) => {
-            const text = await readFile(file, 'utf8');
-
-            return checkContent(text, file);
-        }),
-    );
-
-    const findings = checked.flatMap((entry) => entry.findings);
+/**
+ * Merge every checked file into one model by union, keeping the first spelling of each
+ * (assignee, kind, target). Two files granting the same target to the same user describe one
+ * assignment, so declaring it twice is not an error and must not be applied twice.
+ */
+export function mergeAssignments(checked: CheckedFile[]): DesiredAssignment[] {
     const collected = checked.flatMap((entry) => entry.assignments);
 
     const seen = new Set<string>();
@@ -80,9 +71,10 @@ export async function loadFiles(patterns: string[]): Promise<LoadResult> {
         assignments.push(assignment);
     }
 
-    return {
-        files,
-        assignments,
-        findings: Findings.of(findings),
-    };
+    return assignments;
+}
+
+/** Every finding the checked files raised, in the order the files were read. */
+export function mergeFindings(checked: CheckedFile[]): Finding[] {
+    return checked.flatMap((entry) => entry.findings);
 }
